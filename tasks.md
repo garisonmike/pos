@@ -114,44 +114,55 @@ rather than planned up front.
 - [x] Coverage test widened to resolve ownership transitively over foreign keys, including Django's auto-created join tables
 
 ### Catalog
-- [ ] `Item` extensions: `is_price_variable`, `is_available`, `short_name`, `image`, `sort_order`
-- [ ] Category CRUD, scoped per business
-- [ ] TaxRate CRUD, one default per business enforced
-- [ ] Item CRUD covering products and services
-- [ ] Several barcodes per item, any of which resolves to the item
-- [ ] Search and barcode lookup tuned for the till
-- [ ] Mixed inclusive/exclusive tax totalling correctly, rounding edges tested
+- [x] `Item` extensions: `is_price_variable`, `is_available`, `short_name`, `image`, `sort_order`
+- [x] Category CRUD, scoped per business
+- [x] TaxRate CRUD, one default per business enforced *(discovered: the old default was stood down after saving, so the insert hit the partial unique index and returned a conflict)*
+- [x] Item CRUD covering products and services
+- [x] Several barcodes per item, any of which resolves to the item
+- [x] Search and barcode lookup tuned for the till
+- [x] Mixed inclusive/exclusive tax in one catalogue, rounding edges tested
+- [x] Categories and tax rates refuse deletion while referenced, with a usable message
 
 ### Inventory
-- [ ] `StockItem` per item per store, with `reorder_level`
-- [ ] `StockMovement` append-only ledger with `balance_after`
-- [ ] Adjustments requiring a reason, manager and above, audited
-- [ ] Low-stock endpoint
+- [x] `StockItem` per item per store, with `reorder_level`
+- [x] `StockMovement` append-only ledger with `balance_after`
+- [x] Adjustments requiring a reason, manager and above, audited
+- [x] Adjust by delta or by counted total
+- [x] Row lock in `apply_movement` so concurrent sales cannot lose a movement
+- [x] Negative stock allowed and surfaced rather than refused
+- [x] Low-stock endpoint, and a per-item ledger endpoint
+- [x] `rebuild_quantity` so the cached total can always be re-derived
 
 ### CSV import
-- [ ] Validate then commit, per-row errors rather than all-or-nothing
-- [ ] Upsert by SKU, several barcodes per row
-- [ ] Unknown categories created and reported; unknown tax rates rejected per row
-- [ ] Validate token expires after an hour
-- [ ] Commit re-checks every referenced category and tax rate, failing changed rows individually
-- [ ] Downloadable template and documented column spec
+- [x] Validate then commit, per-row errors rather than all-or-nothing
+- [x] Upsert by SKU, several barcodes per row
+- [x] Unknown categories created and reported; unknown tax rates rejected per row
+- [x] Validate token expires after an hour
+- [x] Token tied to a hash of the file, so commit cannot swap it
+- [x] Commit re-checks every referenced category and tax rate, failing changed rows individually
+- [x] Opening stock arrives through the ledger
+- [x] Downloadable template with a product and a service example
 
 ### Flutter
-- [ ] Scaffold: Riverpod, dio, go_router, secure storage
-- [ ] Business slug entry, device registration, PIN sign-in
-- [ ] Read-only catalogue browse, search, barcode lookup
-- [ ] Widget tests on the auth flow and the item list
+- [x] Scaffold: Riverpod, dio, secure storage
+- [x] Business ID entry, device registration, password and PIN sign-in
+- [x] Token refresh in an interceptor, with a single in-flight guard
+- [x] Read-only catalogue browse, category filter, search, barcode lookup
+- [x] Item detail sheet
+- [x] 21 widget and unit tests, `flutter analyze` clean
 
 ### Close
-- [ ] Isolation tests on every new table, to milestone 1's bar
-- [ ] Retail template proven end to end
-- [ ] Docs, changelog, issue closed with a summary
+- [x] Isolation tests on every new table, to milestone 1's bar
+- [x] Retail template proven end to end
+- [x] Docs, changelog, issue closed with a summary
 
 ---
 
 ### Deferred out of milestone 2
-- [ ] Stock take / recount flow *(moved: the adjustment path covers the immediate need; a guided full recount is its own screen)*
-- [ ] Item images beyond a single upload field
+- [ ] Stock take / recount flow *(the adjustment path with reason COUNT covers the immediate need; a guided full recount is its own screen)*
+- [ ] Camera barcode scanning *(typed and hardware-scanner entry works; most Kenyan counters use a scanner that behaves as a keyboard)*
+- [ ] Background job for imports over 5,000 rows *(refused with a clear message for now, rather than carrying a worker nothing needs yet)*
+- [ ] Per-branch price overrides *(seam left open: resolve as `override ?? item.price`)*
 
 ## Milestone 3 — Sales and checkout
 

@@ -5,6 +5,60 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-13 — Milestone 2: catalogue, stock, import, and the first till screens
+
+**Worked on:** everything after the close-outs — the catalogue, inventory, CSV
+import, and the Flutter client.
+
+**Finished:** 365 backend tests and 21 Flutter tests passing, `ruff` and
+`flutter analyze` clean, and the retail template verified end to end through the
+live API: onboard, set up, add a category and an item with two barcodes, resolve
+the second barcode, take stock, refuse an adjustment with no reason, accept one
+with a reason, see it appear in the low-stock list, import a CSV with a
+deliberate bad row, and sign a cashier in by PIN who can search but not edit.
+
+### Decisions worth sanity-checking
+
+**Two flags on `Item` a retail-only build would have skipped.**
+`is_available` is separate from `is_active` because "delisted" and "off today"
+are different, and a salon needs "fully booked" as much as a duka needs "out of
+season". `is_price_variable` is on from the start rather than retrofitted
+through the cart in milestone 3. Both sit on `Item` rather than in a
+product-only table — putting them there is precisely what would make services
+second-class.
+
+**Stock is a ledger with a cached total, not a number.** `StockItem.quantity`
+can always be re-derived from the movements. It looks redundant until a count
+disagrees with the shelf: the number says how many, only the ledger says why.
+
+**Negative stock is allowed.** Refusing would mean refusing to record something
+that has already happened. A visibly wrong number beats books that quietly
+disagree with the drawer, so it is surfaced with a warning instead.
+
+**`apply_movement` takes a row lock.** Two cashiers selling the last unit at
+once would otherwise lose a movement to a classic lost update — which shows up
+weeks later as stock that will not reconcile, not as an error anyone notices.
+
+**Import is deliberately not atomic across rows.** You asked for per-row errors
+over all-or-nothing, so a commit that hits bad rows still imports the good ones
+*and* creates any categories they named. That means a partly-failed commit is
+not a clean no-op. I think that is the right trade for onboarding, but it is the
+one place where per-row handling has a visible cost, so flagging it plainly.
+
+**The device token is stored as a credential, not a setting.** It looks like
+configuration, but with four digits it signs someone in, so it lives in the
+keystore. Signing out clears the session tokens and keeps it — which is exactly
+what lets the next cashier take over with a PIN.
+
+### Open question
+
+Camera barcode scanning is not built; the till takes typed or
+hardware-scanner input. Most Kenyan counters use a USB or Bluetooth scanner that
+behaves as a keyboard, so this is the realistic path and the camera is a
+convenience. Tell me if you want it in milestone 3 or later.
+
+---
+
 ## 2026-08-13 — Milestone 2 close-outs: Redis, lockout, boot checks, and an isolation gap
 
 **Worked on:** the three items carried over from milestone 1's sign-off, before

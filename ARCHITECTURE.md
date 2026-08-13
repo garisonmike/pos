@@ -354,6 +354,83 @@ then fails to scan at the counter.
 branch is an insert; hanging quantity off the item itself would make it a
 redesign with live data to migrate.
 
+**Prices are business-wide, with the seam left open.** One price per item across
+branches, which is how most Kenyan chains operate. If a depot ever needs to
+price differently from a kiosk, a `StorePriceOverride` table resolves as
+`override ?? item.price` without touching `Item` or any sale code.
+
+**Two flags that a retail-only build would have forgotten.** `is_available` is
+separate from `is_active`: "delisted" and "off today" are different states, and
+a salon needs "fully booked" exactly as much as a duka needs "out of season".
+`is_price_variable` marks items whose price the cashier enters — a service
+quoted on the day, or damaged retail stock. Both live on `Item` rather than in a
+product-only table, because putting them there is what makes services
+second-class.
+
+### Stock
+
+Two models, and the split is the point.
+
+```
+StockItem      item × store → quantity, reorder_level
+StockMovement  append-only: delta, balance_after, reason, note, user, ref
+```
+
+`StockItem.quantity` is a **cache** of the ledger, rebuildable from it at any
+time. Keeping both looks redundant until a count disagrees with the shelf: the
+cached number answers *how many*, and only the ledger answers *why* — which is
+the question a shop owner actually asks.
+
+Quantities are `Decimal`, not integers, because loose goods are real: sugar and
+flour come out of an open sack by weight. Money stays integer cents.
+
+**Nothing moves without a reason and an author.** Adjustments, wastage and count
+corrections all require a note, enforced in the service layer as well as the
+serializer so it holds however the code is called. Sales and refunds are refused
+as manual adjustments outright — they carry a sale reference instead, and
+allowing them here would let someone move stock as if sold with no sale behind
+it. That pairing is deliberate: adjusting stock is how a theft gets covered up,
+so the role boundary and the record of crossing it belong together.
+
+**Stock may go negative.** Refusing would mean refusing to record something that
+has already happened, which puts the books further from the truth than a
+negative number does. It is surfaced with a warning for a manager to reconcile.
+
+`apply_movement()` takes a row lock. Two cashiers selling the last unit at the
+same moment would otherwise both read the same quantity and write back totals
+that ignore each other — the classic lost update, which shows up as stock that
+will not reconcile rather than as an error anyone notices.
+
+### Bulk import
+
+A client's product list is reliably the slowest part of onboarding, not the
+software. So import is built for the shape that work really takes: a spreadsheet
+exported from wherever the prices currently live, inconsistent in a dozen small
+ways.
+
+**Validate, then commit.** Validate writes nothing and reports every row.
+Commit imports what passed and reports the rest — valid rows land even when
+others fail, because refusing four hundred good rows over three bad ones means
+an afternoon of editing before anything works at all.
+
+Two details stop the phases disagreeing:
+
+- The token is tied to a **hash of the file**, so commit cannot be pointed at a
+  different file than the one whose report was reviewed. It expires in an hour.
+- Commit **re-resolves** every category and tax rate rather than trusting what
+  validate found. Someone may rename one while the report is being read, and
+  that row must then fail like any other bad reference while the rest still
+  import.
+
+Unknown **categories are created**; unknown **tax rates are not**. A category is
+a free-form label and pre-creating thirty is friction with nothing to show for
+it. A typo creating `VAT 16 %` at the wrong value would silently mis-tax every
+sale filed against it from then on.
+
+One consequence worth being explicit about: a commit is **not** a clean no-op
+when rows fail. Good rows import and named categories are created, which is the
+direct cost of per-row handling over all-or-nothing.
+
 ---
 
 ## Modules, not forks
@@ -590,6 +667,48 @@ ones. Sync accepts; checkout refuses.
 Both `device_created_at` and `server_received_at` are stored. All reporting uses
 server time, because a till with a wrong clock must not be able to move revenue
 between days.
+
+---
+
+## The till application
+
+Flutter, Android first. Currently signs in and browses; selling is milestone 3.
+
+**Three states, one rule.** The app is in exactly one of: *unclaimed* (no
+business chosen), *claimed* (business known, device not registered, so a
+password is the only way in), *registered* (PIN sign-in available), or *signed
+in*. The root widget switches on that and nothing else, so "why am I looking at
+sign-in" has one readable answer rather than being decided by screens pushing
+each other around.
+
+**The device token is a credential, not configuration.** It looks like a
+setting — written once, never changed — but combined with four digits it signs a
+cashier in. It goes in the platform keystore with the access and refresh tokens,
+never in shared preferences. Signing out clears the tokens and *keeps* the
+device token, which is exactly what lets the next cashier take over with a PIN.
+
+**Refresh lives in an interceptor.** Access tokens are deliberately short-lived
+and a till sits idle between customers, so any screen can be the first to meet an
+expired one. Handling it per call site would fail on whichever screen the author
+forgot. A single in-flight guard stops a burst of parallel requests each
+triggering a refresh — with rotation on the server, the second and third would
+present a token the first had already replaced and sign the cashier out
+mid-shift.
+
+**Offline is not the same as signed out.** If the session check fails because
+the network is down, the app keeps the stored session rather than bouncing a
+cashier to sign-in over a dropped bar of signal.
+
+**The UI constraints are functional, not aesthetic.** A duka counter is often
+near an open front, so contrast is pushed well past the usual minimum — no grey
+text carries meaning. Tap targets are 56pt minimum and PIN keys are 72, because
+the person tapping is often holding a bag of shopping. Primary actions sit at
+the bottom where a thumb lands. The PIN pad submits on the fourth digit rather
+than making someone find a button they would have to look at.
+
+**"Not tracked" is shown differently from "none left".** A haircut with `0`
+beside it reads as sold out, and a cashier would hesitate over something they
+should simply sell. Untracked items show no stock line at all.
 
 ---
 

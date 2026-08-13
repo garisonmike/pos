@@ -38,3 +38,8 @@ htmlcov/
 
 # Docker volumes
 /docker/postgres/data/
+
+# Flutter build artefacts not covered above
+/mobile/android/.gradle/
+/mobile/android/local.properties
+/mobile/.flutter-plugins*

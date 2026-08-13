@@ -26,9 +26,10 @@ modules switched on, sharing the same tenant, item and sale models. See
 
 ## Current state
 
-Milestone 1 is complete: tenant isolation, authentication and the platform
-console. There is no checkout yet — that is milestone 3. See
-[tasks.md](tasks.md) for what is done and what is next, and
+Milestones 1 and 2 are complete: tenant isolation, authentication, the platform
+console, the catalogue, stock, CSV import, and an Android till that signs in and
+browses. There is **no checkout yet** — selling, payments and offline queueing
+are milestone 3. See [tasks.md](tasks.md) for what is done and what is next, and
 [progress.md](progress.md) for a dated log of decisions.
 
 ---
@@ -128,12 +129,59 @@ curl -s localhost:8000/api/v1/tenant/setup/ \
 
 Mary can now sign in with her PIN from any till registered to this shop.
 
+### Filling a catalogue
+
+Onboarding is usually slowest at the product list, so there is a two-step CSV
+import: check the file, then commit it.
+
+```bash
+# Get a template with every column and two worked examples
+curl -s localhost:8000/api/v1/items/import/template/ \
+  -H "Authorization: Bearer $OWNER_TOKEN" -o items.csv
+
+# Check it. Nothing is written; you get a per-row report and a token.
+curl -s localhost:8000/api/v1/items/import/validate/ \
+  -H "Authorization: Bearer $OWNER_TOKEN" -F file=@items.csv
+
+# Import the rows that passed
+curl -s localhost:8000/api/v1/items/import/commit/ \
+  -H "Authorization: Bearer $OWNER_TOKEN" -F file=@items.csv -F token=$TOKEN
+```
+
+Rows that fail come back with the row number, the field and what to do about it.
+Valid rows still import — a file is rarely wrong all the way through.
+
+---
+
+## Running the app
+
+The Flutter till lives in [mobile/](mobile/). It signs in and browses the
+catalogue; selling arrives in milestone 3.
+
+```bash
+cd mobile
+flutter pub get
+flutter run                        # Android emulator reaches the API on 10.0.2.2
+flutter test                       # widget and unit tests
+flutter analyze
+```
+
+Pointing at a different API:
+
+```bash
+flutter run --dart-define=POS_API_URL=http://192.168.1.20:8000
+```
+
+On a physical device the emulator alias will not work — use the machine's LAN
+address as above.
+
 ---
 
 ## Running the tests
 
 ```bash
-docker compose exec api pytest
+docker compose exec api pytest     # backend
+cd mobile && flutter test          # client
 ```
 
 Useful variations:
@@ -153,7 +201,7 @@ docker compose run --rm api pytest
 
 ### What the tests guard
 
-Most of the suite is ordinary behavioural testing, but four groups exist
+Most of the suite is ordinary behavioural testing, but these exist
 specifically to stop a class of bug from ever shipping:
 
 | Test | Guards against |
@@ -162,6 +210,8 @@ specifically to stop a class of bug from ever shipping:
 | `test_tenant_isolation.py` | Isolation failing at the database level, including a tenant binding surviving onto a reused pooled connection. |
 | `test_cross_tenant_api.py` | Isolation failing at the API level — a view that looks a record up without scoping, or a payload that smuggles in another business's id. Also walks the URL conf to prove every platform route requires a platform administrator. |
 | `test_money.py` | Rounding errors. Every edge case where a cent could appear or vanish. |
+| `test_platform_read_boundary.py` | The one place a request may cross businesses. Asserts both directions at once, so neither isolation being off nor the console being broken can pass. |
+| `test_pin_lockout.py` | A four-digit PIN being guessable. Proves attempts are bounded in total, not just in rate. |
 
 The database role used by the tests is the same non-superuser, `NOBYPASSRLS`
 role used in development and production. Running the isolation suite as a role
@@ -211,6 +261,19 @@ everything marked below must be changed before a real deployment.
 | `PLATFORM_ADMIN_EMAIL` | | |
 | `TENANT_STATUS_CACHE_SECONDS` | `60` | How long a business's active/suspended status is trusted before being re-read. This is the worst-case delay before a suspension takes effect. |
 
+### Redis and till lockout
+
+| Variable | Default | Notes |
+|---|---|---|
+| `REDIS_URL` | `redis://cache:6379/0` | Holds suspension status and PIN lockout counters. Nothing is persisted; losing it costs one extra query per business. |
+| `PIN_LOCKOUT_MAX_ATTEMPTS` | `5` | Consecutive failures before a till is refused. |
+| `PIN_LOCKOUT_SECONDS` | `900` | How long the lockout lasts. |
+
+> A four-digit PIN is guessable in ten thousand tries, so a rate limit alone is
+> not enough — it caps how *fast* attempts arrive, not how many. The lockout caps
+> the total. See ARCHITECTURE for why a wrong *device token* deliberately does
+> not count towards it.
+
 ---
 
 ## Project layout
@@ -224,6 +287,11 @@ pos/
 ├── progress.md            dated log of work and decisions
 ├── docker-compose.yml     the one entry point
 ├── docker/postgres/init/  creates the non-superuser application role
+├── mobile/                Flutter till (Android first)
+│   └── lib/
+│       ├── core/          theme, API client, session storage
+│       ├── data/          models and repositories
+│       └── features/      auth and catalogue screens
 └── backend/
     ├── config/            settings, root URL conf
     ├── conftest.py        shared test fixtures
@@ -232,7 +300,8 @@ pos/
         ├── tenants/       businesses, modules, business-type templates
         ├── accounts/      users, roles, sign-in, registered tills
         ├── stores/        branches
-        ├── catalog/       items, categories, tax rates, barcodes
+        ├── catalog/       items, categories, tax rates, barcodes, CSV import
+        ├── inventory/     stock levels and the movement ledger
         └── platform_admin/  provisioning, usage, the operator's console
 ```
 

@@ -5,6 +5,80 @@ milestone.
 
 ---
 
+## [0.2.0] — 2026-08-13 — Milestone 2: catalogue, stock and the first till screens
+
+What a business sells and how much of it is on the shelf, plus an Android app
+that signs in and browses. No checkout yet — that is milestone 3.
+
+### Security
+
+- **Closed an isolation gap on five tables owned through a foreign key.**
+  Milestone 1's coverage test looked for a `tenant` *column*; these belong to a
+  business by way of a relation, and four of them are created by Django rather
+  than declared here, so a walk over our own models never saw them. Four were
+  harmless. `token_blacklist_outstandingtoken` was not: it stores the encoded
+  refresh token in a text column beside the user it was issued to, so a query
+  made while one business was bound could have read another's refresh tokens
+  verbatim.
+- Coverage test now resolves ownership transitively over foreign keys and
+  includes auto-created models, so this class of table cannot slip through
+  again.
+- Till lockout: five consecutive wrong PINs refuse that device for fifteen
+  minutes regardless of pacing, with a second counter per user so attempts
+  spread across tills still run out. Every failure goes to the audit trail.
+- Startup checks refuse to run with the published platform console path or the
+  development signing key, and warn about a per-process cache.
+
+### Added
+
+**Catalogue**
+- `Item` extended with `short_name`, `is_price_variable`, `is_available`,
+  `image` and `sort_order`.
+- Category, tax rate, item and barcode CRUD, scoped per business.
+- Several barcodes per item; any of them resolves to the item.
+- Search across name, short name, SKU and barcode, and a trimmed till endpoint.
+- Per-item tax breakdown, so mixed inclusive and exclusive pricing is visible
+  in the API rather than implied.
+
+**Stock**
+- `StockItem` per item per store, with a per-branch reorder level.
+- `StockMovement`, append-only, with the balance after each entry.
+- Adjustments by delta or counted total, requiring a reason, audited.
+- Low-stock endpoint, and a per-item ledger.
+
+**Bulk import**
+- Two-phase CSV import with per-row errors rather than all-or-nothing failure.
+- Upsert by SKU, several barcodes per row, opening stock through the ledger.
+- Unknown categories created and reported; unknown tax rates rejected per row.
+- Token tied to a hash of the file, expiring after an hour, and references
+  re-resolved at commit so anything renamed in between fails only its own row.
+- Downloadable template with a product and a service example.
+
+**Till application**
+- Flutter scaffold: Riverpod, dio, go_router, secure storage.
+- Business ID entry, device registration, password and PIN sign-in.
+- Read-only catalogue browse with category filter, search and barcode lookup.
+- 21 widget and unit tests.
+
+**Infrastructure**
+- Redis, serving the tenant status cache and lockout counters.
+- Scoped request throttles on both sign-in routes.
+
+### Fixed
+
+- Marking a new default tax rate stood the old one down *after* saving, so the
+  insert hit the partial unique index and returned a conflict for something the
+  caller was entitled to do.
+
+### Known gaps
+
+- No checkout, payments or offline queue yet.
+- No CI pipeline.
+- Camera barcode scanning is typed entry for now; most Kenyan counters use a
+  scanner that behaves as a keyboard.
+
+---
+
 ## [0.1.0] — 2026-08-13 — Milestone 1: tenant and auth foundation
 
 The foundation the rest of the platform sits on. Multiple independent

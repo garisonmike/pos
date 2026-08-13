@@ -19,7 +19,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from apps.accounts.models import Device, User
+from apps.accounts import lockout, services
+from apps.accounts.models import Device, User, hash_device_token
 from apps.accounts.serializers import (
     ChangePasswordSerializer,
     DeviceRegisterSerializer,
@@ -36,6 +37,7 @@ from apps.core.audit import record_audit
 from apps.core.models import AuditAction
 from apps.core.permissions import IsManagerOrAbove, IsOwner
 from apps.core.tenancy import tenant_context
+from apps.tenants.models import Tenant
 
 
 @extend_schema(tags=["auth"])
@@ -45,6 +47,7 @@ class TenantLoginView(APIView):
     permission_classes = [AllowAny]
     authentication_classes: list = []
     serializer_class = TenantLoginSerializer
+    throttle_scope = "login"
 
     @extend_schema(
         summary="Sign in",
@@ -97,43 +100,146 @@ class TenantLoginView(APIView):
 
 @extend_schema(tags=["auth"])
 class PinLoginView(APIView):
-    """Fast cashier switching on an already-registered till."""
+    """Fast cashier switching on an already-registered till.
+
+    Guarded by a lockout as well as a rate limit. A four-digit PIN is a space
+    of ten thousand, so capping how *fast* attempts arrive is not enough on its
+    own - a patient attacker with a stolen till just works within the cap. See
+    ``apps.accounts.lockout``.
+    """
 
     permission_classes = [AllowAny]
     authentication_classes: list = []
     serializer_class = PinLoginSerializer
+    throttle_scope = "pin-login"
 
     @extend_schema(
         summary="Sign in with a till PIN",
         description=(
             "Fast sign-in for a cashier taking over a till between customers. "
             "Requires a registered device token as well as the PIN, so it "
-            "cannot be used from an unregistered client."
+            "cannot be used from an unregistered client.\n\n"
+            "After several consecutive failures the till is locked for a "
+            "period and returns 429 with `retry_after_seconds`, regardless of "
+            "how slowly the attempts arrived. Every failure is written to the "
+            "business's audit trail."
         ),
         request=PinLoginSerializer,
-        responses={200: TokenPairSerializer, 400: OpenApiResponse(description="Refused")},
+        responses={
+            200: TokenPairSerializer,
+            400: OpenApiResponse(description="Refused"),
+            429: OpenApiResponse(description="Till locked after repeated failures"),
+        },
     )
     def post(self, request):
         serializer = PinLoginSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
-        user = serializer.validated_data["user"]
-        tenant = serializer.validated_data["tenant"]
-        device = serializer.validated_data["device"]
+        tenant = Tenant.objects.filter(slug=data["tenant_slug"]).first()
+        if tenant is None or not tenant.is_operational:
+            # Same message a wrong PIN gets, so the endpoint cannot be used to
+            # discover which businesses exist on the platform.
+            return Response(
+                {"detail": services.REFUSED_MESSAGE, "code": "pin_refused"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Counters are keyed on the hash of the device token rather than the
+        # device's primary key, so an attempt carrying a token that matches no
+        # device can still be counted.
+        device_key = hash_device_token(data["device_token"])
+        username = data["username"]
+
+        state = lockout.check(tenant.id, device_key, username)
+        if state.is_locked:
+            self._audit_failure(
+                request, tenant, username, reason="locked_out", attempts=state.attempts
+            )
+            return Response(
+                {
+                    "detail": (
+                        "This till is locked after too many incorrect PINs. "
+                        f"Try again in {state.retry_after_minutes} minute(s), "
+                        "or sign in with a password."
+                    ),
+                    "code": "pin_locked_out",
+                    "retry_after_seconds": state.retry_after_seconds,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        try:
+            result = services.authenticate_pin(
+                tenant=tenant,
+                device_token=data["device_token"],
+                username=username,
+                pin=data["pin"],
+            )
+        except services.PinAuthError as exc:
+            body = {"detail": exc.detail, "code": exc.code}
+            if exc.counts_towards_lockout:
+                failed = lockout.record_failure(tenant.id, device_key, username)
+                self._audit_failure(
+                    request, tenant, username, reason=exc.code, attempts=failed.attempts
+                )
+                if failed.is_locked:
+                    body = {
+                        "detail": (
+                            "This till is now locked after too many incorrect "
+                            f"PINs. Try again in {failed.retry_after_minutes} "
+                            "minute(s), or sign in with a password."
+                        ),
+                        "code": "pin_locked_out",
+                        "retry_after_seconds": failed.retry_after_seconds,
+                    }
+                    return Response(body, status=status.HTTP_429_TOO_MANY_REQUESTS)
+                body["attempts_remaining"] = lockout.attempts_remaining(failed)
+            else:
+                self._audit_failure(
+                    request, tenant, username, reason=exc.code, attempts=0
+                )
+            return Response(body, status=status.HTTP_400_BAD_REQUEST)
+
+        lockout.clear(tenant.id, device_key, username)
 
         with tenant_context(tenant.id):
             record_audit(
                 action=AuditAction.LOGIN,
-                entity=user,
-                actor=user,
+                entity=result.user,
+                actor=result.user,
                 request=request,
                 tenant_id=tenant.id,
-                after={"method": "pin", "device": str(device.pk)},
+                after={"method": "pin", "device": str(result.device.pk)},
             )
-            tokens = issue_tokens_for(user)
-            body = {**tokens, "user": UserSerializer(user).data}
+            tokens = issue_tokens_for(result.user)
+            body = {**tokens, "user": UserSerializer(result.user).data}
 
         return Response(body, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def _audit_failure(request, tenant, username: str, *, reason: str, attempts: int) -> None:
+        """Record a refused attempt against the business it was aimed at.
+
+        The cache decides whether to refuse the next attempt; this is the
+        durable record. A manager looking into a missing float needs to be able
+        to see that someone sat trying PINs on the front counter at 11pm, and a
+        counter that expires in fifteen minutes will not tell them that.
+
+        No user is attached even when the username exists, because at this point
+        the caller has not proved they are that person - filing the entry
+        against them would put failures in an innocent cashier's history.
+        """
+        with tenant_context(tenant.id):
+            record_audit(
+                action=AuditAction.LOGIN_FAILED,
+                entity_type="accounts.User",
+                entity_id=username,
+                request=request,
+                tenant_id=tenant.id,
+                reason=reason,
+                after={"method": "pin", "attempts": attempts},
+            )
 
 
 @extend_schema(tags=["auth"])

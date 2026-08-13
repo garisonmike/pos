@@ -8,6 +8,7 @@ tests pass without proving anything.
 """
 
 from .base import *  # noqa: F403
+from .base import REST_FRAMEWORK
 
 DEBUG = False
 
@@ -15,6 +16,9 @@ DEBUG = False
 # how long a hash takes to compute.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
+# Local memory rather than Redis, so the suite needs no second service running
+# and one test's lockout counters cannot bleed into the next. The lockout code
+# uses only the standard cache API, so it behaves identically on either backend.
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -25,3 +29,8 @@ CACHES = {
 # Tenant status changes must be observable immediately in tests rather than
 # after a cache window, so suspension tests assert behaviour and not timing.
 TENANT_STATUS_CACHE_SECONDS = 0
+
+# Throttles off by default: they count requests per address, and a test file
+# making dozens of sign-in calls would trip them for reasons unrelated to what
+# it is asserting. The tests that care about throttling turn them back on.
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {"pin-login": None, "login": None}

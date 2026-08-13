@@ -10,6 +10,7 @@ nothing to leak.
 from __future__ import annotations
 
 import pytest
+from django.core.cache import cache
 from django.db import transaction
 from rest_framework.test import APIClient
 
@@ -21,6 +22,20 @@ from apps.core.tenancy import bypass_rls, tenant_context
 from apps.stores.models import Store
 from apps.tenants.models import BusinessType, TenantStatus
 from apps.tenants.services import provision_tenant
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Start every test with an empty cache.
+
+    The cache holds till lockout counters and per-business suspension status.
+    Neither is rolled back with the database, so without this a test that
+    exhausts a device's PIN attempts would leave the next one locked out, and
+    the failure would appear in a test that never mentioned lockout.
+    """
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture

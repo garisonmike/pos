@@ -8,9 +8,7 @@ DEBUG = True
 # origin is unpredictable. Locked down properly in prod.py.
 CORS_ALLOW_ALL_ORIGINS = True
 
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "pos-dev",
-    }
-}
+# Cache comes from base: the Redis service in the compose file. Development
+# deliberately uses the same backend as production, because the till lockout
+# depends on counters being shared across processes and a local-memory cache
+# would hide that difference until it mattered.

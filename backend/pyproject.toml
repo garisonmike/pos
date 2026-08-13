@@ -13,6 +13,9 @@ dependencies = [
     "django-environ>=0.12,<0.13",
     "django-filter>=25.1",
     "django-cors-headers>=4.7,<5",
+    # Django's built-in Redis backend needs the client library; django-redis is
+    # not used, so there is one fewer layer between settings and the server.
+    "redis>=5.2,<6",
 ]
 
 [project.optional-dependencies]

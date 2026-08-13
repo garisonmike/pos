@@ -33,6 +33,20 @@ services:
       timeout: 3s
       retries: 20
 
+  cache:
+    image: redis:7-alpine
+    # Redis holds two things, both of which must survive an API restart but
+    # neither of which is worth persisting to disk: the per-business
+    # active/suspended status, and the failed-PIN counters behind till lockout.
+    # Losing the lot on a restart costs one extra status query per business and
+    # forgives any attempt counters mid-flight, so persistence is off.
+    command: redis-server --save "" --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
   api:
     build:
       context: ./backend
@@ -50,6 +64,9 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
+      REDIS_URL: ${REDIS_URL}
+      PIN_LOCKOUT_MAX_ATTEMPTS: ${PIN_LOCKOUT_MAX_ATTEMPTS}
+      PIN_LOCKOUT_SECONDS: ${PIN_LOCKOUT_SECONDS}
       JWT_ACCESS_TOKEN_LIFETIME_MINUTES: ${JWT_ACCESS_TOKEN_LIFETIME_MINUTES}
       JWT_REFRESH_TOKEN_LIFETIME_DAYS: ${JWT_REFRESH_TOKEN_LIFETIME_DAYS}
       PLATFORM_ADMIN_URL: ${PLATFORM_ADMIN_URL}
@@ -62,6 +79,8 @@ services:
       - "8000:8000"
     depends_on:
       db:
+        condition: service_healthy
+      cache:
         condition: service_healthy
 
 volumes:

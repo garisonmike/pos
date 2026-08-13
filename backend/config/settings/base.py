@@ -188,6 +188,34 @@ PLATFORM_ADMIN_EMAIL = env("PLATFORM_ADMIN_EMAIL", default="admin@example.com")
 # a busy till is not making an extra query on every request.
 TENANT_STATUS_CACHE_SECONDS = env.int("TENANT_STATUS_CACHE_SECONDS", default=60)
 
+# Redis backs the tenant status cache and the till lockout counters. Both are
+# process-shared state: with more than one API worker, a per-process cache
+# would let each worker keep its own view of whether a business is suspended,
+# and would give an attacker one full set of PIN attempts per worker.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env("REDIS_URL", default="redis://cache:6379/0"),
+        "KEY_PREFIX": "pos",
+    }
+}
+
+# Till PIN lockout. See apps.accounts.lockout for why this is a lockout rather
+# than only a request-rate limit.
+PIN_LOCKOUT_MAX_ATTEMPTS = env.int("PIN_LOCKOUT_MAX_ATTEMPTS", default=5)
+PIN_LOCKOUT_SECONDS = env.int("PIN_LOCKOUT_SECONDS", default=900)
+
+# Blunt outer limits on the sign-in routes, independent of the lockout above.
+# The lockout stops one device being ground down; these stop a caller working
+# through many devices or business slugs from one address.
+REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = (
+    "rest_framework.throttling.ScopedRateThrottle",
+)
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+    "pin-login": env("THROTTLE_PIN_LOGIN", default="20/min"),
+    "login": env("THROTTLE_LOGIN", default="30/min"),
+}
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

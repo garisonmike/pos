@@ -13,11 +13,10 @@ from __future__ import annotations
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from django.utils import timezone
 from rest_framework import serializers
 
 from apps.accounts.constants import UserRole
-from apps.accounts.models import Device, User, hash_device_token
+from apps.accounts.models import Device, User
 from apps.core.tenancy import tenant_context
 from apps.tenants.models import Tenant
 
@@ -182,44 +181,18 @@ class PinLoginSerializer(serializers.Serializer):
     A four-digit PIN alone would be trivially guessable; combined with
     possession of a registered till it is a reasonable way to attribute sales
     to the right cashier without a password between every customer.
+
+    This validates the shape of the request only. The credential check itself
+    is in ``apps.accounts.services.authenticate_pin``, because the view has to
+    distinguish a locked-out till from a wrong PIN from an unregistered device,
+    and apply the lockout counters in between - none of which fits inside a
+    serializer that can only pass or raise.
     """
 
     tenant_slug = serializers.SlugField()
     device_token = serializers.CharField(write_only=True)
     username = serializers.CharField()
     pin = serializers.CharField(write_only=True, trim_whitespace=False)
-
-    _REFUSED = "That PIN was not recognised on this device."
-
-    def validate(self, attrs: dict) -> dict:
-        tenant = Tenant.objects.filter(slug=attrs["tenant_slug"]).first()
-        if tenant is None or not tenant.is_operational:
-            raise serializers.ValidationError({"detail": self._REFUSED})
-
-        with tenant_context(tenant.id):
-            device = Device.objects.filter(
-                token_hash=hash_device_token(attrs["device_token"]),
-                is_active=True,
-            ).first()
-            if device is None:
-                raise serializers.ValidationError(
-                    {"detail": "This till is not registered, or its access was revoked."}
-                )
-
-            user = User.objects.filter(
-                tenant=tenant, username=attrs["username"], is_active=True
-            ).first()
-            if user is None or not user.check_pin(attrs["pin"]):
-                raise serializers.ValidationError({"detail": self._REFUSED})
-
-            device.touch()
-            user.last_pin_login_at = timezone.now()
-            user.save(update_fields=["last_pin_login_at", "updated_at"])
-
-        attrs["user"] = user
-        attrs["tenant"] = tenant
-        attrs["device"] = device
-        return attrs
 
 
 class PlatformLoginSerializer(serializers.Serializer):

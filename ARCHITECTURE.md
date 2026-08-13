@@ -208,6 +208,110 @@ the second with a real committed transaction rather than a test-wrapped one.
 `is_local` silently does nothing and every query would come back empty for
 reasons that are very hard to find.
 
+### Tables that belong to a business indirectly
+
+A table can hold one business's rows without carrying a `tenant_id`, if it
+points at something that does. Milestone 1's coverage test only looked for a
+direct `tenant` column, so it walked straight past five such tables — all
+created by Django or a third-party app rather than declared in this codebase:
+
+| Table | Belongs to a business via | Consequence if unprotected |
+|---|---|---|
+| `token_blacklist_outstandingtoken` | `user_id` | **Stores the encoded refresh token itself in a text column.** A query made while one business was bound could read another's refresh tokens verbatim. |
+| `token_blacklist_blacklistedtoken` | the row above | Inherits that exposure. |
+| `accounts_user_groups` | `user_id` | Group membership across businesses. Empty in practice — roles are a field, not Django groups. |
+| `accounts_user_user_permissions` | `user_id` | As above. |
+| `django_admin_log` | `user_id` | Console activity. Its rows reference platform administrators, who have no business. |
+
+Four were harmless in practice. The first was not: it is a credential
+disclosure, not metadata.
+
+These are protected with `enable_rls_via()`, which defines visibility by the
+parent's visibility rather than by copying the tenant rule:
+
+```sql
+EXISTS (SELECT 1 FROM accounts_user p WHERE p.id = token_blacklist_outstandingtoken.user_id)
+OR COALESCE(current_setting('app.bypass_rls', true), '') = 'on'
+```
+
+The subquery is evaluated as the querying role, so the parent's own policy
+applies inside it. A row whose parent is invisible is therefore invisible too,
+and the rule stays correct automatically if the tenant predicate ever changes —
+there is no second copy to keep in step.
+
+The coverage test now resolves ownership **transitively** over foreign keys,
+across `apps.get_models(include_auto_created=True)` so the join tables Django
+creates for itself are included. A table reaching a business through any depth
+of relation must carry a policy or the build fails.
+
+### How the platform reads across businesses
+
+There are two distinct mechanisms, and it is worth being precise about which
+applies where, because the answer is not the same for every table.
+
+**The registry is simply not protected.** `tenants_tenant` carries no policy at
+all. It is what isolation is *defined against*: sign-in resolves a business by
+slug before any business is bound, so a policy here would make signing in
+impossible. Access is an application-layer concern instead — only the platform
+surfaces list it, and a business reads exactly one row, its own.
+
+**Everything else is protected, and the console sets a flag.** Every
+business-owned table has a policy permitting a row when the bound tenant matches
+**or** when the session flag `app.bypass_rls` is on.
+`TenantBindingMiddleware` sets that flag for exactly two URL prefixes — the
+console and `/api/v1/platform/` — and every view behind them independently
+requires `IsPlatformAdmin`. Nothing else in the system can turn it on, and a
+test walks the URL conf to prove no route there is left open.
+
+So a cross-tenant read is never an absence of protection. It is a protected
+table plus an explicitly set flag, on a route that requires the platform
+operator, inside one transaction.
+
+Both directions are asserted together in
+`apps/core/tests/test_platform_read_boundary.py`. Proving only that the operator
+can read everything would still pass with isolation switched off entirely;
+proving only that a business sees its own rows would still pass with the console
+broken. The pair is what pins the boundary down.
+
+### The escape hatch: migrations and backfills
+
+A data migration, a management command or a shell session has no request and
+therefore no bound business — so it sees **nothing at all**. That is the safe
+default, but it is a confusing one to meet, because a migration that updates
+zero rows reports success:
+
+```python
+# Silently touches nothing. Not an error.
+Item.all_objects.all().update(cost_cents=0)
+```
+
+Two supported shapes, depending on the work:
+
+```python
+# Genuinely cross-business: one pass over everything.
+from django.db import transaction
+from apps.core.tenancy import bypass_rls
+
+with transaction.atomic(), bypass_rls():
+    Item.all_objects.all().update(...)
+
+# Per-business work: bind each in turn. Preferable where it fits, because
+# each iteration is confined and a bug cannot spill across businesses.
+from apps.core.tenancy import tenant_context
+
+for tenant_id in Tenant.objects.values_list("id", flat=True):
+    with transaction.atomic(), tenant_context(tenant_id):
+        ...
+```
+
+The transaction is required, not stylistic: the underlying setting is
+transaction-scoped, and `tenant_context()` raises rather than let a binding be
+made that silently does nothing. Inside a `RunPython`, Django already provides
+the transaction, so `bypass_rls()` alone is enough.
+
+Both shapes, and the zero-rows failure mode, are covered by tests in the
+boundary file above.
+
 ### The bypass, and keeping it small
 
 `bypass_rls()` lifts isolation. It is used by exactly two things: the platform
@@ -324,6 +428,34 @@ accepted only alongside a registered device token, so possession of the till is
 the other half. PIN sign-in cannot be used from an arbitrary client. Device
 tokens are 32 bytes of system randomness, stored as a SHA-256 hash, and shown
 in plaintext exactly once at registration.
+
+**PIN sign-in is bounded in total, not just in rate.** A rate limit caps how
+*fast* attempts arrive; it does not cap how *many*. Against a four-digit space,
+a patient attacker holding a stolen till simply works within the limit. So there
+is a lockout as well: five consecutive failures and that till is refused for
+fifteen minutes, however slowly the attempts came in, and the correct PIN does
+not help while it lasts.
+
+Two counters, because there are two attacks. A **device** counter stops many
+PINs being tried against one till — the stolen-tablet case. A **user** counter
+stops one cashier's PIN being tried across several tills, which a per-device
+limit alone would miss entirely. They are independent: locking one till leaves
+the shop trading on another, while locking a cashier follows them everywhere.
+
+An unregistered device token is deliberately **not** counted. Counting it would
+let anyone lock out a till they cannot otherwise touch by sending rubbish
+tokens, turning the protection into a way to stop a shop trading.
+
+Counters live in Redis rather than the database — they are high-frequency,
+worthless once expired, and must be shared across API workers, since a
+per-process count would hand an attacker the full allowance once per worker.
+Every failure is also written to the audit trail, which is the durable record: a
+manager investigating a missing float needs to see that someone sat trying PINs
+at eleven at night, and a counter that expires in fifteen minutes will not tell
+them that. The entry is filed against the *username string*, with no user
+attached, because at that point nobody has proved they are that person and
+filing it against them would put someone else's guessing into an innocent
+cashier's history.
 
 **Roles are ordered**, so checks read as "this role or above":
 
@@ -512,6 +644,27 @@ recording.
 | **Riverpod** | Testable state management without a widget tree, so the sync and cart logic can be unit-tested away from the UI. |
 | **JWT over sessions** | Stateless, so a network drop does not invalidate anything server-side, and a refresh token lets a till run for a fortnight. |
 | **Django admin as the platform console** | Everything the operator needs is CRUD over a handful of models. The REST endpoints exist alongside it, so a purpose-built dashboard later is additive rather than a rewrite. |
+| **Redis** | Two pieces of state that must be shared across worker processes and are worthless once expired: per-business suspension status, and PIN lockout counters. A per-process cache would let each worker keep its own view of both, which would quietly weaken the lockout. |
+
+### Failing loudly on unchanged configuration
+
+Some settings are harmless in development, must be changed before deployment,
+and give no visible sign when they have not been. Those are guarded by Django's
+own check framework, registered at `Error` level so `runserver`, `migrate` and
+every management command refuse to run — which usefully means a bad
+configuration fails the deployment's migrate step, not just the web process.
+
+| Check | Guards |
+|---|---|
+| `pos.E001` | `PLATFORM_ADMIN_URL` still the placeholder published in `.env.example` |
+| `pos.E002` | It set to `admin/`, or empty, which would mount the console at the site root |
+| `pos.E003` | `SECRET_KEY` still the development value — it signs every access token on the platform |
+| `pos.W001` | A per-process cache in a deployment, which weakens PIN lockout |
+
+All are inert when `DEBUG` is on: the placeholders are the point in development,
+and failing locally would be friction with no security benefit. The placeholder
+stays in `.env.example` as documentation of the expected shape — the check is
+what makes forgetting to change it loud rather than silent.
 
 ---
 

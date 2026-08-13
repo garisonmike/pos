@@ -98,23 +98,60 @@ rather than planned up front.
 
 ---
 
-## Milestone 2 — Generic catalog and inventory
+## Milestone 2 — Catalog, inventory, first Flutter screens · [#2](https://github.com/garisonmike/pos/issues/2)
 
-- [ ] GitHub issue with scope and acceptance criteria
-- [ ] Category CRUD
-- [ ] Tax rate CRUD, enforcing one default per business
-- [ ] Item CRUD covering both products and services
-- [ ] Barcode management, several per item
-- [ ] Item search and barcode lookup endpoints, tuned for the till
-- [ ] Item images
-- [ ] `StockItem` per item per store
-- [ ] `StockMovement` append-only ledger
-- [ ] Stock adjustments, manager and above, reason required
-- [ ] Low-stock thresholds and an alerts endpoint
-- [ ] Stock take / recount flow
-- [ ] Bulk item import from CSV
-- [ ] Retail template working end to end before any other business type
-- [ ] Tests: stock ledger arithmetic, negative-stock handling, isolation on every new table
+### Carried over from milestone 1's sign-off
+- [x] Redis in the compose file, serving the tenant status cache and lockout
+- [x] PIN lockout: 5 failures on a device refuses it for 15 minutes, `429` with `retry_after_seconds`
+- [x] A second counter per user, so attempts spread across tills still run out
+- [x] Unregistered device tokens deliberately excluded from the count, so nobody can lock a till they cannot touch
+- [x] Every failed attempt written to the audit trail, filed against the username and never the user
+- [x] Scoped request throttles on both sign-in routes
+- [x] `pos.E001`/`E002` boot checks on `PLATFORM_ADMIN_URL`, `pos.E003` on `SECRET_KEY`, `pos.W001` on a per-process cache
+- [x] Cross-tenant read boundary proved in both directions in one file
+- [x] ARCHITECTURE: how the platform reads across businesses, and the migration/backfill escape hatch
+- [x] **RLS gap closed on five tables owned indirectly** *(discovered: the milestone 1 coverage test only looked for a direct `tenant` column. `token_blacklist_outstandingtoken` stores the encoded refresh token itself against a user id, so a tenant-scoped query could have read another business's refresh tokens verbatim. Also `token_blacklist_blacklistedtoken`, `accounts_user_groups`, `accounts_user_user_permissions`, `django_admin_log`.)*
+- [x] Coverage test widened to resolve ownership transitively over foreign keys, including Django's auto-created join tables
+
+### Catalog
+- [ ] `Item` extensions: `is_price_variable`, `is_available`, `short_name`, `image`, `sort_order`
+- [ ] Category CRUD, scoped per business
+- [ ] TaxRate CRUD, one default per business enforced
+- [ ] Item CRUD covering products and services
+- [ ] Several barcodes per item, any of which resolves to the item
+- [ ] Search and barcode lookup tuned for the till
+- [ ] Mixed inclusive/exclusive tax totalling correctly, rounding edges tested
+
+### Inventory
+- [ ] `StockItem` per item per store, with `reorder_level`
+- [ ] `StockMovement` append-only ledger with `balance_after`
+- [ ] Adjustments requiring a reason, manager and above, audited
+- [ ] Low-stock endpoint
+
+### CSV import
+- [ ] Validate then commit, per-row errors rather than all-or-nothing
+- [ ] Upsert by SKU, several barcodes per row
+- [ ] Unknown categories created and reported; unknown tax rates rejected per row
+- [ ] Validate token expires after an hour
+- [ ] Commit re-checks every referenced category and tax rate, failing changed rows individually
+- [ ] Downloadable template and documented column spec
+
+### Flutter
+- [ ] Scaffold: Riverpod, dio, go_router, secure storage
+- [ ] Business slug entry, device registration, PIN sign-in
+- [ ] Read-only catalogue browse, search, barcode lookup
+- [ ] Widget tests on the auth flow and the item list
+
+### Close
+- [ ] Isolation tests on every new table, to milestone 1's bar
+- [ ] Retail template proven end to end
+- [ ] Docs, changelog, issue closed with a summary
+
+---
+
+### Deferred out of milestone 2
+- [ ] Stock take / recount flow *(moved: the adjustment path covers the immediate need; a guided full recount is its own screen)*
+- [ ] Item images beyond a single upload field
 
 ## Milestone 3 — Sales and checkout
 

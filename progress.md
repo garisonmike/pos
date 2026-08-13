@@ -5,6 +5,84 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-13 — Milestone 2 close-outs: Redis, lockout, boot checks, and an isolation gap
+
+**Worked on:** the three items carried over from milestone 1's sign-off, before
+touching any catalog code.
+
+**Finished:**
+
+- Redis in the compose file, backing both the tenant status cache and the new
+  lockout counters. Development now uses the same cache backend as production,
+  because the lockout depends on counters being shared across processes and a
+  local-memory cache would hide that difference until it mattered.
+- PIN lockout with two counters: five failures on a device refuses it for
+  fifteen minutes, and a second per-user counter catches attempts spread across
+  several tills. Every failure goes to the audit trail. Scoped request throttles
+  sit on top as a blunt outer limit.
+- Startup checks that refuse to run with an unchanged platform console path or
+  the development signing key, and warn about a per-process cache.
+- One test file proving the cross-tenant read boundary in both directions, and
+  an ARCHITECTURE section on how it works plus the migration/backfill escape
+  hatch.
+
+249 tests passing, up from 201.
+
+### The isolation gap was worse than I flagged
+
+I said the coverage test had missed two empty Django join tables. Checking
+properly against the live catalogue, it had missed **five** tables — and one of
+them was not harmless:
+
+```
+token_blacklist_outstandingtoken   user_id -> accounts_user   rls=f
+  columns: id, token TEXT, created_at, expires_at, user_id, jti
+```
+
+That table stores the **encoded refresh token itself**, in a text column, next
+to the id of the user it was issued to. With no policy on it, a query made while
+one business was bound could have read another business's refresh tokens
+verbatim — a credential disclosure, not metadata. The other four
+(`token_blacklist_blacklistedtoken`, the two `PermissionsMixin` join tables, and
+`django_admin_log`) were the harmless kind I originally described.
+
+The cause is worth stating because it generalises: milestone 1's coverage test
+looked for models with a `tenant` **column**. All five of these belong to a
+business through a **foreign key** instead, and four of them are not declared
+anywhere in this codebase — Django creates them itself, so a walk over ordinary
+models never sees them.
+
+Fixed with `enable_rls_via()`, which defines a row's visibility as its parent's
+visibility rather than copying the tenant predicate, so the rule cannot drift
+out of step. The coverage test now resolves ownership transitively over foreign
+keys and includes auto-created models. Verified against a live database: bound
+to one business, one of six refresh tokens is visible and none belong to anyone
+else.
+
+### Decisions worth sanity-checking
+
+**An unregistered device token does not count towards lockout.** Counting it
+would let anyone lock a till they cannot otherwise touch by sending rubbish
+tokens, which turns a protection into a way to stop a shop trading. A wrong PIN
+counts; a wrong token does not.
+
+**Failed attempts are filed against the username string, with no user
+attached.** At that point nobody has proved they are that person, and attaching
+them would put someone else's guessing into an innocent cashier's history —
+exactly the record a manager might later read as evidence against them.
+
+**Locking a cashier follows them across tills; locking a till does not follow
+the cashier.** Two independent dimensions. My first version of the device-scope
+test contradicted its own comment by reusing one cashier on both tills, and
+failed correctly.
+
+### Open question
+
+Nothing blocking. Next up is catalog code proper, starting with the `Item`
+extensions.
+
+---
+
 ## 2026-08-13 — Milestone 1: tenant and auth foundation
 
 **Worked on:** the whole of milestone 1 — repository skeleton, Docker setup,

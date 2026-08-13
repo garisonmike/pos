@@ -13,11 +13,15 @@ If one of these fails, the fix is almost always to add
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 import pytest
 from django.apps import apps
-from django.db import connection, models
+from django.db import connection, models, transaction
+from django.utils import timezone
 
 from apps.core.db.rls import POLICY_NAME
+from apps.core.tenancy import bypass_rls, tenant_context
 
 pytestmark = pytest.mark.django_db
 
@@ -117,6 +121,104 @@ def test_tables_reaching_a_tenant_indirectly_are_also_protected():
         f"through a foreign key - but carry no isolation policy: {missing}. "
         "Protect each with enable_rls() or enable_rls_via() in a migration."
     )
+
+
+class TestNullableParentReferencesFailClosed:
+    """A row whose parent link is null must be invisible, not universally visible.
+
+    ``enable_rls_via`` defines visibility as ``EXISTS (SELECT 1 FROM parent ...)``.
+    With a null foreign key that subquery matches nothing, so the row is hidden
+    from every business - which is the direction a mistake here has to fall.
+
+    This is not hypothetical for the table used below.
+    ``token_blacklist_outstandingtoken.user_id`` is nullable, and the row holds
+    an encoded refresh token. When a user is removed the token row can outlive
+    them, and an orphaned credential that became visible to *everyone* rather
+    than *no one* would be considerably worse than the gap this policy closed.
+
+    The bypass clause is what keeps such a row reachable at all, so the platform
+    operator can still find and clear it.
+    """
+
+    @staticmethod
+    def _orphan_token():
+        """An outstanding token with no user, as a deleted account would leave.
+
+        Written under bypass because the policy's WITH CHECK refuses it
+        otherwise - which is itself the write-side half of failing closed.
+        """
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+        with transaction.atomic(), bypass_rls():
+            return OutstandingToken.objects.create(
+                user=None,
+                jti="orphaned-jti-for-test",
+                token="fake.refresh.token",
+                created_at=timezone.now(),
+                expires_at=timezone.now() + timedelta(days=1),
+            )
+
+    def test_an_orphaned_row_is_invisible_to_the_business_it_came_from(self, tenant_a):
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+        orphan = self._orphan_token()
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            assert not OutstandingToken.objects.filter(pk=orphan.pk).exists()
+
+    def test_an_orphaned_row_is_invisible_to_every_other_business(
+        self, tenant_a, tenant_b
+    ):
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+        orphan = self._orphan_token()
+
+        for tenant in (tenant_a, tenant_b):
+            with transaction.atomic(), tenant_context(tenant.id):
+                assert not OutstandingToken.objects.filter(pk=orphan.pk).exists()
+
+    def test_an_orphaned_row_is_invisible_with_no_business_bound(self):
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+        orphan = self._orphan_token()
+
+        with transaction.atomic(), tenant_context(None):
+            assert not OutstandingToken.objects.filter(pk=orphan.pk).exists()
+
+    def test_an_orphaned_row_is_still_visible_to_the_platform(self):
+        """Hidden from every business, but not lost.
+
+        Without the bypass clause in the policy the row would be unreachable by
+        any query at all, leaving a stored credential that nobody could find to
+        revoke.
+        """
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+        orphan = self._orphan_token()
+
+        with transaction.atomic(), bypass_rls():
+            assert OutstandingToken.objects.filter(pk=orphan.pk).exists()
+
+    def test_a_row_with_a_parent_is_visible_only_to_that_parents_business(
+        self, tenant_a, tenant_b, cashier_a
+    ):
+        """The ordinary case, alongside the null case, so the pair reads together."""
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            owned = OutstandingToken.objects.create(
+                user=cashier_a,
+                jti="owned-jti-for-test",
+                token="fake.refresh.token",
+                created_at=timezone.now(),
+                expires_at=timezone.now() + timedelta(days=1),
+            )
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            assert OutstandingToken.objects.filter(pk=owned.pk).exists()
+
+        with transaction.atomic(), tenant_context(tenant_b.id):
+            assert not OutstandingToken.objects.filter(pk=owned.pk).exists()
 
 
 def test_every_tenant_table_has_an_isolation_policy():

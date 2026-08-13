@@ -178,6 +178,20 @@ class PinLoginView(APIView):
             )
         except services.PinAuthError as exc:
             body = {"detail": exc.detail, "code": exc.code}
+            # DO NOT simplify this to "count every failure". The branch is
+            # load-bearing: a wrong PIN counts, an unrecognised device token
+            # does not.
+            #
+            # A device token is 32 bytes of system randomness, so a wrong one is
+            # not evidence of anyone guessing a PIN - there is nothing to guess.
+            # But counting it would mean anyone who can reach this endpoint could
+            # lock out a till they have no other access to, just by posting
+            # rubbish tokens with a real business slug and username. That turns a
+            # protection against theft into a way to stop a shop trading, which
+            # is a denial of service any passer-by could run from a phone.
+            #
+            # The rate throttle is what bounds unrecognised-token traffic; the
+            # lockout is only for failures against a till that genuinely exists.
             if exc.counts_towards_lockout:
                 failed = lockout.record_failure(tenant.id, device_key, username)
                 self._audit_failure(
@@ -233,6 +247,21 @@ class PinLoginView(APIView):
         with tenant_context(tenant.id):
             record_audit(
                 action=AuditAction.LOGIN_FAILED,
+                # DO NOT "tidy" this into entity=user with an actor FK, even
+                # though the username usually matches a real person and the
+                # lookup is right there.
+                #
+                # A failed sign-in proves only that someone typed this name. It
+                # does not prove they are that person - in fact the likeliest
+                # reading of a run of these is that somebody else was guessing.
+                # Attaching the user would file that run in an innocent
+                # cashier's history, and this trail is exactly what a manager
+                # reads when a float goes missing. The wrong FK here becomes
+                # evidence against the victim.
+                #
+                # So the username is kept as a plain string: enough to see what
+                # was tried, not enough to imply who tried it. record_audit also
+                # leaves actor null because no authenticated user exists here.
                 entity_type="accounts.User",
                 entity_id=username,
                 request=request,

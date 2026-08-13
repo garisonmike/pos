@@ -101,6 +101,11 @@ def check(tenant_id, device_id, username: str = "") -> LockoutState:
 def record_failure(tenant_id, device_id, username: str = "") -> LockoutState:
     """Count a failed attempt and report the resulting state.
 
+    Only call this for failures that are evidence of guessing - a wrong PIN
+    against a device that exists. The caller decides; see the branch in
+    ``PinLoginView.post`` for why an unrecognised device token must not reach
+    here, and what breaks if it does.
+
     The window is refreshed on every failure rather than counting within a fixed
     window from the first one. An attacker who paces attempts to straddle a
     fixed window would otherwise never accumulate enough to trip the limit.

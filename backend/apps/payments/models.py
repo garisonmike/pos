@@ -1,0 +1,335 @@
+"""
+M-Pesa: credentials, payment intents, and every callback ever received.
+
+The idempotency design lives in the constraints on these tables, so it is worth
+reading them as a set. Four keys, each catching a different real failure:
+
+``PaymentIntent.client_uuid``
+    The till retrying an initiation after a timeout. Same uuid returns the
+    existing intent instead of sending a second push at the customer's phone.
+
+``PaymentIntent.checkout_request_id``
+    Two intents claiming the same Daraja push.
+
+``MpesaCallback.checkout_request_id``
+    Safaricom retrying a callback, which it does routinely.
+
+``Payment.mpesa_receipt_number`` (in ``apps.sales``)
+    One real movement of money credited twice by any path at all. The last line
+    of defence: even if every check above were bypassed, the same M-Pesa receipt
+    cannot be applied to a business twice.
+
+Nothing here is ever deleted. A callback that is rejected is stored with the
+reason, because "we received this and refused it" is a materially different
+record from "we never received it" when a customer is standing at a counter
+insisting they paid.
+"""
+
+from __future__ import annotations
+
+import secrets
+import uuid
+
+from django.db import models
+from django.utils import timezone
+
+from apps.core.models import TenantOwnedModel, TimeStampedModel, UUIDModel
+from apps.payments.fields import EncryptedTextField
+
+
+class DarajaEnvironment(models.TextChoices):
+    """Which Safaricom environment a tenant's credentials belong to."""
+
+    SANDBOX = "SANDBOX", "Sandbox"
+    PRODUCTION = "PRODUCTION", "Production"
+
+
+class MpesaCredential(TenantOwnedModel, UUIDModel, TimeStampedModel):
+    """One business's Daraja credentials.
+
+    Per tenant, not per platform. Safaricom issues production credentials to a
+    registered business, not to whoever runs the software, so every shop brings
+    their own - and one shop's credentials must never be usable to take money
+    into another shop's account.
+
+    The secrets are encrypted at rest and never returned by any serializer. The
+    audit trail redacts them by substring, which is why that fix landed before
+    this model existed.
+    """
+
+    shortcode = models.CharField(
+        max_length=16, help_text="Paybill or till number money is paid into."
+    )
+    consumer_key = EncryptedTextField()
+    consumer_secret = EncryptedTextField()
+    passkey = EncryptedTextField(help_text="Used to sign the STK push password.")
+
+    environment = models.CharField(
+        max_length=12,
+        choices=DarajaEnvironment.choices,
+        default=DarajaEnvironment.SANDBOX,
+        help_text=(
+            "Sandbox until Safaricom issues the business its production "
+            "credentials, which happens on their timeline rather than ours."
+        ),
+    )
+    is_active = models.BooleanField(default=True)
+
+    allowed_callback_ips = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "Safaricom source addresses accepted for callbacks. Required on "
+            "production, optional on sandbox where no real money moves."
+        ),
+    )
+
+    last_verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When these credentials last successfully obtained a token.",
+    )
+    last_error = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "payments_mpesa_credential"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant"], name="one_mpesa_credential_per_tenant"
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.shortcode} ({self.environment})"
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment == DarajaEnvironment.PRODUCTION
+
+    @property
+    def base_url(self) -> str:
+        return (
+            "https://api.safaricom.co.ke"
+            if self.is_production
+            else "https://sandbox.safaricom.co.ke"
+        )
+
+    @property
+    def requires_ip_allowlist(self) -> bool:
+        """Whether callbacks must come from a known address.
+
+        Mandatory on production, where a forged callback would mark a real sale
+        paid for money nobody sent. Optional on sandbox, where nothing moves and
+        requiring it would only make the thing harder to try out.
+        """
+        return self.is_production
+
+
+class IntentState(models.TextChoices):
+    """Where a payment intent has got to."""
+
+    PENDING = "PENDING", "Waiting for the customer"
+    SUCCEEDED = "SUCCEEDED", "Paid"
+    FAILED = "FAILED", "Refused or cancelled"
+    EXPIRED = "EXPIRED", "No answer in time"
+
+
+class PaymentIntent(TenantOwnedModel, UUIDModel, TimeStampedModel):
+    """One STK push: an attempt to take money for one sale."""
+
+    sale = models.ForeignKey(
+        "sales.Sale", on_delete=models.PROTECT, related_name="payment_intents"
+    )
+
+    client_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        help_text=(
+            "Generated by the till before the request. Retrying with the same "
+            "uuid returns this intent rather than sending a second prompt to the "
+            "customer's phone."
+        ),
+    )
+
+    amount_cents = models.BigIntegerField()
+    phone = models.CharField(max_length=32, help_text="Where the prompt is sent.")
+
+    # Assigned by Daraja when it accepts the push.
+    checkout_request_id = models.CharField(max_length=64, blank=True, db_index=True)
+    merchant_request_id = models.CharField(max_length=64, blank=True)
+
+    callback_token = models.CharField(
+        max_length=64,
+        unique=True,
+        editable=False,
+        help_text=(
+            "Embedded in the callback URL sent to Safaricom. A callback carries "
+            "no tenant, so this is what lets an unauthenticated request resolve "
+            "to one business and one sale before anything is bound."
+        ),
+    )
+
+    state = models.CharField(
+        max_length=12, choices=IntentState.choices, default=IntentState.PENDING, db_index=True
+    )
+    result_code = models.IntegerField(null=True, blank=True)
+    result_description = models.TextField(blank=True)
+
+    expires_at = models.DateTimeField(
+        help_text=(
+            "An STK prompt lapses in about a minute. Past this the intent stops "
+            "blocking a retry, and the reconciliation job asks Safaricom what "
+            "actually happened."
+        )
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
+    reconciled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the outcome was confirmed by querying Daraja rather than by a callback.",
+    )
+
+    initiated_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        related_name="payment_intents",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "payments_payment_intent"
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "client_uuid"], name="unique_intent_client_uuid_per_tenant"
+            ),
+            models.UniqueConstraint(
+                fields=["tenant", "checkout_request_id"],
+                condition=~models.Q(checkout_request_id=""),
+                name="unique_checkout_request_per_tenant",
+            ),
+        ]
+        indexes = [models.Index(fields=["tenant", "state", "-created_at"])]
+
+    def __str__(self) -> str:
+        return f"{self.amount_cents} to {self.phone} ({self.state})"
+
+    @staticmethod
+    def new_callback_token() -> str:
+        return secrets.token_urlsafe(32)
+
+    @property
+    def is_pending(self) -> bool:
+        return self.state == IntentState.PENDING
+
+    @property
+    def has_lapsed(self) -> bool:
+        """Whether the prompt window has passed without an answer."""
+        return self.is_pending and timezone.now() >= self.expires_at
+
+
+class CallbackOutcome(models.TextChoices):
+    """What was done with a callback when it arrived."""
+
+    APPLIED = "APPLIED", "Payment credited"
+    DUPLICATE = "DUPLICATE", "Already seen, ignored"
+    FAILED_PAYMENT = "FAILED_PAYMENT", "Customer did not pay"
+    SUSPECT = "SUSPECT", "Held for a person to check"
+
+
+class SuspectReason(models.TextChoices):
+    """Why a callback was not acted on.
+
+    Every one of these means real money may be sitting unapplied, so none of
+    them is silently dropped.
+    """
+
+    UNKNOWN_TOKEN = "UNKNOWN_TOKEN", "No intent matches this callback URL"
+    REQUEST_ID_MISMATCH = "REQUEST_ID_MISMATCH", "Checkout request id does not match the intent"
+    AMOUNT_MISMATCH = "AMOUNT_MISMATCH", "Amount does not match the intent"
+    SALE_NOT_AWAITING = "SALE_NOT_AWAITING", "Sale is no longer awaiting payment"
+    UNTRUSTED_SOURCE = "UNTRUSTED_SOURCE", "Came from an address not on the allowlist"
+    INTENT_ALREADY_SETTLED = "INTENT_ALREADY_SETTLED", "Intent was already resolved"
+
+
+class MpesaCallback(TenantOwnedModel, UUIDModel, TimeStampedModel):
+    """Every callback received, whatever was done with it.
+
+    A complete record rather than only the ones that worked. When a customer
+    insists they paid, the useful answer is "we received this at 14:02 and
+    refused it because the sale had been voided at 14:01" - which requires
+    keeping the refusals.
+
+    ``checkout_request_id`` is unique, so Safaricom retrying a callback hits the
+    constraint and the second arrival is recorded as a duplicate instead of
+    crediting the sale again.
+    """
+
+    intent = models.ForeignKey(
+        PaymentIntent,
+        on_delete=models.PROTECT,
+        related_name="callbacks",
+        null=True,
+        blank=True,
+        help_text="Null when the callback token matched nothing at all.",
+    )
+
+    checkout_request_id = models.CharField(max_length=64, blank=True)
+    merchant_request_id = models.CharField(max_length=64, blank=True)
+    mpesa_receipt_number = models.CharField(max_length=32, blank=True)
+
+    result_code = models.IntegerField(null=True, blank=True)
+    result_description = models.TextField(blank=True)
+    amount_cents = models.BigIntegerField(null=True, blank=True)
+    phone = models.CharField(max_length=32, blank=True)
+
+    outcome = models.CharField(max_length=16, choices=CallbackOutcome.choices)
+    suspect_reason = models.CharField(
+        max_length=24, choices=SuspectReason.choices, blank=True
+    )
+
+    raw_payload = models.JSONField(
+        default=dict,
+        help_text="Exactly what Safaricom sent, kept for disputes and for replaying in tests.",
+    )
+    source_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        related_name="resolved_callbacks",
+        null=True,
+        blank=True,
+    )
+    resolution_note = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "payments_mpesa_callback"
+        ordering = ("-created_at",)
+        constraints = [
+            # The key that makes a replayed callback harmless: the second insert
+            # cannot happen, so the credit cannot happen twice.
+            models.UniqueConstraint(
+                fields=["checkout_request_id"],
+                condition=~models.Q(checkout_request_id=""),
+                name="unique_callback_per_checkout_request",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["tenant", "outcome", "-created_at"]),
+            models.Index(fields=["outcome", "resolved_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.checkout_request_id or 'unmatched'} ({self.outcome})"
+
+    @property
+    def needs_attention(self) -> bool:
+        """Suspect and unresolved: money that may be sitting unapplied.
+
+        Surfaced in the platform console rather than waiting for a report,
+        because the useful window for noticing this is hours, not a month.
+        """
+        return self.outcome == CallbackOutcome.SUSPECT and self.resolved_at is None

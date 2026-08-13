@@ -1,0 +1,39 @@
+name: pos_till
+description: Point of sale till for the POS platform.
+publish_to: "none"
+version: 0.2.0
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management. Chosen over setState/Provider because the sync engine and
+  # cart logic in milestone 3 need to be unit-testable away from any widget
+  # tree, and Riverpod providers can be read without one.
+  flutter_riverpod: ^2.6.1
+
+  # HTTP with interceptors, which is what makes token refresh transparent to
+  # every call site rather than something each screen remembers to do.
+  dio: ^5.7.0
+
+  # Declarative routing, so "signed out" can redirect from anywhere without each
+  # screen checking.
+  go_router: ^14.6.2
+
+  # Tokens and the device token go in the platform keystore, never in shared
+  # preferences. A device token is a credential: it is half of PIN sign-in.
+  flutter_secure_storage: ^9.2.2
+
+  # Non-secret preferences: which business this till belongs to.
+  shared_preferences: ^2.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

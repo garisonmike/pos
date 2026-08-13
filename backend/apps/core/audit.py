@@ -19,10 +19,51 @@ from django.db import models
 from apps.core.models import AuditLog
 from apps.core.tenancy import get_current_tenant_id
 
-#: Never copied into the audit trail, regardless of which model is being logged.
-REDACTED_FIELDS = frozenset(
-    {"password", "pin_hash", "token", "device_token", "secret", "api_key"}
+#: Substrings that mark a field as credential-shaped.
+#:
+#: Matched as substrings rather than whole names, and this is the point rather
+#: than a shortcut. The original version compared whole keys, which meant
+#: ``password`` was redacted but ``consumer_secret``, ``passkey`` and
+#: ``access_token`` were written to the trail in clear. That was harmless only
+#: for as long as nothing stored credentials - the moment per-tenant M-Pesa keys
+#: existed, a single audited write of that model would have put a live secret
+#: into a table managers can read.
+#:
+#: Erring towards over-redaction is deliberate. A field wrongly redacted costs a
+#: reader some context; a field wrongly kept costs a tenant their credentials.
+REDACTED_SUBSTRINGS = frozenset(
+    {
+        "password",
+        "passwd",
+        "passkey",
+        "secret",
+        "token",
+        "api_key",
+        "apikey",
+        "private_key",
+        "credential",
+        "pin_hash",
+        "pin",
+        "signature",
+        "authorization",
+        "consumer_key",
+    }
 )
+
+#: Kept for callers that check membership directly. The matching itself now goes
+#: through :func:`is_sensitive_field`.
+REDACTED_FIELDS = REDACTED_SUBSTRINGS
+
+
+def is_sensitive_field(name: str) -> bool:
+    """Whether a field name looks like it carries a credential.
+
+    Substring matching on a lowercased name, so ``consumer_secret``,
+    ``mpesa_passkey`` and ``refresh_token`` are all caught without anyone having
+    to remember to add each new spelling to a list.
+    """
+    lowered = name.lower()
+    return any(marker in lowered for marker in REDACTED_SUBSTRINGS)
 
 #: Distinguishes "no tenant was supplied, use the current one" from an explicit
 #: ``tenant_id=None``, which means the action belongs to the platform and to no
@@ -32,13 +73,31 @@ _UNSET = object()
 
 
 def _redact(data: dict[str, Any] | None) -> dict[str, Any]:
-    """Drop credential-shaped fields and make values JSON-safe."""
+    """Drop credential-shaped fields and make values JSON-safe.
+
+    Recurses into nested dictionaries and lists, because a payload logged whole
+    - an API request body, say - hides its secrets one level down where a
+    top-level scan would walk straight past them.
+    """
     if not data:
         return {}
-    return {
-        key: "[redacted]" if key in REDACTED_FIELDS else _jsonable(value)
-        for key, value in data.items()
-    }
+    return {key: _redact_value(key, value) for key, value in data.items()}
+
+
+def _redact_value(key: str, value: Any) -> Any:
+    if is_sensitive_field(key):
+        return "[redacted]"
+    if isinstance(value, dict):
+        return {
+            inner: _redact_value(inner, nested) for inner, nested in value.items()
+        }
+    if isinstance(value, list):
+        return [
+            _redact_value(key, entry) if not isinstance(entry, dict)
+            else {inner: _redact_value(inner, nested) for inner, nested in entry.items()}
+            for entry in value
+        ]
+    return _jsonable(value)
 
 
 def _jsonable(value: Any) -> Any:

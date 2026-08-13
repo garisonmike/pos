@@ -69,3 +69,51 @@ def enable_rls(table: str) -> migrations.RunSQL:
 def enable_rls_for(*tables: str) -> list[migrations.RunSQL]:
     """Convenience wrapper for migrations that add several tenant tables."""
     return [enable_rls(table) for table in tables]
+
+
+def enable_rls_via(
+    table: str, column: str, parent_table: str, parent_column: str = "id"
+) -> migrations.RunSQL:
+    """Protect a table that belongs to a business only indirectly.
+
+    Some tables carry no ``tenant_id`` of their own but still hold rows that
+    belong to exactly one business, because they point at something that does.
+    Django's own tables are the main source of these: the many-to-many join
+    tables behind ``PermissionsMixin``, the admin log, and simplejwt's
+    outstanding-token table, which stores the encoded refresh token itself
+    alongside the user it was issued to.
+
+    Visibility is defined by the parent's visibility::
+
+        EXISTS (SELECT 1 FROM accounts_user p WHERE p.id = <table>.user_id)
+
+    The subquery is evaluated as the querying role, so the parent's own policy
+    applies inside it. A row whose parent is invisible is therefore invisible
+    too, and the rule stays correct automatically as the parent's policy
+    changes - there is no second copy of the tenant logic to keep in step.
+
+    The bypass clause is repeated here rather than relied upon through the
+    parent, so that a row whose foreign key is null is still reachable from the
+    platform surface instead of being orphaned beyond any query's reach.
+    """
+    predicate = (
+        f"EXISTS (SELECT 1 FROM {parent_table} rls_parent "
+        f"WHERE rls_parent.{parent_column} = {table}.{column}) "
+        "OR COALESCE(current_setting('app.bypass_rls', true), '') = 'on'"
+    )
+    return migrations.RunSQL(
+        sql=[
+            f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;",
+            f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY;",
+            f"""
+            CREATE POLICY {POLICY_NAME} ON {table}
+                USING ({predicate})
+                WITH CHECK ({predicate});
+            """,
+        ],
+        reverse_sql=[
+            f"DROP POLICY IF EXISTS {POLICY_NAME} ON {table};",
+            f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY;",
+            f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY;",
+        ],
+    )

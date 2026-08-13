@@ -22,6 +22,22 @@ from apps.core.db.rls import POLICY_NAME
 pytestmark = pytest.mark.django_db
 
 
+def _concrete_models() -> list[type[models.Model]]:
+    """Every real table, including the join tables Django creates for itself.
+
+    ``include_auto_created`` is the important part. The many-to-many join
+    tables behind ``PermissionsMixin`` are real tables holding real rows, but
+    they are not declared anywhere in this codebase, so a walk over ordinary
+    models steps straight past them. That is exactly how they went unprotected
+    through milestone 1.
+    """
+    return [
+        model
+        for model in apps.get_models(include_auto_created=True)
+        if not model._meta.abstract and not model._meta.proxy
+    ]
+
+
 def models_with_tenant_column() -> list[type[models.Model]]:
     """Every concrete model carrying a ``tenant`` column.
 
@@ -30,18 +46,77 @@ def models_with_tenant_column() -> list[type[models.Model]]:
     without inheriting ``TenantOwnedModel``. Checking the column is what the
     database cares about, so it is what this checks.
     """
-    found = []
-    for model in apps.get_models():
-        if model._meta.abstract or model._meta.proxy:
-            continue
-        if any(field.name == "tenant" for field in model._meta.local_fields):
-            found.append(model)
-    return found
+    return [
+        model
+        for model in _concrete_models()
+        if any(field.name == "tenant" for field in model._meta.local_fields)
+    ]
+
+
+def models_reaching_a_tenant() -> list[type[models.Model]]:
+    """Every model that belongs to a business, directly or through a relation.
+
+    A table with no ``tenant_id`` still holds one business's rows if it points
+    at something that does. Following those references is what this adds over
+    the direct check: simplejwt's outstanding-token table carries no tenant, but
+    it stores an encoded refresh token beside the id of the user it was issued
+    to, which makes every row in it the property of exactly one business.
+
+    Resolved transitively, so a table pointing at a table pointing at a
+    tenant-owned row is caught too.
+    """
+    owned = set(models_with_tenant_column())
+    everything = _concrete_models()
+
+    # Repeat until nothing new is found, so indirection of any depth is caught.
+    changed = True
+    while changed:
+        changed = False
+        for model in everything:
+            if model in owned:
+                continue
+            for field in model._meta.local_fields:
+                if field.is_relation and field.related_model in owned:
+                    owned.add(model)
+                    changed = True
+                    break
+
+    return sorted(owned, key=lambda m: m._meta.db_table)
 
 
 def test_there_are_tenant_owned_models():
-    """Guards the two tests below from passing vacuously on an empty list."""
+    """Guards the tests below from passing vacuously on an empty list."""
     assert models_with_tenant_column(), "Expected at least one tenant-owned model."
+
+
+def test_tables_reaching_a_tenant_indirectly_are_also_protected():
+    """The gap that milestone 1's direct-column check walked past.
+
+    Tables with no tenant column of their own, but holding rows that belong to
+    one business by way of a foreign key. Left unprotected, the worst of them
+    would have let a query made under one business read another's refresh
+    tokens verbatim.
+
+    If this fails for a newly added table, protect it with ``enable_rls_via``
+    rather than by copying the tenant predicate, so the rule stays defined by
+    the parent's visibility.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT tablename FROM pg_policies WHERE policyname = %s", [POLICY_NAME]
+        )
+        protected = {row[0] for row in cursor.fetchall()}
+
+    missing = sorted(
+        model._meta.db_table
+        for model in models_reaching_a_tenant()
+        if model._meta.db_table not in protected
+    )
+    assert not missing, (
+        "These tables hold rows belonging to a single business - directly or "
+        f"through a foreign key - but carry no isolation policy: {missing}. "
+        "Protect each with enable_rls() or enable_rls_via() in a migration."
+    )
 
 
 def test_every_tenant_table_has_an_isolation_policy():
@@ -72,7 +147,7 @@ def test_every_tenant_table_forces_row_level_security():
     policies in place and completely inert. This is the difference between a
     system that is isolated and one that only looks it.
     """
-    tables = [model._meta.db_table for model in models_with_tenant_column()]
+    tables = [model._meta.db_table for model in models_reaching_a_tenant()]
     with connection.cursor() as cursor:
         cursor.execute(
             """

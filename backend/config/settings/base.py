@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.stores",
     "apps.catalog",
+    "apps.inventory",
     "apps.platform_admin",
 ]
 

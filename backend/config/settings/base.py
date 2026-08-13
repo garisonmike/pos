@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     "apps.stores",
     "apps.catalog",
     "apps.inventory",
+    "apps.sales",
+    "apps.payments",
     "apps.platform_admin",
 ]
 
@@ -200,6 +202,22 @@ CACHES = {
         "KEY_PREFIX": "pos",
     }
 }
+
+# Encrypts each tenant's Daraja credentials at rest. Deliberately separate from
+# SECRET_KEY: that key is rotated for its own reasons - a leak, a policy, a new
+# deployment - and rotating it must not destroy every tenant's payment
+# configuration. Generate with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+DARAJA_ENCRYPTION_KEY = env("DARAJA_ENCRYPTION_KEY", default="")
+
+# Where Safaricom should post STK results. Must be publicly reachable in a real
+# deployment; the callback path itself carries the token that resolves a tenant.
+MPESA_CALLBACK_BASE_URL = env("MPESA_CALLBACK_BASE_URL", default="http://localhost:8000")
+
+# How long an STK prompt is considered live. Safaricom's own window is about a
+# minute; a little longer here avoids declaring a payment lapsed while the
+# customer is still typing their PIN.
+MPESA_INTENT_TIMEOUT_SECONDS = env.int("MPESA_INTENT_TIMEOUT_SECONDS", default=90)
 
 # Till PIN lockout. See apps.accounts.lockout for why this is a lockout rather
 # than only a request-rate limit.

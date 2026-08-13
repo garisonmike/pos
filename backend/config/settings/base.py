@@ -1,0 +1,201 @@
+"""
+Settings shared by every environment.
+
+Environment-specific modules (dev, prod, test) import everything from here and
+override only what genuinely differs, so there is one place to look when asking
+"how is this configured".
+"""
+
+from datetime import timedelta
+from pathlib import Path
+
+import environ
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+env = environ.Env()
+
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="insecure-development-key-change-me")
+DEBUG = env.bool("DJANGO_DEBUG", default=False)
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+
+# The Django admin is the platform control surface, so it is mounted somewhere
+# unguessable rather than at the well-known /admin/ path. This is not a security
+# boundary on its own (authentication and the platform-admin check are), it just
+# keeps the control surface out of the way of routine scanning.
+PLATFORM_ADMIN_URL = env("PLATFORM_ADMIN_URL", default="ops-console/")
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    # Third party
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    "drf_spectacular",
+    "django_filters",
+    "corsheaders",
+    # Local
+    "apps.core",
+    "apps.tenants",
+    "apps.accounts",
+    "apps.stores",
+    "apps.catalog",
+    "apps.platform_admin",
+]
+
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Must sit after authentication so the Django admin session is available,
+    # and it opens its own transaction so that `SET LOCAL app.tenant_id` is
+    # scoped to the request. See apps/core/middleware.py for why that matters.
+    "apps.core.middleware.TenantBindingMiddleware",
+]
+
+ROOT_URLCONF = "config.urls"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = "config.wsgi.application"
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("DB_NAME", default="pos"),
+        "USER": env("DB_USER", default="pos_app"),
+        "PASSWORD": env("DB_PASSWORD", default="pos_app"),
+        "HOST": env("DB_HOST", default="db"),
+        "PORT": env.int("DB_PORT", default=5432),
+        # Deliberately False. TenantBindingMiddleware opens the request
+        # transaction itself so that the tenant binding is established inside
+        # it; letting Django also wrap the view would only add a savepoint.
+        "ATOMIC_REQUESTS": False,
+    }
+}
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+AUTH_USER_MODEL = "accounts.User"
+
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
+
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "Africa/Nairobi"
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# auth.E003 requires USERNAME_FIELD to be globally unique. It deliberately is
+# not: usernames are unique within a business, enforced by a composite unique
+# constraint on (tenant, username). Global uniqueness would mean the second
+# shop to sign up finds its staff names already taken by strangers. The
+# ambiguity the check guards against is handled in UserManager, whose
+# get_by_natural_key resolves only platform administrators.
+SILENCED_SYSTEM_CHECKS = ["auth.E003"]
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        # Closed by default: a view has to opt in to being public. The reverse
+        # default means one forgotten permission class exposes tenant data.
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
+    "DEFAULT_PAGINATION_CLASS": "apps.core.pagination.DefaultPagination",
+    "PAGE_SIZE": 50,
+    "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=env.int("JWT_ACCESS_TOKEN_LIFETIME_MINUTES", default=60)
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=env.int("JWT_REFRESH_TOKEN_LIFETIME_DAYS", default=14)
+    ),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "POS Platform API",
+    "DESCRIPTION": (
+        "Multi-tenant point of sale platform for Kenyan retail, restaurant, "
+        "salon and pharmacy businesses.\n\n"
+        "Every endpoint below the /api/v1/ prefix operates inside exactly one "
+        "tenant, resolved from the access token. Endpoints under "
+        "/api/v1/platform/ are the exception: they are cross-tenant and "
+        "restricted to platform administrators."
+    ),
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SORT_OPERATIONS": False,
+    "ENUM_NAME_OVERRIDES": {
+        "UserRoleEnum": "apps.accounts.models.UserRole.choices",
+        "TenantStatusEnum": "apps.tenants.models.TenantStatus.choices",
+        "BusinessTypeEnum": "apps.tenants.models.BusinessType.choices",
+    },
+}
+
+# Seed credentials for the platform admin created on first boot.
+PLATFORM_ADMIN_USERNAME = env("PLATFORM_ADMIN_USERNAME", default="platform")
+PLATFORM_ADMIN_PASSWORD = env("PLATFORM_ADMIN_PASSWORD", default="")
+PLATFORM_ADMIN_EMAIL = env("PLATFORM_ADMIN_EMAIL", default="admin@example.com")
+
+# How long a tenant's active/suspended status is trusted before being re-read.
+# Short enough that suspending a tenant takes effect quickly, long enough that
+# a busy till is not making an extra query on every request.
+TENANT_STATUS_CACHE_SECONDS = env.int("TENANT_STATUS_CACHE_SECONDS", default=60)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "{levelname} {asctime} {name} {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+    },
+    "root": {"handlers": ["console"], "level": "INFO"},
+}

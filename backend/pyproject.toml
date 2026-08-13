@@ -1,0 +1,48 @@
+[project]
+name = "pos-backend"
+version = "0.1.0"
+description = "Multi-tenant point of sale platform API"
+requires-python = ">=3.13"
+
+dependencies = [
+    "Django>=5.2,<5.3",
+    "djangorestframework>=3.16,<3.17",
+    "djangorestframework-simplejwt>=5.5,<6",
+    "drf-spectacular>=0.28,<0.29",
+    "psycopg[binary]>=3.2,<4",
+    "django-environ>=0.12,<0.13",
+    "django-filter>=25.1",
+    "django-cors-headers>=4.7,<5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "pytest-cov>=6.0",
+    "factory-boy>=3.3",
+    "ruff>=0.9",
+]
+
+[tool.setuptools]
+# The project is a Django app tree rather than an installable library; this
+# keeps `pip install -e .` from trying to auto-discover packages and failing.
+packages = []
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py", "tests.py"]
+testpaths = ["apps"]
+addopts = "--strict-markers -ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "DJ", "C4"]
+ignore = [
+    # Django models legitimately lack __str__ ordering concerns handled elsewhere.
+    "DJ001",
+]

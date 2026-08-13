@@ -1,0 +1,40 @@
+# Environment
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# Django
+*.log
+/backend/staticfiles/
+/backend/media/
+
+# Flutter / Dart
+/mobile/.dart_tool/
+/mobile/build/
+/mobile/.flutter-plugins
+/mobile/.flutter-plugins-dependencies
+/mobile/ios/Pods/
+/mobile/**/GeneratedPluginRegistrant.*
+*.g.dart
+*.freezed.dart
+
+# Editors
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Docker volumes
+/docker/postgres/data/

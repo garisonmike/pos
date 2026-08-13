@@ -30,6 +30,8 @@ urlpatterns = [
     path("api/v1/auth/", include("apps.accounts.urls")),
     path("api/v1/", include("apps.tenants.urls")),
     path("api/v1/", include("apps.stores.urls")),
+    path("api/v1/", include("apps.catalog.urls")),
+    path("api/v1/", include("apps.inventory.urls")),
     path("api/v1/platform/", include("apps.platform_admin.urls")),
     # Schema is generated from the serializers and views themselves, so the
     # documentation cannot drift away from the implementation.

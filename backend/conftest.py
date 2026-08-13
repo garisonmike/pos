@@ -9,6 +9,8 @@ nothing to leak.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 from django.core.cache import cache
 from django.db import transaction
@@ -154,6 +156,82 @@ def item_a(tenant_a, tax_rate_a) -> Item:
             price_cents=18000,
             cost_cents=15000,
             tax_rate=tax_rate_a,
+        )
+
+
+@pytest.fixture
+def exclusive_rate_a(tenant_a) -> TaxRate:
+    """A tax-exclusive rate alongside the inclusive one.
+
+    Both exist in the same business on purpose: mixing the two is the case the
+    per-rate ``is_inclusive`` flag exists for, and the one a per-business
+    setting could not express.
+    """
+    with transaction.atomic(), tenant_context(tenant_a.id):
+        return TaxRate.objects.create(
+            tenant=tenant_a, name="VAT 16% trade", rate_bps=1600, is_inclusive=False
+        )
+
+
+@pytest.fixture
+def category_a(tenant_a):
+    from apps.catalog.models import Category
+
+    with transaction.atomic(), tenant_context(tenant_a.id):
+        return Category.objects.create(tenant=tenant_a, name="Dry Goods", slug="dry-goods")
+
+
+@pytest.fixture
+def service_a(tenant_a):
+    """A service: no stock, has a duration, price quoted on the day."""
+    with transaction.atomic(), tenant_context(tenant_a.id):
+        return Item.objects.create(
+            tenant=tenant_a,
+            sku="SVC-BRAID",
+            name="Braiding",
+            price_cents=50000,
+            item_type="SERVICE",
+            track_stock=False,
+            is_price_variable=True,
+            duration_minutes=120,
+        )
+
+
+@pytest.fixture
+def stock_a(tenant_a, item_a, store_a):
+    """Forty bags of sugar at the main branch, with a reorder level of ten."""
+    from apps.inventory.models import MovementReason, StockItem, apply_movement
+
+    with transaction.atomic(), tenant_context(tenant_a.id):
+        stock = StockItem.objects.create(
+            tenant=tenant_a, item=item_a, store=store_a, reorder_level=Decimal("10")
+        )
+        apply_movement(
+            stock_item=stock,
+            delta=Decimal("40"),
+            reason=MovementReason.PURCHASE,
+            note="Opening delivery",
+        )
+        stock.refresh_from_db()
+        return stock
+
+
+@pytest.fixture
+def item_b(tenant_b):
+    """An item in the other business, to be leaked to and never be."""
+    with transaction.atomic(), tenant_context(tenant_b.id):
+        return Item.objects.create(
+            tenant=tenant_b, sku="NAILS-2IN", name="Nails 2 inch", price_cents=25000
+        )
+
+
+@pytest.fixture
+def stock_b(tenant_b, item_b, store_b):
+    from apps.inventory.models import StockItem
+
+    with transaction.atomic(), tenant_context(tenant_b.id):
+        return StockItem.objects.create(
+            tenant=tenant_b, item=item_b, store=store_b, reorder_level=Decimal("5")
         )
 
 

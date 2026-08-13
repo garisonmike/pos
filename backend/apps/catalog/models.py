@@ -142,13 +142,41 @@ class TaxRate(TenantOwnedModel, UUIDModel, TimeStampedModel):
 
 
 class Item(TenantOwnedModel, UUIDModel, TimeStampedModel):
-    """Something a business sells: a product on a shelf or a service performed."""
+    """Something a business sells: a product on a shelf or a service performed.
+
+    One model, not two, and the reason is worth stating because it is the thing
+    every later module depends on. A service is an item that is not
+    stock-tracked and has a duration. A product is an item that is stock-tracked
+    and has barcodes. Everything downstream - cart, sale line, tax, discounts,
+    receipts, reports - operates on *items*, so none of it needs a second code
+    path when the restaurant, salon and pharmacy modules arrive.
+
+    Fields that only one kind of business uses still live here rather than in a
+    product-only table, as long as every kind could plausibly want them. A salon
+    needs "fully booked today" exactly as much as a duka needs "out of stock",
+    and quoting a price on the day is as normal for braiding as it is for
+    damaged retail stock. Splitting those out would be the retail assumption
+    that makes services second-class.
+
+    What does *not* belong here is anything stock-shaped beyond the
+    ``track_stock`` switch. Quantities live in ``inventory.StockItem``, per
+    store, so a services-only business has no rows in that table at all and no
+    dead columns here.
+    """
 
     sku = models.CharField(
         max_length=64,
         help_text="The business's own code for this item. Unique within the business.",
     )
     name = models.CharField(max_length=150)
+    short_name = models.CharField(
+        max_length=24,
+        blank=True,
+        help_text=(
+            "Label for till buttons and receipt lines, where the full name will "
+            "not fit. Falls back to a truncated name when blank."
+        ),
+    )
     description = models.TextField(blank=True)
     category = models.ForeignKey(
         Category,
@@ -167,7 +195,19 @@ class Item(TenantOwnedModel, UUIDModel, TimeStampedModel):
 
     price_cents = models.BigIntegerField(
         validators=[MinValueValidator(0)],
-        help_text="Selling price in cents. Whether tax is included is decided by the tax rate.",
+        help_text=(
+            "Selling price in cents. Whether tax is included is decided by the "
+            "tax rate. When is_price_variable is set this is a suggestion "
+            "rather than the price charged."
+        ),
+    )
+    is_price_variable = models.BooleanField(
+        default=False,
+        help_text=(
+            "The cashier enters the price at the till, starting from the "
+            "suggestion above. For services quoted on the day and for retail "
+            "oddments such as damaged stock."
+        ),
     )
     cost_cents = models.BigIntegerField(
         default=0,
@@ -199,7 +239,28 @@ class Item(TenantOwnedModel, UUIDModel, TimeStampedModel):
         help_text="How long a service takes. Used for appointment booking; null for products.",
     )
 
-    is_active = models.BooleanField(default=True)
+    image = models.ImageField(upload_to="items/", blank=True, null=True)
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower numbers appear first on the till. Ties fall back to name.",
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        help_text=(
+            "Delisted. An inactive item is gone from the till entirely and stays "
+            "only so past sales still resolve."
+        ),
+    )
+    is_available = models.BooleanField(
+        default=True,
+        help_text=(
+            "Temporarily off-sale, and deliberately separate from is_active. "
+            "'Out of season', 'kitchen has run out' and 'stylist off today' are "
+            "everyday states that must not require delisting an item and "
+            "re-creating it."
+        ),
+    )
     created_by = models.ForeignKey(
         "accounts.User",
         on_delete=models.SET_NULL,
@@ -210,7 +271,7 @@ class Item(TenantOwnedModel, UUIDModel, TimeStampedModel):
 
     class Meta:
         db_table = "catalog_item"
-        ordering = ("name",)
+        ordering = ("sort_order", "name")
         constraints = [
             models.UniqueConstraint(
                 fields=["tenant", "sku"], name="unique_item_sku_per_tenant"
@@ -233,6 +294,23 @@ class Item(TenantOwnedModel, UUIDModel, TimeStampedModel):
     @property
     def is_service(self) -> bool:
         return self.item_type == ItemType.SERVICE
+
+    @property
+    def till_label(self) -> str:
+        """What a till button shows: the short name, or a trimmed full name."""
+        return self.short_name or self.name[:24]
+
+    @property
+    def is_sellable(self) -> bool:
+        """Whether this can be added to a sale right now.
+
+        Both flags, because they mean different things: ``is_active`` is
+        delisted for good, ``is_available`` is off today. Stock is deliberately
+        not consulted here - a shop may sell the last bag while the count says
+        zero, and refusing that at the catalogue layer would put the cashier in
+        an argument with the customer over a number.
+        """
+        return self.is_active and self.is_available
 
 
 class Barcode(TenantOwnedModel, TimeStampedModel):

@@ -16,6 +16,9 @@ dependencies = [
     # Django's built-in Redis backend needs the client library; django-redis is
     # not used, so there is one fewer layer between settings and the server.
     "redis>=5.2,<6",
+    # Required by ImageField, which validates that an upload is really an image
+    # rather than trusting its extension.
+    "Pillow>=11.0,<12",
 ]
 
 [project.optional-dependencies]

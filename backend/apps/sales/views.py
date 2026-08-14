@@ -37,7 +37,7 @@ from apps.sales.serializers import (
 )
 from apps.sales.services import CheckoutError, LineRequest, create_sale, take_cash, void_sale
 from apps.sales.states import IllegalTransition
-from apps.stores.models import Store
+from apps.stores.selection import resolve_store_for
 
 
 @extend_schema(tags=["sales"])
@@ -382,46 +382,9 @@ class SaleViewSet(viewsets.ReadOnlyModelViewSet):
     def _resolve_store(self, request, store_id):
         """Which branch this sale belongs to.
 
-        Defaults to the business's default branch. With several branches and no
-        choice made, refusing beats guessing: a sale filed against the wrong
-        branch takes its stock movement with it.
+        Delegates to apps.stores.selection, which the sync endpoint uses too -
+        a branch resolved one way at the till and another way at sync would
+        file the same sale's stock movement against different shops depending
+        on whether the network was up.
         """
-        stores = Store.objects.filter(tenant=request.user.tenant, is_active=True)
-
-        if store_id:
-            store = stores.filter(pk=store_id).first()
-            if store is None:
-                return None, Response(
-                    {"detail": "No such branch.", "code": "not_found"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            return store, None
-
-        if request.user.store_id:
-            store = stores.filter(pk=request.user.store_id).first()
-            if store is not None:
-                return store, None
-
-        default = stores.filter(is_default=True).first()
-        if default is not None:
-            return default, None
-
-        if stores.count() > 1:
-            return None, Response(
-                {
-                    "detail": (
-                        "This business has several branches and none is marked "
-                        "default. Say which branch this sale belongs to."
-                    ),
-                    "code": "store_required",
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        only = stores.first()
-        if only is None:
-            return None, Response(
-                {"detail": "This business has no active branch.", "code": "no_store"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        return only, None
+        return resolve_store_for(request, store_id)

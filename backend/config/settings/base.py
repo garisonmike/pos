@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "apps.inventory",
     "apps.sales",
     "apps.payments",
+    "apps.sync",
     "apps.platform_admin",
 ]
 

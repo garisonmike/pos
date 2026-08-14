@@ -34,6 +34,7 @@ urlpatterns = [
     path("api/v1/", include("apps.inventory.urls")),
     path("api/v1/", include("apps.sales.urls")),
     path("api/v1/payments/", include("apps.payments.urls")),
+    path("api/v1/", include("apps.sync.urls")),
     path("api/v1/platform/", include("apps.platform_admin.urls")),
     # Schema is generated from the serializers and views themselves, so the
     # documentation cannot drift away from the implementation.

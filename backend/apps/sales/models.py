@@ -165,6 +165,25 @@ class Sale(TenantOwnedModel, UUIDModel, TimeStampedModel):
         blank=True, help_text="Required whenever a discount is applied."
     )
     discount_authorized_at = models.DateTimeField(null=True, blank=True)
+    discount_authorized_pin_version = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Only for OFFLINE authorisations: which version of the manager's "
+            "PIN the device's cached copy was, at the moment it checked. Not "
+            "the hash and nothing derived from the PIN - a counter. Compared "
+            "against the manager's current version at sync."
+        ),
+    )
+    discount_authorization_is_stale = models.BooleanField(
+        default=False,
+        help_text=(
+            "Set at sync when the version the device checked against no longer "
+            "matches the manager's current one, meaning the approving PIN was "
+            "changed or revoked while the till was offline. The sale still "
+            "lands - the goods left the shop - but it is flagged for a person."
+        ),
+    )
     discount_authorized_via = models.CharField(
         max_length=12,
         blank=True,
@@ -490,6 +509,11 @@ class SaleDiscrepancy(TenantOwnedModel, UUIDModel, TimeStampedModel):
         NEGATIVE_STOCK = "NEGATIVE_STOCK", "Sale drove stock below zero"
         OVERPAID = "OVERPAID", "More was taken than was owed"
         LATE_PAYMENT = "LATE_PAYMENT", "Payment arrived after the sale was finished"
+        STALE_AUTHORIZATION = (
+            "STALE_AUTH",
+            "Offline discount approved against a PIN that has since changed",
+        )
+        UNKNOWN_DEVICE = "UNKNOWN_DEVICE", "Sale claimed a till this business does not own"
 
     sale = models.ForeignKey(
         Sale, on_delete=models.PROTECT, related_name="discrepancies", null=True, blank=True

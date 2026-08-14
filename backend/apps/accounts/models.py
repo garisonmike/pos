@@ -139,6 +139,16 @@ class User(UUIDModel, AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         blank=True,
         help_text="Hashed till PIN. Empty means this user cannot use fast sign-in.",
     )
+    pin_version = models.PositiveIntegerField(
+        default=0,
+        help_text=(
+            "Bumped every time the PIN is set or cleared. A device caches this "
+            "alongside the hash it verifies against offline and sends it back at "
+            "sync, so an authorisation made against a PIN that has since been "
+            "changed or revoked is detectable. Carries no information about the "
+            "PIN itself - it is a counter, not a digest."
+        ),
+    )
 
     is_active = models.BooleanField(
         default=True,
@@ -207,13 +217,18 @@ class User(UUIDModel, AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         return UserRole(self.role).label if self.role in UserRole.values else self.role
 
     def set_pin(self, raw_pin: str) -> None:
-        """Set the till PIN, hashed with the same algorithm as passwords."""
+        """Set the till PIN, hashed with the same algorithm as passwords.
+
+        Bumps ``pin_version``, which is what lets a sync tell that a device
+        authorised something offline against a PIN that has since changed.
+        """
         if not raw_pin:
-            self.pin_hash = ""
+            self.clear_pin()
             return
         if not (raw_pin.isdigit() and 4 <= len(raw_pin) <= 6):
             raise ValueError("A PIN must be 4 to 6 digits.")
         self.pin_hash = make_password(raw_pin)
+        self.pin_version += 1
 
     def check_pin(self, raw_pin: str) -> bool:
         """Verify a till PIN. Always false when no PIN has been set."""
@@ -222,7 +237,14 @@ class User(UUIDModel, AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         return check_password(raw_pin, self.pin_hash)
 
     def clear_pin(self) -> None:
+        """Remove the PIN, and bump the version so devices know it is gone.
+
+        Revoking a PIN has to be as detectable as changing one - a till that was
+        offline when someone was let go must not be able to present a stale
+        authorisation as current.
+        """
         self.pin_hash = ""
+        self.pin_version += 1
 
     @staticmethod
     def assignable_roles() -> tuple[str, ...]:

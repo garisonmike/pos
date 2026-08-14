@@ -5,6 +5,106 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-14 — Offline sync
+
+**Worked on:** the sync endpoints, the till's outbox database, and the offline
+discount authorisation question I left open at the end of milestone 2.
+
+**Finished:**
+
+- `POST /api/v1/sync/sales/` — batch ingest with a verdict per sale. A till
+  emptying its outbox needs to know exactly which rows it may delete, and one
+  bad sale in a batch of forty must not strand the other thirty-nine.
+- `GET /api/v1/sync/catalog/?since=` — delta pull on a cursor the server chose.
+- Offline PIN lockout in the till's own database, with the same thresholds as
+  the server.
+- `pin_version` on `User`, and the fingerprint comparison at sync.
+- Five drift tables on the device: `queued_sales`, `pin_attempts`,
+  `sync_cursor`, `catalog_cache`, `staff_cache`.
+
+**Decisions, and why:**
+
+**Idempotency is the constraint's job, not a lookup's.** The obvious shape —
+look for an existing sale, create one if there is none — passes every
+sequential test and still sells the same bag of sugar twice, because two
+threads both run the SELECT before either runs the INSERT. So `replay_sale`
+inserts first and treats `IntegrityError` on
+`unique_sale_client_uuid_per_tenant` as the duplicate signal. The test for it
+uses real threads against `TransactionTestCase`, because the usual per-test
+transaction hides the race completely — inside one transaction the threads
+cannot see each other at all, so the bug being tested would not exist.
+
+**The device check is a lookup, not a comparison.** A batch names a
+`device_id`, and it is resolved inside the tenant's own scope. Another
+business's device is simply not found. Writing it as
+`device.tenant_id == tenant.id` would need the row first, and fetching the row
+is the mistake.
+
+**The PIN fingerprint: implemented, with the claim narrowed.** Every `set_pin`
+and `clear_pin` bumps `pin_version`; the till caches it and sends it back with
+an offline approval. This reliably catches a till approving against a PIN that
+has since been changed or revoked. It does **not** prove the device performed
+the check — anyone who can edit the till's local database can also read the
+version it holds, so a fabricated payload built on a current cache carries a
+matching version. I have written that limit into the docstring rather than
+letting the comment imply a check that is not there. What does hold: staleness,
+revocation, and a role re-check on the named authoriser.
+
+**A stale authorisation never rejects the sale.** By the time sync runs the
+customer has walked out with the goods. Refusing the record would delete the
+evidence rather than the problem, so it lands flagged.
+
+**Extracted `_resolve_store` to `apps/stores/selection.py`.** Three callers now.
+A branch resolved one way at the till and another way at sync would file the
+same sale's stock movement against different shops depending on whether the
+network was up.
+
+**Flagging, because it touches money and I would rather say it now — two things.**
+
+**1. A till that undercharged has its whole sale rejected.** This is the
+likeliest offline failure there is: a price goes up while a till is
+disconnected, the till collects yesterday's lower price, and at sync the server
+prices the cart higher. `take_cash` then refuses with `insufficient_tender`,
+which rolls the sale back and hands the till a `rejected` verdict.
+
+Nothing is lost — the till keeps the row and shows it to a person, which is
+exactly what `rejected` is for. But it contradicts the rule this whole
+subsystem is built on: *a completed sale is a fact, not a request, and the
+server does not refuse one.* The goods left the shop and the stock does not
+move.
+
+I have not guessed at the fix, because the three sensible answers differ in
+what they do to the shop's money, and that is the owner's call, not mine:
+
+- **Write off the shortfall.** Sale settles at what was collected, difference
+  recorded as a discrepancy. Simplest, and loses the least paperwork.
+- **Carry it as a debt.** Sale lands at the server's price and sits in
+  `AWAITING_PAYMENT` short by the difference, with stock moved anyway. Honest,
+  but leaves rows nobody will ever close on a price change nobody will chase.
+- **Treat it as an unauthorised discount.** Fits the existing gate, but it
+  means the system hands out discounts nobody approved.
+
+Pinned by `test_a_till_that_undercharged_has_its_sale_held_back`, which asserts
+the current behaviour and says in its docstring that it is not settled design.
+
+**2. A stolen till is a stolen manager PIN.** `GET /sync/catalog/` sends `pin_hash` down so an offline check has something to
+verify against — managers only, never cashiers. But a PIN is four to six
+digits, so a hash of one is brute-forceable by anyone holding the tablet, and
+that same PIN works online. A stolen till is, in practice, a stolen manager
+PIN. This is inherent to approving anything offline against a short secret.
+
+The fix I want, and did not build here: a **separate offline approval code**,
+versioned the same way, revocable on its own and useless for signing in. Then a
+stolen till gives up only the thing that can be rotated without touching
+anyone's sign-in. It needs its own credential-management surface — setting it,
+rotating it, a screen for it — which is account management rather than sync, so
+I have recorded it in ARCHITECTURE.md as open rather than widening this piece.
+
+**Come back to:** ESC/POS printing, wiring the drift queue to a real cart and
+checkout screen, the two-devices-sell-the-last-unit test, and shift open/close.
+
+---
+
 ## 2026-08-13 — Milestone 2: catalogue, stock, import, and the first till screens
 
 **Worked on:** everything after the close-outs — the catalogue, inventory, CSV

@@ -227,23 +227,52 @@ rather than planned up front.
 - [x] Unavailable items cannot be rung up
 - [x] 19 negative-path tests
 
-### Outstanding
-- [ ] Manager authorization for discounts *(discovered: `create_sale` accepts discounts with no authority check at all; unreachable until the endpoint exists, live the moment it does)*
-- [ ] Cash checkout API end to end
-- [ ] Split payments across cash and M-Pesa
-- [ ] `MpesaCredential` API, write-only
-- [ ] STK push client against the Daraja sandbox
-- [ ] Callback: four idempotency keys, terminal-state guard, suspect path
-- [ ] Safaricom IP allowlist, mandatory on production credentials
-- [ ] Reconciliation job for lapsed intents
-- [ ] Unresolved suspect callbacks and discrepancies in the platform console
-- [ ] Receipt PDF, branded per tenant
+### Discounts and cash checkout
+- [x] Manager authorization for discounts *(discovered: `create_sale` accepted discounts with no authority check at all — unreachable until the endpoint existed, live the moment it did)*
+- [x] Split by the **acting user's own role**: manager or owner authorises from their session, a cashier needs a credential in the request
+- [x] Credential checked **before** the role, so the endpoint cannot report who holds manager rights
+- [x] Refused attempts audited against the username string with no user foreign key
+- [x] Cash checkout API end to end, one request rather than create-then-pay
+- [x] `SaleViewSet.void` narrowed to `except IllegalTransition` *(a genuine bug should be a loud 500, not a politely misreported 400)*
+
+### M-Pesa
+- [x] `MpesaCredential` API, write-only, Fernet-encrypted with a key separate from `SECRET_KEY`
+- [x] STK push client against the Daraja sandbox
+- [x] Second pending push on one sale answers `409` rather than prompting the customer twice
+- [x] Callback: four idempotency keys, terminal-state guard, suspect path
+- [x] Callback credits only a sale still in `AWAITING_PAYMENT`; anything else routes to `SuspectCallback`
+- [x] Callback token derived per intent; unknown tokens answer `ResultCode 0` and record nothing
+- [x] Safaricom IP allowlist, mandatory once a tenant runs on production credentials
+- [x] `X-Forwarded-For` read from the **last** entry, one trusted proxy assumed, `pos.E004` if unconfigured in production
+- [x] Reconciliation job for lapsed intents, reusing the one guarded settlement path
+- [x] `confirmed_via` records whether a payment was confirmed by callback or by status query
+- [x] A late callback backfills the real receipt code over a `RECON-` placeholder
+- [x] Unresolved suspect callbacks and discrepancies in the platform console, read-only
+
+### Receipts
+- [x] Sequential per-tenant receipt numbers, allocated under a row lock
+- [x] Receipt text for a 32-character thermal printer
+- [x] Receipt PDF, branded per tenant, 80mm
 - [ ] ESC/POS printing from the till
-- [ ] Offline sync: catalogue delta pull
-- [ ] Offline sync: sale batch ingest with `client_uuid` idempotency
-- [ ] Sync rejects a payload replayed with another business's token and device
+
+### Offline sync
+- [x] Catalogue delta pull on a server-chosen cursor, read **before** the queries so a concurrent write cannot be skipped
+- [x] Withdrawn items sent with `is_active` cleared rather than omitted
+- [x] Sale batch ingest with `client_uuid` idempotency, one verdict per sale
+- [x] Insert-first / `IntegrityError`-second, so the unique constraint is the arbiter rather than a racy lookup
+- [x] Concurrent replay proved with real threads against `TransactionTestCase` — two and five at once
+- [x] Sync rejects a payload replayed with another business's device, via a tenant-scoped lookup that simply does not find it
+- [x] `UNIQUE(tenant, client_uuid)` proved to let two businesses share an identifier without one suppressing the other
+- [x] Offline PIN lockout in the outbox database, same thresholds as the server, keyed on the username typed
+- [x] Offline refusals sync home as `DISCOUNT_REFUSED` audit entries
+- [x] `pin_version` fingerprint: catches a PIN changed or revoked while the till was offline *(does **not** prove the device did the check — an attacker who can edit the local database can read the version too, and the claim is scoped to that)*
+- [x] Authoriser's role re-checked at sync, so a till claiming a cashier approved a discount is caught
+- [x] Device totals compared and disagreements flagged, server figure standing
+- [x] `_resolve_store` extracted to `apps/stores/selection.py` *(three callers now; a branch resolved one way at the till and another at sync would file the same stock movement against different shops)*
 - [ ] Two offline devices selling the last unit: both accepted, stock negative, flagged
-- [ ] Flutter: drift queue, cart, checkout, offline indicator
+- [ ] Flutter: drift queue wired to the cart, checkout, offline indicator
+
+### Still to do
 - [ ] Shift open/close with cash drawer reconciliation
 - [ ] SMS receipt *(stretch)*
 

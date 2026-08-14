@@ -30,10 +30,26 @@ dependencies:
   # Non-secret preferences: which business this till belongs to.
   shared_preferences: ^2.3.3
 
+  # The till's own database. A duka's connection drops for hours, so the till
+  # is not a client that caches - it is the shop's record of its own trading
+  # day. Drift over raw sqflite because the outbox is queried from a background
+  # sync loop and from the UI at the same time, and typed queries are what stop
+  # those two disagreeing about a column's meaning.
+  drift: ^2.20.0
+  drift_flutter: ^0.2.0
+  path_provider: ^2.1.5
+
+  # Generating a client_uuid on the till, at the moment of sale. This is the
+  # key the server dedupes on, so it must be generated once and survive a
+  # restart - never regenerated on retry.
+  uuid: ^4.5.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  drift_dev: ^2.20.0
+  build_runner: ^2.4.13
 
 flutter:
   uses-material-design: true

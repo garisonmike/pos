@@ -601,22 +601,65 @@ drifting a few shillings a day.
 
 ## Offline sync
 
-*Designed now, built in milestone 3. Documented here because it constrains
-decisions in every earlier milestone.*
-
 The core rule: **a completed sale is a fact, not a request. The server never
 rejects one.** Money has already changed hands; refusing the record only loses
 data.
 
 ### What the device holds
 
-Two SQLite tables via drift: a mirror of the catalogue, and an outbox of sales
-waiting to sync.
+Five drift/SQLite tables, in `mobile/lib/data/outbox/database.dart`:
+
+| Table | Why it exists |
+|---|---|
+| `queued_sales` | Sales rung up with no connection, keyed on `client_uuid`. Rows are deleted only on a verdict from the server, never on a hopeful assumption that the upload worked. |
+| `pin_attempts` | The offline lockout counter, and the refusals waiting to be sent home. See below. |
+| `sync_cursor` | The `server_time` the last catalogue download returned, stored as the exact string the server sent. |
+| `catalog_cache` | The price list, flattened for pricing a cart with nothing to ask. |
+| `staff_cache` | Staff, with `pin_version` and — for managers only — `pin_hash`. |
 
 ### Catalogue pull
 
-`GET /api/v1/sync/catalog/?since=<cursor>` returns deltas — items, barcodes,
-prices, tax rates — using an `updated_at` cursor plus tombstones for deletes.
+`GET /api/v1/sync/catalog/?since=<cursor>` returns everything with an
+`updated_at` after the cursor. Withdrawn items are sent **with `is_active`
+cleared, not omitted**: a till that never hears about a withdrawal carries on
+selling the thing, and a queued sale that already includes it still needs a name
+to print.
+
+The cursor is always the `server_time` the previous response carried, never the
+till's own clock. A till running fast would otherwise ask for a window that
+skips changes it never saw.
+
+`server_time` is read *before* the queries run, not after. Taken afterwards, a
+row written while the queries were running would fall before the returned
+timestamp and never be sent again — a price change lost for good.
+
+### Sending the backlog up
+
+`POST /api/v1/sync/sales/` takes a whole batch and answers with a **verdict per
+sale** — `accepted`, `duplicate` or `rejected` — rather than one status for the
+request. One bad sale in a batch of forty must not strand the other
+thirty-nine, and the till has to know exactly which rows it may delete from its
+outbox. The batch is `200` whenever it was *understood*, even if every sale in
+it was refused.
+
+A batch also carries `refused_authorizations`: the discount approvals the till
+turned down while it had no connection (see the lockout section below).
+
+### The device must belong to the business
+
+Every batch names a `device_id`, and it is resolved with a **tenant-scoped
+lookup** rather than fetched and then compared:
+
+```python
+Device.objects.filter(pk=device_id, is_active=True).first()
+```
+
+Another business's device id is simply not found. There is no cross-tenant
+comparison to get wrong and no branch that could accidentally accept one, which
+is exactly why it is written as a lookup — `device.tenant_id == tenant.id` needs
+the row first, and fetching the row is the mistake. A batch that names an
+unknown till is refused with `unknown_device` and recorded as a
+`SaleDiscrepancy` against the business that sent it.
 
 ### Idempotency
 
@@ -624,6 +667,21 @@ Every sale carries a client-generated `client_uuid`, a `device_id` and a
 monotonic device sequence, all created on the device before any network call.
 The server has `UNIQUE(tenant, client_uuid)`; replaying a batch returns the
 original sale with `200`, never a duplicate with `201`.
+
+**Idempotency is the database's job, not a lookup's.** The obvious shape — look
+for an existing sale, create one if absent — is a race with a window between the
+two statements, and two threads uploading the same batch will both find nothing
+and both insert. So `replay_sale` **inserts first** and treats `IntegrityError`
+on `unique_sale_client_uuid_per_tenant` as the duplicate signal. The constraint
+is the arbiter because the constraint is the only thing that is actually atomic.
+`apps/sync/tests/test_concurrent_replay.py` proves it with real threads against
+`TransactionTestCase`; the usual per-test transaction would hide the race
+entirely, because inside one transaction the threads cannot see each other at
+all.
+
+The key is scoped `(tenant, client_uuid)` rather than globally unique, so that a
+collision between two businesses — by chance or on purpose — cannot make one
+shop's sale silently vanish as somebody else's duplicate.
 
 This matters more than clean-disconnect handling. The real failure mode on
 Kenyan mobile data is not a connection that drops — it is a request that hangs
@@ -662,27 +720,115 @@ A device that was offline while its business was suspended can still sync sales
 it already completed — that money was taken. It is blocked from starting new
 ones. Sync accepts; checkout refuses.
 
-### Open: offline discount authorisation has no lockout
+### Offline discount authorisation
 
-A discount needs a manager's approval, and online that approval is a username
-plus their PIN verified server-side — where the existing PIN lockout applies, so
-a wrong PIN counts against the same device and user counters as a sign-in.
+A discount needs a manager's approval. Online, that approval is a username plus
+their PIN verified server-side, where the PIN lockout applies. Offline, the
+device verifies against its cached copy, and three separate controls stand in
+for the server that is not there.
 
-Offline, the device verifies that PIN **locally** against its cached user
-record, and there is no lockout on that path. A stolen till taken deliberately
-offline therefore gets unlimited, unlogged guesses at a manager's four digits,
-after which every discount it rings up looks authorised.
+**A lockout in the outbox database.** The server counts failed attempts in
+Redis, and Redis is precisely what cannot be reached. So `pin_attempts` holds
+the count on the device, with the same thresholds as the server
+(`PIN_LOCKOUT_MAX_ATTEMPTS = 5`, `PIN_LOCKOUT_SECONDS = 900`) — two different
+numbers would mean a manager who mistypes twice is locked out at the counter but
+not in the back office, and the shop would learn to distrust whichever one
+refused them.
 
-This is narrower than it first appears — amendment to the online design means a
-manager running the till alone authorises from their own session, so the local
-path is only needed for *cashier delegates to a different manager while
-offline*. But it is a real gap and it is open. Not solved yet; recorded here so
-it is not discovered later as a surprise.
+```
+pin_attempts(
+  scope_key TEXT PRIMARY KEY,   -- the username typed, not a user id
+  failures INTEGER,
+  locked_until INTEGER,         -- epoch ms, null when open
+  last_failure_at DATETIME,
+  pending_telemetry_json TEXT   -- refusals waiting to sync
+)
+```
 
-Plausible answers when it is addressed: a local attempt counter in the device's
-own storage (weak — the attacker holds the device), signing the cached PIN hash
-with a server key so an offline verification can be re-checked at sync, or
-simply refusing discounts offline and accepting the counter friction.
+It is keyed on the **username typed**, not a resolved user id, so a name that
+matches nobody is rate-limited on the same footing as one that does — otherwise
+the counter itself answers "does this name exist?" and the staff list can be
+enumerated by watching which names lock out. It is not cleared by reconnecting:
+a lockout liftable by toggling aeroplane mode would not be a lockout. And an
+attempt made *while* locked out is recorded but does not extend the window, so a
+bystander tapping at the screen cannot keep a manager shut out indefinitely.
+
+**Every refusal syncs home.** `pending_telemetry_json` is sent with the next
+batch and written as `DISCOUNT_REFUSED` audit entries, filed against the
+attempted username as a bare string with no user foreign key — exactly as an
+online refusal and a failed sign-in are, because nobody proved they were that
+person. Without this, somebody spending an evening on a manager's four digits at
+a disconnected till would leave a record only on the tablet in their hand.
+
+**A PIN version fingerprint.** Every `set_pin` and `clear_pin` bumps
+`accounts.User.pin_version`. The till caches that number beside the hash it
+verifies against, and sends it back with any offline approval:
+
+| Field | Where | What it holds |
+|---|---|---|
+| `accounts.User.pin_version` | server | Bumped on every `set_pin` / `clear_pin`. The source of truth. |
+| `staff_cache.pin_version` | device | The version of the cached copy the device checks against. |
+| `discount_authorization.pin_version` | wire | What the device reports it checked against. |
+| `sales.Sale.discount_authorized_pin_version` | server | Recorded on the sale, for OFFLINE approvals only. |
+| `sales.Sale.discount_authorization_is_stale` | server | Set at sync when the two do not match. |
+
+**Be precise about what this establishes.** It reliably catches a device
+approving against a PIN that has since been *changed or revoked* — a till that
+was offline across either event reports a number that no longer matches, and the
+sale is flagged with a `STALE_AUTH` discrepancy. It does **not** prove the
+device performed the check: anyone who can edit the till's local database can
+also read the version that database holds, so a fabricated payload built on a
+current cache carries a matching version. Detecting that would need the device
+to hold a secret the fabricator cannot read, which a rooted Android tablet does
+not offer. The claim is the narrow one — staleness and revocation, not forgery.
+
+The server also re-checks the named authoriser's **role** at sync, so a till
+claiming a cashier approved a discount is caught regardless of versions.
+
+A stale or invalid authorisation never rejects the sale. By the time sync runs
+the customer has walked out with the goods; refusing the record would delete the
+evidence rather than the problem.
+
+### Open: a till that undercharged has its sale rejected
+
+The likeliest offline failure there is: a price goes up while a till is
+disconnected, the till collects yesterday's lower price, and at sync the server
+prices the cart higher. `take_cash` refuses with `insufficient_tender`, which
+rolls the sale back and returns a `rejected` verdict.
+
+Nothing is lost — the till keeps the row and shows it to a person — but it
+contradicts the rule this subsystem is built on: a completed sale is a fact the
+server does not refuse. The goods left the shop and the stock does not move.
+
+Not decided, because the three sensible answers differ in what they do to the
+shop's money: write the shortfall off, carry it as a debt on a sale that sits in
+`AWAITING_PAYMENT`, or treat it as an unauthorised discount. Pinned by
+`test_a_till_that_undercharged_has_its_sale_held_back`.
+
+### Open: a stolen till is a stolen manager PIN
+
+`GET /sync/catalog/` sends `pin_hash` down so an offline check has something to
+verify against. It is sent **only for users who can actually authorise** — a
+cashier's hash is never downloaded, because no offline check would consult it.
+
+The cost is real and worth stating plainly: a PIN is four to six digits, so a
+hash of one is brute-forceable by anyone holding the tablet, and that same PIN
+works online. Approving anything offline against a short secret has this shape
+inherently — a local check needs a local verifier.
+
+The stronger fix, deferred: a **separate offline approval code**, versioned the
+same way, revocable on its own and useless for signing in. Then a stolen till
+gives up only the thing that can be rotated without touching anyone's sign-in.
+Not built yet; recorded here so it is not discovered later as a surprise.
+
+### What the till claimed it came to
+
+A batch may carry the total the till believed a sale came to. It is **never
+trusted** — the server prices every cart again from its own catalogue. A
+disagreement is recorded as a `TOTALS_MISMATCH` discrepancy and the sale still
+lands, because the goods have already left the shop. What a disagreement usually
+means is a till carrying a price list from before the last change, which is
+worth a person's attention rather than a rejection nobody sees.
 
 ### Clock skew
 

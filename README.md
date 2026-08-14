@@ -28,8 +28,16 @@ modules switched on, sharing the same tenant, item and sale models. See
 
 Milestones 1 and 2 are complete: tenant isolation, authentication, the platform
 console, the catalogue, stock, CSV import, and an Android till that signs in and
-browses. There is **no checkout yet** — selling, payments and offline queueing
-are milestone 3. See [tasks.md](tasks.md) for what is done and what is next, and
+browses.
+
+Milestone 3 is most of the way there on the server. Cart arithmetic, the sale
+state machine, cash checkout with a manager-authorised discount gate, M-Pesa
+STK push with its callback and reconciliation, receipts as text and PDF, and
+offline sync — batch ingest, idempotent replay and the till's outbox database —
+are all built and tested. What is left is the till side of selling: wiring the
+outbox to a real cart and checkout screen, and ESC/POS printing.
+
+See [tasks.md](tasks.md) for what is done and what is next, and
 [progress.md](progress.md) for a dated log of decisions.
 
 ---
@@ -155,16 +163,21 @@ Valid rows still import — a file is rarely wrong all the way through.
 
 ## Running the app
 
-The Flutter till lives in [mobile/](mobile/). It signs in and browses the
-catalogue; selling arrives in milestone 3.
+The Flutter till lives in [mobile/](mobile/). It signs in, browses the
+catalogue, and carries the offline outbox; the selling screens are next.
 
 ```bash
 cd mobile
 flutter pub get
+dart run build_runner build        # generates the drift outbox code
 flutter run                        # Android emulator reaches the API on 10.0.2.2
 flutter test                       # widget and unit tests
 flutter analyze
 ```
+
+`build_runner` is a required step, not an optional one: the outbox database's
+generated code is not committed, so the app will not compile without it. Re-run
+it after changing anything in [mobile/lib/data/outbox/](mobile/lib/data/outbox/).
 
 Pointing at a different API:
 
@@ -183,6 +196,10 @@ address as above.
 docker compose exec api pytest     # backend
 cd mobile && flutter test          # client
 ```
+
+Run **one backend suite at a time**. Two concurrent `pytest` sessions fight over
+the same test database and the second reports several hundred misleading errors
+that have nothing to do with the code.
 
 Useful variations:
 

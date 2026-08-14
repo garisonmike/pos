@@ -29,10 +29,13 @@ carries that. Two bad options and one acceptable one:
   per attempt so the guard still holds, and is obviously not an M-Pesa code so
   nobody mistakes it for one. Chosen.
 
-A real callback arriving afterwards finds the intent already settled and is
-recorded as a duplicate rather than credited again - and its payload, which does
-carry the true receipt code, is stored on that callback row. So the real code is
-never lost, it just lives on the callback rather than on the payment.
+A real callback arriving afterwards finds the intent already settled, so it is
+not credited again - but it carries the receipt code this job could not get, and
+that code is backfilled onto the existing payment. That is the only moment the
+real code ever becomes available, and without it a reconciled sale could never
+be matched against the business's own M-Pesa statement. The callback is still
+recorded as suspect: a payment arriving after settlement is worth a person's
+attention regardless. See ``backfill_reconciled_receipt``.
 """
 
 from __future__ import annotations
@@ -46,12 +49,11 @@ from django.utils import timezone
 from apps.core.tenancy import bypass_rls, tenant_context
 from apps.payments.daraja import DarajaError, get_client
 from apps.payments.models import IntentState, MpesaCredential, PaymentIntent
-from apps.payments.services import mark_intent_failed, settle_intent
-
-#: Prefix on a payment reference that came from a status query rather than a
-#: callback. Visibly not an M-Pesa receipt code, which are alphanumeric and
-#: never contain a hyphen.
-RECONCILED_PREFIX = "RECON-"
+from apps.payments.services import (
+    RECONCILED_PREFIX,
+    mark_intent_failed,
+    settle_intent,
+)
 
 
 @dataclass

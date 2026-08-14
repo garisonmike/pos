@@ -247,6 +247,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             "tendered_cents",
             "change_cents",
             "mpesa_receipt_number",
+            "confirmed_via",
             "created_at",
         )
         read_only_fields = fields

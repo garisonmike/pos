@@ -31,9 +31,22 @@ from apps.payments.models import (
     PaymentIntent,
     SuspectReason,
 )
-from apps.sales.models import Payment, PaymentMethod, Sale, SaleDiscrepancy
+from apps.sales.models import (
+    Payment,
+    PaymentConfirmation,
+    PaymentMethod,
+    Sale,
+    SaleDiscrepancy,
+)
 from apps.sales.services import CheckoutError, ledger_position, recompute_state
 from apps.sales.states import SaleState
+
+#: Marks a payment reference that came from a status query rather than a
+#: callback. Visibly not an M-Pesa receipt code, which are alphanumeric and
+#: never contain a hyphen. Defined here rather than in reconciliation.py so that
+#: the backfill below can recognise one without importing that module - which
+#: already imports this one.
+RECONCILED_PREFIX = "RECON-"
 
 
 class StkError(Exception):
@@ -55,6 +68,10 @@ class SettlementOutcome:
     payment: Payment | None = None
     suspect_reason: str = ""
     detail: str = ""
+    #: A placeholder reference was replaced with a real M-Pesa receipt code.
+    #: Not a credit - no money moved - but the payment row is now reconcilable
+    #: against the business's own M-Pesa statement.
+    backfilled: bool = False
 
 
 def callback_url_for(intent: PaymentIntent) -> str:
@@ -231,8 +248,15 @@ def settle_intent(
         )
 
     if intent.state != IntentState.PENDING:
+        # A late callback for an attempt already settled by the reconciliation
+        # job carries the one thing that job could not get: the real M-Pesa
+        # receipt code. Take it.
+        backfilled = backfill_reconciled_receipt(
+            intent=intent, mpesa_receipt_number=mpesa_receipt_number
+        )
         return SettlementOutcome(
             credited=False,
+            backfilled=backfilled,
             outcome=CallbackOutcome.SUSPECT,
             suspect_reason=SuspectReason.INTENT_ALREADY_SETTLED,
             detail=f"This payment attempt was already {intent.get_state_display().lower()}.",
@@ -272,6 +296,11 @@ def settle_intent(
             amount_cents=amount_cents,
             mpesa_receipt_number=mpesa_receipt_number,
             mpesa_phone=phone,
+            confirmed_via=(
+                PaymentConfirmation.RECONCILIATION
+                if source == "RECONCILIATION"
+                else PaymentConfirmation.CALLBACK
+            ),
             intent=intent,
             user=user,
         )
@@ -320,6 +349,68 @@ def settle_intent(
     return SettlementOutcome(
         credited=True, outcome=CallbackOutcome.APPLIED, payment=payment
     )
+
+
+def backfill_reconciled_receipt(*, intent: PaymentIntent, mpesa_receipt_number: str) -> bool:
+    """Replace a placeholder reference with the real M-Pesa receipt code.
+
+    The one place a ``Payment`` row is edited after it is written, and worth
+    justifying since every other row here is append-only.
+
+    When the reconciliation job settles an attempt, it can only prove *that* the
+    customer paid - Daraja's status query does not return the receipt code. The
+    payment therefore carries ``RECON-<checkout request id>``, which keeps the
+    unique constraint working but is useless for matching against the business's
+    own M-Pesa statement. If the missing callback later turns up, it carries the
+    real code, and this is the only moment that code ever becomes available.
+
+    Nothing about the money changes: same amount, same sale, same timestamp,
+    same intent. A placeholder is replaced by the fact it stood in for. The sale
+    is not re-credited and its state is not touched - the callback is still
+    recorded as suspect, because a payment arriving after settlement is worth a
+    person's attention regardless.
+
+    Returns whether anything was replaced.
+    """
+    if not mpesa_receipt_number or mpesa_receipt_number.startswith(RECONCILED_PREFIX):
+        return False
+
+    payment = (
+        Payment.objects.select_for_update()
+        .filter(intent=intent, confirmed_via=PaymentConfirmation.RECONCILIATION)
+        .first()
+    )
+    if payment is None:
+        return False
+
+    previous = payment.mpesa_receipt_number
+    payment.mpesa_receipt_number = mpesa_receipt_number
+    payment.confirmed_via = PaymentConfirmation.CALLBACK
+
+    try:
+        with transaction.atomic():
+            payment.save(
+                update_fields=["mpesa_receipt_number", "confirmed_via", "updated_at"]
+            )
+    except IntegrityError:
+        # That receipt code is already on another payment in this business, so
+        # it has been credited elsewhere. Leaving the placeholder alone is the
+        # safe answer; the callback stays suspect and a person can work out
+        # which sale the money really belongs to.
+        return False
+
+    record_audit(
+        action=AuditAction.UPDATE,
+        entity=payment,
+        tenant_id=payment.tenant_id,
+        reason="Late callback supplied the M-Pesa receipt for a reconciled payment",
+        before={"mpesa_receipt_number": previous, "confirmed_via": "RECONCILIATION"},
+        after={
+            "mpesa_receipt_number": mpesa_receipt_number,
+            "confirmed_via": "CALLBACK",
+        },
+    )
+    return True
 
 
 def _raise_late_payment_discrepancy(*, sale, intent, amount_cents, receipt) -> None:

@@ -13,7 +13,8 @@ from django.utils import timezone
 
 from apps.core.tenancy import tenant_context
 from apps.payments.models import IntentState, MpesaCallback, PaymentIntent
-from apps.payments.reconciliation import RECONCILED_PREFIX, reconcile
+from apps.payments.reconciliation import reconcile
+from apps.payments.services import RECONCILED_PREFIX
 from apps.payments.testing import success_callback
 from apps.sales.models import Payment, Sale
 from apps.sales.states import SaleState
@@ -129,10 +130,9 @@ class TestCannotCreditTwice:
         """The race, in the order that actually happens.
 
         Reconciliation credits, then the missing callback finally turns up. It
-        finds the intent already resolved and is recorded rather than applied -
-        and its payload carries the true M-Pesa receipt code, so that code is
-        preserved on the callback row even though the payment carries the
-        reconciliation reference.
+        finds the intent already resolved, so no second payment is made - but it
+        carries the real M-Pesa receipt code, which is backfilled onto the
+        existing payment. See TestBackfillingTheRealReceiptCode.
         """
         fake_daraja.query_result_code = 0
         reconcile()
@@ -151,9 +151,8 @@ class TestCannotCreditTwice:
             payments = list(Payment.objects.all())
             record = MpesaCallback.objects.get()
 
-        assert len(payments) == 1
-        assert payments[0].mpesa_receipt_number.startswith(RECONCILED_PREFIX)
-        # The real code is not lost - it is on the callback record.
+        assert len(payments) == 1  # credited once, not twice
+        assert payments[0].mpesa_receipt_number == "QK12ABC34D"
         assert record.mpesa_receipt_number == "QK12ABC34D"
 
     def test_reconciliation_after_a_callback_does_nothing(
@@ -279,3 +278,207 @@ class TestReconciliationIsolation:
 
         with transaction.atomic(), tenant_context(tenant_b.id):
             assert Payment.all_objects.count() == 0
+
+
+class TestBackfillingTheRealReceiptCode:
+    """The late callback that turns a placeholder into ground truth.
+
+    A reconciled payment carries ``RECON-<checkout request id>`` because
+    Daraja's status query does not return an M-Pesa receipt code. That keeps the
+    unique constraint working but is useless for matching against the business's
+    own M-Pesa statement - and if the missing callback ever turns up, it carries
+    the real code. This is the only moment that code becomes available.
+    """
+
+    def _reconciled_then_callback(self, intent, anon_client, tenant, receipt="QK12ABC34D"):
+        reconcile()
+        response = anon_client.post(
+            f"/api/v1/payments/mpesa/callback/{intent.callback_token}/",
+            success_callback(
+                checkout_request_id=intent.checkout_request_id, receipt=receipt
+            ),
+            format="json",
+        )
+        assert response.status_code == 200
+        return response
+
+    def test_the_placeholder_is_replaced_with_the_real_code(
+        self, lapsed_intent, fake_daraja, tenant_a, anon_client
+    ):
+        fake_daraja.query_result_code = 0
+
+        self._reconciled_then_callback(lapsed_intent, anon_client, tenant_a)
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            payment = Payment.objects.get()
+
+        assert payment.mpesa_receipt_number == "QK12ABC34D"
+        assert not payment.mpesa_receipt_number.startswith(RECONCILED_PREFIX)
+
+    def test_confirmed_via_flips_to_callback(
+        self, lapsed_intent, fake_daraja, tenant_a, anon_client
+    ):
+        from apps.sales.models import PaymentConfirmation
+
+        fake_daraja.query_result_code = 0
+        reconcile()
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            before = Payment.objects.get()
+        assert before.confirmed_via == PaymentConfirmation.RECONCILIATION
+
+        anon_client.post(
+            f"/api/v1/payments/mpesa/callback/{lapsed_intent.callback_token}/",
+            success_callback(
+                checkout_request_id=lapsed_intent.checkout_request_id,
+                receipt="QK12ABC34D",
+            ),
+            format="json",
+        )
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            after = Payment.objects.get()
+        assert after.confirmed_via == PaymentConfirmation.CALLBACK
+
+    def test_the_money_is_untouched(
+        self, lapsed_intent, fake_daraja, tenant_a, anon_client
+    ):
+        """A placeholder is replaced by the fact it stood in for.
+
+        Same amount, same sale, same intent, same timestamp - nothing about the
+        money changes, which is what makes editing an otherwise append-only row
+        acceptable here.
+        """
+        fake_daraja.query_result_code = 0
+        reconcile()
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            before = Payment.objects.get()
+            before_amount, before_sale, before_created = (
+                before.amount_cents,
+                before.sale_id,
+                before.created_at,
+            )
+
+        self._reconciled_then_callback(lapsed_intent, anon_client, tenant_a)
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            after = Payment.objects.get()
+            payment_count = Payment.objects.count()
+
+        assert after.amount_cents == before_amount
+        assert after.sale_id == before_sale
+        assert after.created_at == before_created
+        assert payment_count == 1
+
+    def test_the_sale_state_is_untouched(
+        self, lapsed_intent, fake_daraja, tenant_a, anon_client
+    ):
+        fake_daraja.query_result_code = 0
+        reconcile()
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            sale = Sale.objects.get(pk=lapsed_intent.sale_id)
+            receipt_before = sale.receipt_number
+
+        self._reconciled_then_callback(lapsed_intent, anon_client, tenant_a)
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            sale.refresh_from_db()
+
+        assert sale.state == SaleState.PAID
+        assert sale.receipt_number == receipt_before
+        assert sale.is_overpaid is False
+
+    def test_the_late_callback_is_still_recorded_as_suspect(
+        self, lapsed_intent, fake_daraja, tenant_a, anon_client
+    ):
+        """Useful now rather than merely noise - but still worth a person's eye.
+
+        A payment arriving after settlement means the callback path was broken
+        for a while, and that is worth knowing even though the backfill has made
+        this particular one productive.
+        """
+        from apps.payments.models import CallbackOutcome, SuspectReason
+
+        fake_daraja.query_result_code = 0
+        self._reconciled_then_callback(lapsed_intent, anon_client, tenant_a)
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            record = MpesaCallback.objects.get()
+
+        assert record.outcome == CallbackOutcome.SUSPECT
+        assert record.suspect_reason == SuspectReason.INTENT_ALREADY_SETTLED
+        assert record.mpesa_receipt_number == "QK12ABC34D"
+
+    def test_the_backfill_is_audited(
+        self, lapsed_intent, fake_daraja, tenant_a, anon_client
+    ):
+        """Editing a payment row is unusual enough to leave a trail."""
+        from apps.core.models import AuditAction, AuditLog
+
+        fake_daraja.query_result_code = 0
+        self._reconciled_then_callback(lapsed_intent, anon_client, tenant_a)
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            entry = AuditLog.objects.filter(
+                action=AuditAction.UPDATE, entity_type="sales.Payment"
+            ).first()
+
+        assert entry is not None
+        assert entry.before["confirmed_via"] == "RECONCILIATION"
+        assert entry.after["mpesa_receipt_number"] == "QK12ABC34D"
+
+    def test_a_second_late_callback_changes_nothing_further(
+        self, lapsed_intent, fake_daraja, tenant_a, anon_client
+    ):
+        """Safaricom retries this one too."""
+        fake_daraja.query_result_code = 0
+        self._reconciled_then_callback(lapsed_intent, anon_client, tenant_a)
+        self._reconciled_then_callback(lapsed_intent, anon_client, tenant_a)
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            payments = list(Payment.objects.all())
+
+        assert len(payments) == 1
+        assert payments[0].mpesa_receipt_number == "QK12ABC34D"
+
+    def test_a_callback_settled_payment_is_never_backfilled_over(
+        self, client_cashier_a, item_a, stock_a, sandbox_credential, fake_daraja,
+        tenant_a, anon_client,
+    ):
+        """Only a reconciliation placeholder is replaceable.
+
+        A payment already confirmed by callback holds a real code, and
+        overwriting it would be losing ground truth rather than gaining it.
+        """
+        from apps.sales.models import PaymentConfirmation
+
+        response = client_cashier_a.post(
+            MPESA_CHECKOUT,
+            {"lines": [{"item_id": str(item_a.id), "quantity": "1"}], "phone": "0712345678"},
+            format="json",
+        )
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            intent = PaymentIntent.objects.get(pk=response.json()["payment_intent"]["id"])
+
+        anon_client.post(
+            f"/api/v1/payments/mpesa/callback/{intent.callback_token}/",
+            success_callback(
+                checkout_request_id=intent.checkout_request_id, receipt="QKFIRST001"
+            ),
+            format="json",
+        )
+        anon_client.post(
+            f"/api/v1/payments/mpesa/callback/{intent.callback_token}/",
+            success_callback(
+                checkout_request_id=intent.checkout_request_id, receipt="QKSECOND02"
+            ),
+            format="json",
+        )
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            payment = Payment.objects.get()
+
+        assert payment.mpesa_receipt_number == "QKFIRST001"
+        assert payment.confirmed_via == PaymentConfirmation.CALLBACK

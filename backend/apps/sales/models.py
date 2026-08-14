@@ -33,6 +33,23 @@ class PaymentMethod(models.TextChoices):
     MPESA = "MPESA", "M-Pesa"
 
 
+class PaymentConfirmation(models.TextChoices):
+    """How we know an M-Pesa payment actually happened.
+
+    Follows the same ``*_via`` shape as ``Sale.discount_authorized_via``: the
+    strength of the evidence is recorded rather than every source being quietly
+    treated as equivalent.
+
+    ``RECONCILIATION`` is the weaker of the two. Daraja's status query confirms
+    *that* a payment succeeded but does not return the M-Pesa receipt code, so
+    such a payment carries a placeholder reference until a late callback brings
+    the real one - see ``backfill_reconciled_receipt``.
+    """
+
+    CALLBACK = "CALLBACK", "Confirmed by callback"
+    RECONCILIATION = "RECONCILIATION", "Confirmed by status query"
+
+
 class RefundMethod(models.TextChoices):
     """How money was given back.
 
@@ -315,6 +332,17 @@ class Payment(TenantOwnedModel, UUIDModel, TimeStampedModel):
     # movement, so it is unique per business: no path may credit one twice.
     mpesa_receipt_number = models.CharField(max_length=32, blank=True)
     mpesa_phone = models.CharField(max_length=32, blank=True)
+    confirmed_via = models.CharField(
+        max_length=16,
+        choices=PaymentConfirmation.choices,
+        blank=True,
+        help_text=(
+            "How this payment was confirmed. A payment settled from a status "
+            "query carries a placeholder reference, because that query does not "
+            "return an M-Pesa receipt code - so this says whether the reference "
+            "beside it is a real code or a stand-in."
+        ),
+    )
     intent = models.ForeignKey(
         "payments.PaymentIntent",
         on_delete=models.SET_NULL,

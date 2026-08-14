@@ -20,6 +20,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from apps.compliance.services import ComplianceError, issue_for_settled_sale
 from apps.core.permissions import IsCashierOrAbove, IsManagerOrAbove
 from apps.payments.services import StkError, initiate_stk
 from apps.sales.authorization import (
@@ -188,6 +189,18 @@ class SaleViewSet(viewsets.ReadOnlyModelViewSet):
                     shift=resolve_shift(tenant=request.user.tenant, user=request.user),
                 )
 
+                # The tax document, raised inside this same transaction so its
+                # invoice number rolls back with the sale. There is no deferred
+                # path for a live sale: the number is taken now, in the sale's
+                # own transaction, exactly as the receipt number is.
+                sale.refresh_from_db()
+                issue_for_settled_sale(
+                    sale=sale,
+                    buyer_pin=data.get("buyer_pin", ""),
+                    user=request.user,
+                    request=request,
+                )
+
                 if authorization is not None:
                     record_authorization(
                         sale=sale,
@@ -195,7 +208,7 @@ class SaleViewSet(viewsets.ReadOnlyModelViewSet):
                         actor=request.user,
                         request=request,
                     )
-        except CheckoutError as exc:
+        except (CheckoutError, ComplianceError) as exc:
             return Response(
                 {"detail": exc.detail, "code": exc.code},
                 status=status.HTTP_400_BAD_REQUEST,

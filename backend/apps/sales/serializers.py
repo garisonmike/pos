@@ -111,6 +111,15 @@ class CashCheckoutSerializer(serializers.Serializer):
     )
 
     store_id = serializers.UUIDField(required=False, allow_null=True)
+    buyer_pin = serializers.CharField(
+        max_length=20,
+        required=False,
+        allow_blank=True,
+        help_text=(
+            "The customer's tax PIN, when they ask for a tax invoice. Checked "
+            "for shape only - nothing here can verify it without asking KRA."
+        ),
+    )
     client_uuid = serializers.UUIDField(
         required=False,
         allow_null=True,

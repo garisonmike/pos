@@ -22,9 +22,10 @@ It is the decision everything else is arranged around.
 9. [Printing](#printing)
 10. [M-Pesa](#m-pesa)
 11. [Shifts and the cash drawer](#shifts-and-the-cash-drawer)
-12. [Auditing](#auditing)
-13. [Technology choices](#technology-choices)
-14. [What is deliberately not here](#what-is-deliberately-not-here)
+12. [Compliance](#compliance)
+13. [Auditing](#auditing)
+14. [Technology choices](#technology-choices)
+15. [What is deliberately not here](#what-is-deliberately-not-here)
 
 ---
 
@@ -1194,6 +1195,93 @@ not.
 
 ---
 
+## Compliance
+
+This is a **boundary**, not a KRA integration. Every sale carries what a
+compliance regime needs, and the regime-specific part sits behind an adapter, so
+a real eTIMS integration later is a new class rather than a rewrite of how a sale
+is rung up.
+
+### An invoice number is not a receipt number
+
+Two separate series, and reusing one would be a mistake.
+
+A receipt number identifies what a customer was handed. An invoice number
+identifies a *taxable document*, and the two diverge immediately: a void never
+gets an invoice number, a credit note gets one of its own, and a business not
+registered for VAT gets receipt numbers and no invoices at all. Sharing a series
+would put gaps in the tax sequence the moment anything was voided — and a
+gapless tax sequence is precisely what a revenue authority looks at.
+
+`InvoiceCounter` is per business, locked for each allocation, the same shape as
+`ReceiptCounter`. Gaplessness is proved by a threaded test rather than a
+sequential one, because a race is the only thing that can break it.
+
+### Allocation is never deferred
+
+The number is taken **inside the transaction that commits the sale**. An online
+sale is numbered immediately, in its own transaction. An offline sale is
+numbered when it syncs — the same code, running later, because syncing is when
+that sale commits.
+
+What must never exist is a mechanism that defers allocation for a sale that has
+*already* committed. That would put the hole back.
+
+### Offline sales have no invoice number until they land
+
+Allocating on a disconnected till would make gaplessness across two tills
+unenforceable, so an offline sale simply has no invoice number until it syncs.
+The cost is that a customer asking for a tax invoice at a disconnected till
+cannot have one on the spot.
+
+**This is the position taken here, not a confirmed KRA requirement.** It needs
+verification against real guidance before a VAT-registered client relies on it —
+same caveat as the eTIMS scope note below.
+
+### Documents are immutable
+
+A `ComplianceDocument` is frozen once issued. A correction is a credit note
+referencing the original, never an edit — the same discipline as append-only
+ledgers, and here it is not only principle: an editable tax record is not a tax
+record. `save()` refuses anything outside `MUTABLE_AFTER_ISSUE`, which is
+submission bookkeeping only. A submission that succeeds on the third attempt has
+not changed a single tax fact.
+
+The tax breakdown is snapshotted per rate rather than derived on read, so a rate
+change next year cannot restate what was declared. Per rate because a return is
+filled in that way, and a duka selling zero-rated bread alongside 16% sugar
+would otherwise leave the filer splitting a single total by hand.
+
+### The adapter boundary
+
+```python
+class ComplianceAdapter(Protocol):
+    name: str
+    submits: bool
+    def issue(self, document) -> ComplianceResult: ...
+    def credit(self, document) -> ComplianceResult: ...
+    def status(self, document) -> ComplianceResult: ...
+```
+
+Two implementations from the start, deliberately — one implementation does not
+prove a boundary, it only describes one. Neither is a stub:
+
+| Adapter | For |
+|---|---|
+| `NullAdapter` | A business not registered for VAT. **The common case**, not a placeholder. Documents are recorded and numbered; nothing is submitted, recorded as `NOT_REQUIRED` so "nothing to send" is distinguishable from "not sent yet". |
+| `ManualExportAdapter` | A registered business with no gateway. Produces exactly what somebody would otherwise type into eTIMS Lite, as CSV and PDF. |
+
+Both run against one conformance suite, so a third adapter cannot ship having
+quietly redefined what `issue` means. A failure is a `ComplianceResult`, never
+an exception — the far end is a government service over a Kenyan connection, and
+an adapter that threw would take a sale down with it after the goods had left
+the shop.
+
+An unknown mode falls back to the null adapter rather than raising. A setting
+that has drifted must stop a shop *submitting*, not stop it selling.
+
+---
+
 ## Auditing
 
 Audit entries are written by calling `record_audit()` explicitly, not by
@@ -1266,6 +1354,7 @@ what makes forgetting to change it loud rather than silent.
   keep the name attached to them.
 - **Global barcode uniqueness.** Two unrelated shops printing their own labels
   will collide, and neither is wrong.
-- **eTIMS integration.** Milestone 4 builds a compliance adapter interface with
-  a manual/export implementation. A real OSCU/VSCU integration plugs into that
-  interface later without touching the sales schema.
+- **eTIMS integration.** The compliance adapter interface and a manual/export
+  implementation are built. A real OSCU/VSCU integration plugs into that
+  interface later without touching the sales schema. Nothing here talks to KRA,
+  holds credentials, or carries a device certificate.

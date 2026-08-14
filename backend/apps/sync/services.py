@@ -32,6 +32,7 @@ from django.db import IntegrityError, transaction
 
 from apps.accounts.constants import UserRole
 from apps.accounts.models import Device, User
+from apps.compliance.services import issue_for_settled_sale
 from apps.core.audit import record_audit
 from apps.core.models import AuditAction
 from apps.core.money import round_cash
@@ -239,6 +240,17 @@ def replay_sale(*, tenant, store, cashier, device, payload: dict, request=None) 
         if shift is not None and not shift.is_open:
             flags.append("late_attribution")
         attribute_payment(payment=payment, shift=shift)
+
+        # The invoice number is taken here, not on the device. Allocating it on
+        # a disconnected till would make gaplessness across two tills
+        # unenforceable, so an offline sale simply has no invoice number until
+        # it lands - which is this moment, inside the transaction that commits
+        # it. See ARCHITECTURE.md; this is a position taken, not a confirmed
+        # KRA requirement.
+        # Refreshed first: take_cash settles its own re-fetched row under a
+        # lock, so this instance is still OPEN and an invoice would be refused.
+        sale.refresh_from_db()
+        issue_for_settled_sale(sale=sale, user=cashier, request=request)
     except CheckoutError as exc:
         # The sale exists and the goods are gone, so this cannot roll back the
         # whole batch - but it must roll back this sale, or the shop is left

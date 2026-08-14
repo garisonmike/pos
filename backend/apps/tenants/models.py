@@ -120,6 +120,17 @@ class Tenant(UUIDModel, TimeStampedModel):
         blank=True,
         help_text="Tax PIN printed on receipts and required for tax invoices.",
     )
+    compliance_mode = models.CharField(
+        max_length=10,
+        default="NONE",
+        help_text=(
+            "Which compliance adapter this business's tax documents go "
+            "through. Defaults to NONE because most small dukas are not "
+            "VAT-registered - that is the common case, not a stub for one. "
+            "Choices live on apps.compliance.ComplianceMode; kept as a plain "
+            "field here so tenants does not depend on compliance."
+        ),
+    )
 
     # Contact and receipt branding.
     phone = models.CharField(max_length=32, blank=True)

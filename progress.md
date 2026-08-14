@@ -5,6 +5,62 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-15 — The compliance layer
+
+**Worked on:** milestone 4. Invoice numbering, the immutable document, the
+adapter boundary and the manual export.
+
+**Finished:** `InvoiceCounter`, `ComplianceDocument`, `NullAdapter`,
+`ManualExportAdapter`, the shared conformance suite, CSV and PDF export, and
+102 tests.
+
+**Decisions, and why:**
+
+**A separate invoice series.** A receipt number identifies what a customer was
+handed; an invoice number identifies a taxable document. They diverge
+immediately - a void never gets an invoice number, a credit note gets its own,
+and an unregistered business gets receipts and no invoices at all. Sharing one
+series would gap the tax sequence the moment anything was voided, and that
+sequence is exactly what a revenue authority reads.
+
+**Allocation is never deferred.** The number is taken inside the transaction
+that commits the sale. Online that is immediate; offline it happens at sync,
+which is the same code running later because syncing is when that sale commits.
+What I was careful *not* to build is a mechanism that defers allocation for a
+sale that has already committed - that would put the hole back.
+
+**Two adapters from the start, and neither is a stub.** One implementation
+describes a boundary; two prove it. `NullAdapter` is the common case - most
+small dukas are not VAT-registered - and `ManualExportAdapter` is what a
+registered business without a gateway actually does. Both run against one
+conformance suite, so a third cannot ship having quietly redefined `issue`.
+
+**A failure is a result, not an exception.** The far end is a government
+service over a Kenyan connection. An adapter that threw would take a sale down
+with it after the goods had left the shop.
+
+**The tax breakdown is per rate.** A single total tells a filer nothing when a
+sale mixes zero-rated bread with 16% sugar, which a duka does constantly.
+Snapshotted rather than derived, so a rate change next year cannot restate what
+was declared.
+
+**One thing found while building:** the sync path passed a stale in-memory sale
+to the invoicing hook. `take_cash` settles its own re-fetched row under a lock,
+so the instance the caller holds is still `OPEN` and the invoice was refused.
+The checkout view already refreshed before calling; sync did not. Caught by the
+offline-invoicing tests, which is what they were for.
+
+**Flagged, and written into ARCHITECTURE.md next to the offline-invoice
+position:** that position is mine, not a confirmed KRA requirement. It needs
+checking against real guidance before a VAT-registered client relies on it.
+Same caveat as the eTIMS scope note.
+
+**Come back to:** a settings endpoint for compliance mode and prefix, and an
+export download endpoint. The layer works; there is no back-office surface on
+it yet.
+
+---
+
 ## 2026-08-14 — Shifts, the cash drawer, and closing milestone 3
 
 **Worked on:** shift open/close with drawer reconciliation, then the milestone

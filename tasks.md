@@ -307,14 +307,27 @@ rather than planned up front.
 ### Still to do
 - [ ] SMS receipt *(stretch)*
 
-## Milestone 4 — Compliance layer
+## Milestone 4 — Compliance layer · [#4](https://github.com/garisonmike/pos/issues/4)
 
-- [ ] GitHub issue with scope and acceptance criteria
-- [ ] Per-tenant invoice numbering
-- [ ] Compliance adapter interface
-- [ ] Manual/export adapter producing what a business would enter into eTIMS Lite
-- [ ] Buyer PIN capture on a sale
-- [ ] Extension point documented for a real OSCU/VSCU or gateway integration
+- [x] GitHub issue with scope and acceptance criteria
+- [x] Per-tenant invoice numbering, gapless, separate from the receipt series *(a void never gets an invoice number and a credit note gets its own, so a shared series would gap the moment anything was voided)*
+- [x] Allocation inside the sale's own transaction — no deferred path for a live sale
+- [x] Threaded gaplessness test, five and ten tills at once, plus two businesses racing
+- [x] `ComplianceDocument`, immutable once issued; `save()` refuses anything outside submission bookkeeping
+- [x] Tax breakdown snapshotted per rate *(a return is filled in per rate, and a rate change next year must not restate what was declared)*
+- [x] Credit notes reference their original; an invoice cannot be credited twice and a credit note cannot be credited at all
+- [x] Compliance adapter interface
+- [x] `NullAdapter` for a business not registered for VAT — the common case, not a stub
+- [x] `ManualExportAdapter` producing what a business would type into eTIMS Lite
+- [x] Shared conformance suite run against both adapters *(one implementation describes a boundary; two prove it)*
+- [x] Buyer PIN capture, shape-checked only and named `looks_like_a_kra_pin` so nothing claims to have verified it
+- [x] Submission queued, never inline — a checkout must not wait on a government service
+- [x] CSV and PDF export from one row builder, so the two cannot disagree
+- [x] Offline sales get their number on arrival, never on the device
+- [x] Tenant isolation on both new tables
+- [x] 102 tests
+- [ ] Compliance settings endpoint (mode, prefix) for the back office
+- [ ] Export download endpoint
 
 ## Milestone 5 — Reporting and analytics
 

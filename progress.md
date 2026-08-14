@@ -5,6 +5,73 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-14 — Shifts, the cash drawer, and closing milestone 3
+
+**Worked on:** shift open/close with drawer reconciliation, then the milestone
+close-out.
+
+**Confirmed before starting, as asked:** whether the four cash-rounding
+regression tests actually assert settlement. I did not take my own word for it -
+I reverted the fix and ran them. Three of four failed; one passed. The weak one
+was the *rounded-up* case: overpaying by the rounding pushed the ledger past the
+raw total, so the sale reached PAID by accident while being wrongly marked
+overpaid, and a test checking only the state and the adjustment sailed through.
+I strengthened it to assert the ledger is exactly covered, added a fifth test
+for the rounding-down side, and re-ran against the reverted code: all five now
+fail. Then restored the fix and confirmed all five pass.
+
+That is the lesson the original bug taught, so it is worth naming: every figure
+on the rounded-down path was already correct while the bug was live - the amount
+due, the payment, the overpaid flag. The only thing wrong was that the sale sat
+at OPEN forever. Ledger arithmetic alone would never have caught it.
+
+**Finished:** `Shift`, `CashMovement`, `DrawerCount`, `ShiftDiscrepancy`, the
+open/close/cash endpoints, and 53 tests.
+
+**Decisions, and why:**
+
+**The count is blind, and it is enforced at the API rather than in the
+interface.** No endpoint reports what an open drawer is expected to hold. A
+cashier shown the figure first is not counting, they are typing a number back,
+and the control becomes theatre - which is worse than no control because it
+looks like one. Three tests check the expectation is null on `current`, on the
+detail view and in the listing.
+
+**Cash only.** An M-Pesa payment never touched the drawer. Folding it in is how
+a till reads twenty thousand short every day until nobody trusts the
+reconciliation. `attribute_payment` skips non-cash entirely, so an M-Pesa
+callback landing after a drawer closed raises nothing - flagging it would be
+noise about money that was never in the till.
+
+**Closing figures are frozen, per the decision on late attribution.** A payment
+names its shift explicitly rather than being matched by a time window, because
+an offline sale rung up during a shift but synced after it closed would fall
+outside any window and vanish from the reconciliation - exactly the sale a shop
+most needs accounted for. So late arrivals happen, and when one does the shift's
+figures stay as counted and a `LATE_ATTRIBUTION` discrepancy is written with an
+FK back to the shift.
+
+**A variance never blocks the close**, and carries the full breakdown - float,
+cash sales, refunds, paid in, paid out. A cashier who is nine hundred short
+needs to see which line it should have come from.
+
+**A denomination breakdown that does not sum to the declared total is refused
+rather than corrected.** Picking a winner between two disagreeing figures would
+hide which one the cashier got wrong.
+
+**Shifts are optional.** A duka with one person and one drawer may never open
+one. `Payment.shift` is nullable and the whole feature is inert if unused,
+which is also why adding it did not disturb any existing test.
+
+**Milestone 3 closed out:** README, ARCHITECTURE, CHANGELOG 0.3.0, tasks.md and
+this log all brought current.
+
+**Come back to:** the offline approval code, tracked under account management.
+It is the one real security gap this milestone leaves open, and it wants its own
+credential surface rather than being bolted onto sync.
+
+---
+
 ## 2026-08-14 — The selling screens, printing, and a live bug found underneath
 
 **Worked on:** the undercharge fix the last entry flagged, then the till side of

@@ -5,6 +5,102 @@ milestone.
 
 ---
 
+## [0.3.0] — 2026-08-14 — Milestone 3: selling, payments, receipts, offline and the drawer
+
+A shop can now trade. Ring up a sale, take cash or M-Pesa, hand over a receipt,
+keep selling when the network drops, and count the drawer at the end of the day.
+
+### Selling
+
+- Cart arithmetic in integer cents throughout: discount before tax, a whole-cart
+  discount apportioned across lines before tax by largest remainder, round per
+  line then sum. Mixed inclusive and exclusive tax rates total correctly on one
+  sale.
+- Sale state machine with every transition asserted and all 36 state pairs swept,
+  so nothing is legal by omission. **A paid sale cannot be voided.**
+- Cash checkout in one request, because that is how a counter works.
+- Discounts need authority. A manager or owner authorises from their own
+  session; a cashier needs a manager's credential in the request, verified and
+  discarded. Refusals are audited against the username typed, with no user
+  foreign key — nobody proved they were that person.
+
+### M-Pesa
+
+- STK push against Daraja, with per-tenant credentials encrypted at rest under a
+  key separate from `SECRET_KEY`.
+- Four idempotency keys, one guarded settlement path, and a terminal-state guard
+  so a callback can only credit a sale still awaiting payment.
+- Safaricom IP allowlist, mandatory once a tenant runs on production credentials.
+  `X-Forwarded-For` is read from the **last** entry — the leftmost is
+  attacker-controlled.
+- A reconciliation job for pushes whose callback never arrived, and a backfill
+  that replaces the placeholder reference when a late callback finally brings
+  the real receipt code.
+
+### Receipts
+
+- Sequential per-tenant numbering, allocated under a row lock inside the sale's
+  own transaction.
+- Text for a 58mm thermal printer and PDF for everything else, both from one
+  source so they cannot disagree about what was sold.
+- ESC/POS printing from the till. A printer out of paper never fails a sale.
+
+### Offline
+
+- The till sells with no connection, queueing to its own database.
+- Batch ingest with a verdict per sale: one bad sale in a batch of forty does
+  not strand the other thirty-nine.
+- Idempotent replay by database constraint rather than by a lookup — the obvious
+  look-then-create shape is a race, and two threads uploading the same batch
+  would both insert. Proved with real threads, two and five at once.
+- Offline PIN lockout in the till's own database, since the server's counter
+  lives in Redis and Redis is exactly what is unreachable. Refused attempts sync
+  home as audit entries.
+- A `pin_version` fingerprint catches a till approving a discount against a PIN
+  that has since been changed or revoked.
+- A till that undercharged because a price rose while it was offline settles for
+  what it collected, with the shortfall recorded and flagged.
+
+### Shifts and the cash drawer
+
+- Open a drawer with a counted float, record cash in and out, close it with a
+  count.
+- **The count is blind.** No endpoint reports what an open drawer is expected to
+  hold; the expectation is computed only once the cashier's figure is in hand.
+- Cash only. M-Pesa never enters the expected-cash figure.
+- Closing figures are frozen. A sale arriving after the drawer closed raises a
+  `LATE_ATTRIBUTION` discrepancy rather than rewriting what somebody signed off.
+
+### Fixed
+
+- **Any cash sale whose total was not a whole shilling took the customer's money
+  and never settled.** `ledger_position` read the raw total while `take_cash`
+  charged the rounded figure, so the two disagreed by up to fifty cents: no
+  receipt number, no stock movement, sale left open. With VAT-inclusive pricing
+  that is most sales. Settlement is now decided against
+  `collectable_cents = total + rounding - written_off`.
+- Audit redaction matched whole field names, so `consumer_secret` and `passkey`
+  would have been written to a manager-readable table in clear. Fixed before the
+  credential model existed.
+- `SaleViewSet.void` caught every exception and reported it as bad input, hiding
+  genuine bugs behind a 400.
+
+### Known limitations
+
+- **A stolen till is a stolen manager PIN.** The catalogue download sends a
+  manager's PIN hash so an offline discount check has something to verify
+  against. Four to six digits is brute-forceable by anyone holding the tablet,
+  and the same PIN signs in. Tracked under account management: a separate
+  offline approval code, revocable on its own.
+- The `pin_version` fingerprint catches staleness and revocation. It does not
+  prove the device performed the check — anyone who can edit the till's database
+  can read the version it holds.
+- A shift's total and the sales total will not tie out without reading both.
+  Deliberate; every discrepancy carries a foreign key to its shift so the join
+  is a query when reporting arrives.
+
+---
+
 ## [0.2.0] — 2026-08-13 — Milestone 2: catalogue, stock and the first till screens
 
 What a business sells and how much of it is on the shelf, plus an Android app

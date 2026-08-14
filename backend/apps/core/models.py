@@ -86,6 +86,9 @@ class AuditAction(models.TextChoices):
     REFUND = "REFUND", "Refunded"
     DISCOUNT_AUTHORIZED = "DISCOUNT_AUTHORIZED", "Discount authorised"
     DISCOUNT_REFUSED = "DISCOUNT_REFUSED", "Discount authorisation refused"
+    SHIFT_OPENED = "SHIFT_OPENED", "Shift opened"
+    SHIFT_CLOSED = "SHIFT_CLOSED", "Shift closed"
+    CASH_MOVEMENT = "CASH_MOVEMENT", "Cash moved in or out of the drawer"
 
 
 class AuditLog(TimeStampedModel):

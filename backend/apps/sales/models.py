@@ -364,6 +364,22 @@ class Payment(TenantOwnedModel, UUIDModel, TimeStampedModel):
     # movement, so it is unique per business: no path may credit one twice.
     mpesa_receipt_number = models.CharField(max_length=32, blank=True)
     mpesa_phone = models.CharField(max_length=32, blank=True)
+    shift = models.ForeignKey(
+        "shifts.Shift",
+        on_delete=models.PROTECT,
+        related_name="payments",
+        null=True,
+        blank=True,
+        help_text=(
+            "Which drawer this money went into. Named explicitly rather than "
+            "worked out from a time window: a sale rung up during a shift but "
+            "synced after it closed would fall outside any window and vanish "
+            "from the reconciliation, which is exactly the sale a shop most "
+            "needs accounted for. Null for a business that does not run "
+            "shifts - the feature is optional and a shop that never opens one "
+            "goes on selling."
+        ),
+    )
     confirmed_via = models.CharField(
         max_length=16,
         choices=PaymentConfirmation.choices,

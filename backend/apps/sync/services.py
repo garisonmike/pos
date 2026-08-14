@@ -38,6 +38,7 @@ from apps.core.money import round_cash
 from apps.sales.authorization import AuthorizationMethod
 from apps.sales.models import Sale, SaleDiscrepancy
 from apps.sales.services import CheckoutError, LineRequest, create_sale, take_cash
+from apps.shifts.services import attribute_payment, resolve_shift
 
 
 @dataclass
@@ -220,12 +221,24 @@ def replay_sale(*, tenant, store, cashier, device, payload: dict, request=None) 
     )
 
     try:
-        take_cash(
+        payment = take_cash(
             sale=sale,
             tendered_cents=payload["tendered_cents"],
             user=cashier,
             round_to_shilling=round_to_shilling,
         )
+        # File the cash against the drawer the till says it went into. If that
+        # drawer has already been closed, its figures are left exactly as
+        # counted and the late arrival is recorded against it instead - see
+        # attribute_payment.
+        shift = resolve_shift(
+            tenant=tenant,
+            user=cashier,
+            client_uuid=payload.get("shift_client_uuid"),
+        )
+        if shift is not None and not shift.is_open:
+            flags.append("late_attribution")
+        attribute_payment(payment=payment, shift=shift)
     except CheckoutError as exc:
         # The sale exists and the goods are gone, so this cannot roll back the
         # whole batch - but it must roll back this sale, or the shop is left

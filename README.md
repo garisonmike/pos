@@ -30,12 +30,21 @@ Milestones 1 and 2 are complete: tenant isolation, authentication, the platform
 console, the catalogue, stock, CSV import, and an Android till that signs in and
 browses.
 
-Milestone 3 is most of the way there on the server. Cart arithmetic, the sale
-state machine, cash checkout with a manager-authorised discount gate, M-Pesa
-STK push with its callback and reconciliation, receipts as text and PDF, and
-offline sync — batch ingest, idempotent replay and the till's outbox database —
-are all built and tested. What is left is the till side of selling: wiring the
-outbox to a real cart and checkout screen, and ESC/POS printing.
+Milestone 3 is complete. A shop can ring up a sale, take cash or M-Pesa, hand
+over a receipt, keep trading with no connection, and reconcile its drawer at the
+end of the day:
+
+- **Selling.** Cart arithmetic in integer cents, a sale state machine where a
+  paid sale cannot be voided, and cash checkout with a manager-authorised
+  discount gate.
+- **M-Pesa.** STK push, a callback guarded by four idempotency keys, and a
+  reconciliation job for the pushes whose callback never arrived.
+- **Receipts.** Text for a 58mm thermal printer, PDF for everything else, and
+  ESC/POS printing from the till.
+- **Offline.** The till sells with no network, queues to its own database, and
+  replays safely — the same sale arriving twice is recognised, never duplicated.
+- **Shifts.** Open a drawer with a counted float, record cash in and out, and
+  close it with a blind count that the system checks against what it expected.
 
 See [tasks.md](tasks.md) for what is done and what is next, and
 [progress.md](progress.md) for a dated log of decisions.

@@ -37,6 +37,7 @@ from apps.sales.serializers import (
 )
 from apps.sales.services import CheckoutError, LineRequest, create_sale, take_cash, void_sale
 from apps.sales.states import IllegalTransition
+from apps.shifts.services import attribute_payment, resolve_shift
 from apps.stores.selection import resolve_store_for
 
 
@@ -170,11 +171,21 @@ class SaleViewSet(viewsets.ReadOnlyModelViewSet):
                         ]
                     )
 
-                take_cash(
+                payment = take_cash(
                     sale=sale,
                     tendered_cents=data["tendered_cents"],
                     user=request.user,
                     round_to_shilling=data.get("round_to_shilling", True),
+                )
+
+                # Which drawer this cash went into. Done here rather than
+                # inside take_cash so that apps.sales stays unaware of shifts -
+                # the drawer is a thing that watches sales, not the other way
+                # round. A business that runs no shifts gets None and nothing
+                # changes.
+                attribute_payment(
+                    payment=payment,
+                    shift=resolve_shift(tenant=request.user.tenant, user=request.user),
                 )
 
                 if authorization is not None:

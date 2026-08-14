@@ -19,10 +19,12 @@ It is the decision everything else is arranged around.
 6. [Authentication](#authentication)
 7. [Money](#money)
 8. [Offline sync](#offline-sync)
-9. [M-Pesa](#m-pesa)
-10. [Auditing](#auditing)
-11. [Technology choices](#technology-choices)
-12. [What is deliberately not here](#what-is-deliberately-not-here)
+9. [Printing](#printing)
+10. [M-Pesa](#m-pesa)
+11. [Shifts and the cash drawer](#shifts-and-the-cash-drawer)
+12. [Auditing](#auditing)
+13. [Technology choices](#technology-choices)
+14. [What is deliberately not here](#what-is-deliberately-not-here)
 
 ---
 
@@ -1108,6 +1110,87 @@ Recorded and settled outside the system. Automated M-Pesa refunds need the B2C
 product, its own credentials and a funded float, which a small shop does not
 have on day one — so the ledger stays correct and the shop settles it the way
 they already do. An unsettled refund stays visibly unsettled.
+
+---
+
+## Shifts and the cash drawer
+
+A shift is one cashier, one drawer, one till, for one stretch of time. Closing
+one is the moment a person counts money and puts their name to a figure, which
+makes it the most sensitive record here after the sales themselves.
+
+Shifts are **optional**. A duka with one person and one drawer may never open
+one, and it goes on selling exactly as before — `Payment.shift` is simply null.
+
+### The count is blind
+
+A cashier declares what is in the drawer *before* the system tells them what it
+expected. This is enforced at the API, not merely in the interface: no endpoint
+reports an expected total for a drawer that is still open, and
+`expected_closing_cents` is computed inside `close_shift` only once the declared
+figure is in hand. Showing it first turns the count into typing a number back,
+and the control becomes theatre — which is worse than no control, because it
+looks like one.
+
+### Cash only
+
+```
+expected = opening_float + cash_sales - cash_refunds + paid_in - paid_out
+```
+
+An M-Pesa payment never touched the drawer. Folding mobile money in is how a
+till reads twenty thousand short every day until nobody trusts the
+reconciliation at all. The same reasoning excludes M-Pesa refunds, which are
+settled outside the drawer.
+
+`CashMovement` covers what no sale accounts for: `PAID_IN`, `PAID_OUT`, and
+`DROP` for excess moved to the safe mid-shift. A reason is mandatory — "cash
+out" with no reason is indistinguishable from theft, and the person who has to
+tell them apart is reading it months later. Movements are append-only; a
+mistake is corrected by an opposite movement, never an edit.
+
+### A variance never blocks the close
+
+The count is a fact to record, not something to argue with, and a shop that
+cannot close its till stops trading. A non-zero variance writes a `VARIANCE`
+discrepancy carrying the full breakdown — float, cash sales, refunds, paid in,
+paid out — so a cashier who is nine hundred short can see which line it should
+have come from rather than only that it is missing.
+
+The optional denomination breakdown must sum to the declared total or the close
+is refused. Picking a winner between two disagreeing figures would hide which
+one the cashier got wrong.
+
+### Closing figures are frozen
+
+Once closed, a shift's expected total and variance never change. There is no
+reopening; a correction is a new record.
+
+A payment names its shift **explicitly** rather than being matched by a time
+window, because an offline sale rung up during a shift but synced after it
+closed would fall outside any window and vanish from the reconciliation — and
+that is precisely the sale a shop most needs accounted for. So a late arrival is
+possible, and when one happens the shift's figures are left exactly as counted
+and a `LATE_ATTRIBUTION` discrepancy is written instead.
+
+This is the same principle as no PAID-to-VOID and append-only ledgers: a
+close-time figure records what was true when a person was accountable for it,
+not a running total that drifts as more data arrives. Recomputing would mean two
+different correct answers exist for "what was shift X's variance", depending on
+when you ask.
+
+The cost is that a shift's total and the sales total will not tie out without
+reading both. That is accepted deliberately. Every `ShiftDiscrepancy` carries a
+foreign key to its shift, so joining frozen figures to what landed afterwards is
+a query rather than an investigation whenever the reporting work happens.
+
+### Who may close
+
+Their own drawer, always. Somebody else's only with manager rights — a cashier
+closing a colleague's would be putting a figure against another person's name.
+A manager doing it (the cashier went home) writes a `FORCED_CLOSE` discrepancy:
+a normal thing that happens, and also exactly what it would look like if it were
+not.
 
 ---
 

@@ -84,6 +84,17 @@ class OfflineSaleSerializer(serializers.Serializer):
     round_to_shilling = serializers.BooleanField(default=True)
 
     store_id = serializers.UUIDField(required=False, allow_null=True)
+    shift_client_uuid = serializers.UUIDField(
+        required=False,
+        allow_null=True,
+        help_text=(
+            "Which drawer the till recorded this sale against, by the "
+            "identifier the till generated when it opened the shift. Named "
+            "rather than inferred from a time window: a sale rung up during a "
+            "shift but synced after it closed would fall outside any window "
+            "and vanish from the reconciliation."
+        ),
+    )
     customer_phone = serializers.CharField(max_length=32, required=False, allow_blank=True)
     note = serializers.CharField(required=False, allow_blank=True)
 

@@ -591,10 +591,40 @@ class TestCashRoundingSettlesTheSale:
     def test_a_total_rounded_up_still_settles(
         self, client_cashier_a, cashier_a, item_a, stock_a
     ):
+        """Asserts settlement, not just the arithmetic.
+
+        Rounding *up* is the case that hid the original bug. The extra cents
+        pushed the ledger past the raw total, so the sale reached PAID by
+        accident while being wrongly marked overpaid - and a test checking only
+        the state and the adjustment passed throughout. What pins it is that the
+        ledger is exactly covered: no more, no less.
+        """
         body = self._sell_at(client_cashier_a, cashier_a, item_a, 18051, 18100).json()
 
         assert body["state"] == SaleState.PAID
+        assert body["receipt_number"] is not None
         assert body["rounding_adjustment_cents"] == 49
+        assert body["is_overpaid"] is False
+        assert body["amount_due_cents"] == 18100
+        assert sum(p["amount_cents"] for p in body["payments"]) == 18100
+        assert body["change_cents"] == 0
+
+    def test_the_payment_ledger_exactly_covers_a_rounded_down_sale(
+        self, client_cashier_a, cashier_a, item_a, stock_a
+    ):
+        """The same point from the rounding-down side.
+
+        The state assertion is not decoration. Every other figure here was
+        already correct while the bug was live - the amount due, the payment,
+        the overpaid flag - and the only thing wrong was that the sale sat at
+        OPEN forever. Ledger arithmetic alone would have passed.
+        """
+        body = self._sell_at(client_cashier_a, cashier_a, item_a, 18049, 18000).json()
+
+        assert body["state"] == SaleState.PAID
+        assert body["amount_due_cents"] == 18000
+        assert sum(p["amount_cents"] for p in body["payments"]) == 18000
+        assert body["is_overpaid"] is False
 
     def test_the_stock_moves_on_a_rounded_sale(
         self, client_cashier_a, cashier_a, item_a, stock_a

@@ -287,8 +287,22 @@ rather than planned up front.
   - [ ] Test that a cashier's approval material is still never downloaded
   - [ ] Test that revoking it stops offline approvals while sign-in keeps working
 
+### Shifts and the cash drawer
+- [x] `Shift`, `CashMovement`, `DrawerCount` and `ShiftDiscrepancy`, with RLS
+- [x] Open a drawer with a counted float; one open drawer per cashier, enforced by constraint
+- [x] **Blind count** — no endpoint reports what an open drawer is expected to hold
+- [x] Expected cash is cash only; M-Pesa never enters it
+- [x] Paid in, paid out and drops to the safe, each needing a reason
+- [x] A variance is recorded with its full breakdown and never blocks the close
+- [x] Optional denomination breakdown, refused unless it sums to the declared total
+- [x] Closing figures frozen; no reopening, and a second close changes nothing
+- [x] A payment names its shift explicitly, so an offline sale is not lost to a time window
+- [x] `LATE_ATTRIBUTION` with an FK back to the shift, so reporting can join frozen figures to what arrived after
+- [x] A manager may close somebody else's drawer; it is recorded as `FORCED_CLOSE`
+- [x] Shifts are optional — a shop that never opens one goes on selling
+- [x] 53 tests
+
 ### Still to do
-- [ ] Shift open/close with cash drawer reconciliation
 - [ ] SMS receipt *(stretch)*
 
 ## Milestone 4 — Compliance layer

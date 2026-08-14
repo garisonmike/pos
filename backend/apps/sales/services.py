@@ -75,7 +75,11 @@ def ledger_position(sale: Sale) -> LedgerPosition:
     paid = sale.payments.aggregate(total=Sum("amount_cents"))["total"] or 0
     refunded = sale.refunds.aggregate(total=Sum("amount_cents"))["total"] or 0
     return LedgerPosition(
-        total_cents=sale.total_cents, paid_cents=paid, refunded_cents=refunded
+        total_cents=sale.total_cents,
+        paid_cents=paid,
+        refunded_cents=refunded,
+        rounding_adjustment_cents=sale.rounding_adjustment_cents,
+        written_off_cents=sale.offline_shortfall_cents,
     )
 
 

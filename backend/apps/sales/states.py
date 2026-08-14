@@ -142,11 +142,34 @@ class LedgerPosition:
     total_cents: int
     paid_cents: int
     refunded_cents: int
+    #: Cash rounding to the nearest shilling. Signed: negative when the sale
+    #: was rounded down. Part of the position rather than applied by each
+    #: caller, because a caller that forgets it asks for a figure the customer
+    #: was never charged - and then the sale never settles.
+    rounding_adjustment_cents: int = 0
+    #: Money the shop will never collect on this sale, and has stopped asking
+    #: for. Its own quantity rather than a reduced total, so that what the sale
+    #: *should* have come to and what the shop *settled for* stay separately
+    #: visible - a written-off shortfall folded into the total would be
+    #: indistinguishable from a cheaper sale a week later.
+    written_off_cents: int = 0
+
+    @property
+    def collectable_cents(self) -> int:
+        """What the shop is actually asking the customer for.
+
+        The headline total, adjusted for cash rounding and reduced by anything
+        written off. Every settlement question is asked against this rather
+        than against ``total_cents``: a sale is finished when the customer has
+        paid what they were *asked*, which is not the same number as what the
+        goods listed at.
+        """
+        return self.total_cents + self.rounding_adjustment_cents - self.written_off_cents
 
     @property
     def outstanding_cents(self) -> int:
         """Still owed by the customer. Never negative; see ``overpaid_cents``."""
-        return max(0, self.total_cents - self.paid_cents)
+        return max(0, self.collectable_cents - self.paid_cents)
 
     @property
     def overpaid_cents(self) -> int:
@@ -156,11 +179,11 @@ class LedgerPosition:
         against one sale genuinely charge a customer twice, and the money is
         real; recording it and blocking on it is the only honest response.
         """
-        return max(0, self.paid_cents - self.total_cents)
+        return max(0, self.paid_cents - self.collectable_cents)
 
     @property
     def is_settled(self) -> bool:
-        return self.paid_cents >= self.total_cents and self.total_cents > 0
+        return self.paid_cents >= self.collectable_cents and self.total_cents > 0
 
     @property
     def is_fully_refunded(self) -> bool:
@@ -168,8 +191,12 @@ class LedgerPosition:
 
     @property
     def refundable_cents(self) -> int:
-        """What could still be refunded, capped at what was actually taken."""
-        return max(0, min(self.paid_cents, self.total_cents) - self.refunded_cents)
+        """What could still be refunded, capped at what was actually taken.
+
+        Capped against the collectable figure, not the headline total: money
+        that was written off never arrived, so it cannot be given back.
+        """
+        return max(0, min(self.paid_cents, self.collectable_cents) - self.refunded_cents)
 
 
 def derive_state(current: str, position: LedgerPosition) -> str:

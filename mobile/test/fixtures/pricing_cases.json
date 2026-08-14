@@ -1,0 +1,7769 @@
+{
+ "generated_by": "backend/gen_pricing_fixture.py",
+ "cases": [
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 274112,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 419519,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 20616,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 3207956,
+    "discount_cents": 49589,
+    "tax_cents": 65165,
+    "total_cents": 3273121,
+    "lines": [
+     {
+      "gross_before_discount_cents": 274112,
+      "line_discount_cents": 32411,
+      "cart_discount_share_cents": 0,
+      "net_cents": 241701,
+      "tax_cents": 60425,
+      "gross_cents": 302126
+     },
+     {
+      "gross_before_discount_cents": 2936633,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 2936633,
+      "tax_cents": 0,
+      "gross_cents": 2936633
+     },
+     {
+      "gross_before_discount_cents": 51540,
+      "line_discount_cents": 17178,
+      "cart_discount_share_cents": 0,
+      "net_cents": 29622,
+      "tax_cents": 4740,
+      "gross_cents": 34362
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 241223,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 142486,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 196308,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 454052,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 479912,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 2022345,
+    "discount_cents": 567897,
+    "tax_cents": 274531,
+    "total_cents": 2296876,
+    "lines": [
+     {
+      "gross_before_discount_cents": 1688561,
+      "line_discount_cents": 567797,
+      "cart_discount_share_cents": 0,
+      "net_cents": 1037744,
+      "tax_cents": 83020,
+      "gross_cents": 1120764
+     },
+     {
+      "gross_before_discount_cents": 71243,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 0,
+      "net_cents": 61330,
+      "tax_cents": 9813,
+      "gross_cents": 71143
+     },
+     {
+      "gross_before_discount_cents": 196308,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 196308,
+      "tax_cents": 0,
+      "gross_cents": 196308
+     },
+     {
+      "gross_before_discount_cents": 908104,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 726483,
+      "tax_cents": 181621,
+      "gross_cents": 908104
+     },
+     {
+      "gross_before_discount_cents": 480,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 480,
+      "tax_cents": 77,
+      "gross_cents": 557
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 321564,
+     "quantity_milli": 1,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 129,
+    "discount_cents": 161,
+    "tax_cents": 32,
+    "total_cents": 161,
+    "lines": [
+     {
+      "gross_before_discount_cents": 322,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 161,
+      "net_cents": 129,
+      "tax_cents": 32,
+      "gross_cents": 161
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 477101,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 329,
+    "discount_cents": 148,
+    "tax_cents": 53,
+    "total_cents": 382,
+    "lines": [
+     {
+      "gross_before_discount_cents": 477,
+      "line_discount_cents": 148,
+      "cart_discount_share_cents": 0,
+      "net_cents": 329,
+      "tax_cents": 53,
+      "gross_cents": 382
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 164586,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 360439,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 216464,
+    "discount_cents": 353616,
+    "tax_cents": 46744,
+    "total_cents": 263208,
+    "lines": [
+     {
+      "gross_before_discount_cents": 164586,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 82672,
+      "net_cents": 81914,
+      "tax_cents": 13106,
+      "gross_cents": 95020
+     },
+     {
+      "gross_before_discount_cents": 405494,
+      "line_discount_cents": 135151,
+      "cart_discount_share_cents": 135793,
+      "net_cents": 134550,
+      "tax_cents": 33638,
+      "gross_cents": 168188
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 426967,
+     "quantity_milli": 1,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 23512,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 22351,
+    "discount_cents": 25100,
+    "tax_cents": 3544,
+    "total_cents": 25895,
+    "lines": [
+     {
+      "gross_before_discount_cents": 427,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 225,
+      "net_cents": 202,
+      "tax_cents": 0,
+      "gross_cents": 202
+     },
+     {
+      "gross_before_discount_cents": 47024,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 24775,
+      "net_cents": 22149,
+      "tax_cents": 3544,
+      "gross_cents": 25693
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 295933,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 142209,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 324644,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 216308,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 52316,
+     "quantity_milli": 1,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 411699,
+    "discount_cents": 171132,
+    "tax_cents": 64546,
+    "total_cents": 476245,
+    "lines": [
+     {
+      "gross_before_discount_cents": 295933,
+      "line_discount_cents": 98634,
+      "cart_discount_share_cents": 10850,
+      "net_cents": 186449,
+      "tax_cents": 46612,
+      "gross_cents": 233061
+     },
+     {
+      "gross_before_discount_cents": 142209,
+      "line_discount_cents": 47498,
+      "cart_discount_share_cents": 5208,
+      "net_cents": 71602,
+      "tax_cents": 17901,
+      "gross_cents": 89503
+     },
+     {
+      "gross_before_discount_cents": 162322,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 8927,
+      "net_cents": 153395,
+      "tax_cents": 0,
+      "gross_cents": 153395
+     },
+     {
+      "gross_before_discount_cents": 216,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 12,
+      "net_cents": 204,
+      "tax_cents": 33,
+      "gross_cents": 237
+     },
+     {
+      "gross_before_discount_cents": 52,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 3,
+      "net_cents": 49,
+      "tax_cents": 0,
+      "gross_cents": 49
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 324710,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 175066,
+     "quantity_milli": 333,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 271953,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 227841,
+     "quantity_milli": 333,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 100340,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 559092,
+    "discount_cents": 37015,
+    "tax_cents": 90715,
+    "total_cents": 649807,
+    "lines": [
+     {
+      "gross_before_discount_cents": 162355,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 0,
+      "net_cents": 135651,
+      "tax_cents": 21704,
+      "gross_cents": 157355
+     },
+     {
+      "gross_before_discount_cents": 58297,
+      "line_discount_cents": 5830,
+      "cart_discount_share_cents": 0,
+      "net_cents": 48581,
+      "tax_cents": 3886,
+      "gross_cents": 52467
+     },
+     {
+      "gross_before_discount_cents": 271953,
+      "line_discount_cents": 13598,
+      "cart_discount_share_cents": 0,
+      "net_cents": 206684,
+      "tax_cents": 51671,
+      "gross_cents": 258355
+     },
+     {
+      "gross_before_discount_cents": 75871,
+      "line_discount_cents": 7587,
+      "cart_discount_share_cents": 0,
+      "net_cents": 68284,
+      "tax_cents": 5463,
+      "gross_cents": 73747
+     },
+     {
+      "gross_before_discount_cents": 112883,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 0,
+      "net_cents": 99892,
+      "tax_cents": 7991,
+      "gross_cents": 107883
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 329535,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 300364,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 380778,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 416838,
+     "quantity_milli": 500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 93174,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 2505579,
+    "discount_cents": 1331210,
+    "tax_cents": 449975,
+    "total_cents": 2955554,
+    "lines": [
+     {
+      "gross_before_discount_cents": 370727,
+      "line_discount_cents": 42073,
+      "cart_discount_share_cents": 35725,
+      "net_cents": 271231,
+      "tax_cents": 21698,
+      "gross_cents": 292929
+     },
+     {
+      "gross_before_discount_cents": 600728,
+      "line_discount_cents": 60073,
+      "cart_discount_share_cents": 58770,
+      "net_cents": 481885,
+      "tax_cents": 0,
+      "gross_cents": 481885
+     },
+     {
+      "gross_before_discount_cents": 2665446,
+      "line_discount_cents": 893393,
+      "cart_discount_share_cents": 192626,
+      "net_cents": 1579427,
+      "tax_cents": 394857,
+      "gross_cents": 1974284
+     },
+     {
+      "gross_before_discount_cents": 208419,
+      "line_discount_cents": 20942,
+      "cart_discount_share_cents": 20379,
+      "net_cents": 133678,
+      "tax_cents": 33420,
+      "gross_cents": 167098
+     },
+     {
+      "gross_before_discount_cents": 46587,
+      "line_discount_cents": 2429,
+      "cart_discount_share_cents": 4800,
+      "net_cents": 39358,
+      "tax_cents": 0,
+      "gross_cents": 39358
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 162600,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 182770,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 164881,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 887730,
+    "discount_cents": 135057,
+    "tax_cents": 123397,
+    "total_cents": 1011127,
+    "lines": [
+     {
+      "gross_before_discount_cents": 325200,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 8128,
+      "net_cents": 316972,
+      "tax_cents": 0,
+      "gross_cents": 316972
+     },
+     {
+      "gross_before_discount_cents": 456925,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 11423,
+      "net_cents": 356402,
+      "tax_cents": 89100,
+      "gross_cents": 445502
+     },
+     {
+      "gross_before_discount_cents": 329762,
+      "line_discount_cents": 109910,
+      "cart_discount_share_cents": 5496,
+      "net_cents": 214356,
+      "tax_cents": 34297,
+      "gross_cents": 248653
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 464504,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 311812,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 93742,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 2068,
+     "quantity_milli": 1,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 730095,
+    "discount_cents": 158639,
+    "tax_cents": 69569,
+    "total_cents": 799664,
+    "lines": [
+     {
+      "gross_before_discount_cents": 232252,
+      "line_discount_cents": 77410,
+      "cart_discount_share_cents": 15484,
+      "net_cents": 139358,
+      "tax_cents": 22297,
+      "gross_cents": 161655
+     },
+     {
+      "gross_before_discount_cents": 312,
+      "line_discount_cents": 104,
+      "cart_discount_share_cents": 21,
+      "net_cents": 161,
+      "tax_cents": 26,
+      "gross_cents": 187
+     },
+     {
+      "gross_before_discount_cents": 656194,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 65620,
+      "net_cents": 590574,
+      "tax_cents": 47246,
+      "gross_cents": 637820
+     },
+     {
+      "gross_before_discount_cents": 2,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 2,
+      "tax_cents": 0,
+      "gross_cents": 2
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 119826,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 272465,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1699688,
+    "discount_cents": 5100,
+    "tax_cents": 262380,
+    "total_cents": 1962068,
+    "lines": [
+     {
+      "gross_before_discount_cents": 59913,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 0,
+      "net_cents": 59813,
+      "tax_cents": 0,
+      "gross_cents": 59813
+     },
+     {
+      "gross_before_discount_cents": 1907255,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 0,
+      "net_cents": 1639875,
+      "tax_cents": 262380,
+      "gross_cents": 1902255
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 150228,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 307659,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1768164,
+    "discount_cents": 52580,
+    "tax_cents": 79921,
+    "total_cents": 1848085,
+    "lines": [
+     {
+      "gross_before_discount_cents": 1051596,
+      "line_discount_cents": 52580,
+      "cart_discount_share_cents": 0,
+      "net_cents": 999016,
+      "tax_cents": 79921,
+      "gross_cents": 1078937
+     },
+     {
+      "gross_before_discount_cents": 769148,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 769148,
+      "tax_cents": 0,
+      "gross_cents": 769148
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 56157,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 378397,
+    "discount_cents": 14702,
+    "tax_cents": 94599,
+    "total_cents": 472996,
+    "lines": [
+     {
+      "gross_before_discount_cents": 393099,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 9702,
+      "net_cents": 378397,
+      "tax_cents": 94599,
+      "gross_cents": 472996
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 263711,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 306813,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 423488,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 976729,
+    "discount_cents": 55635,
+    "tax_cents": 93114,
+    "total_cents": 1069843,
+    "lines": [
+     {
+      "gross_before_discount_cents": 263711,
+      "line_discount_cents": 13186,
+      "cart_discount_share_cents": 0,
+      "net_cents": 250525,
+      "tax_cents": 62631,
+      "gross_cents": 313156
+     },
+     {
+      "gross_before_discount_cents": 345165,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 345165,
+      "tax_cents": 0,
+      "gross_cents": 345165
+     },
+     {
+      "gross_before_discount_cents": 423488,
+      "line_discount_cents": 42449,
+      "cart_discount_share_cents": 0,
+      "net_cents": 381039,
+      "tax_cents": 30483,
+      "gross_cents": 411522
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 419494,
+     "quantity_milli": 333,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 459901,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 277083,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 312459,
+    "discount_cents": 401311,
+    "tax_cents": 54172,
+    "total_cents": 366631,
+    "lines": [
+     {
+      "gross_before_discount_cents": 139692,
+      "line_discount_cents": 46559,
+      "cart_discount_share_cents": 46700,
+      "net_cents": 46433,
+      "tax_cents": 11608,
+      "gross_cents": 58041
+     },
+     {
+      "gross_before_discount_cents": 517389,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 259436,
+      "net_cents": 222373,
+      "tax_cents": 35580,
+      "gross_cents": 257953
+     },
+     {
+      "gross_before_discount_cents": 92269,
+      "line_discount_cents": 4713,
+      "cart_discount_share_cents": 43903,
+      "net_cents": 43653,
+      "tax_cents": 6984,
+      "gross_cents": 50637
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 417712,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 522140,
+    "discount_cents": 522140,
+    "tax_cents": 83542,
+    "total_cents": 605682,
+    "lines": [
+     {
+      "gross_before_discount_cents": 1044280,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 522140,
+      "net_cents": 522140,
+      "tax_cents": 83542,
+      "gross_cents": 605682
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 268498,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 160157,
+     "quantity_milli": 333,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 466270,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 17242,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1133775,
+    "discount_cents": 44642,
+    "tax_cents": 231095,
+    "total_cents": 1364870,
+    "lines": [
+     {
+      "gross_before_discount_cents": 671245,
+      "line_discount_cents": 33562,
+      "cart_discount_share_cents": 0,
+      "net_cents": 549727,
+      "tax_cents": 87956,
+      "gross_cents": 637683
+     },
+     {
+      "gross_before_discount_cents": 53332,
+      "line_discount_cents": 5333,
+      "cart_discount_share_cents": 0,
+      "net_cents": 47999,
+      "tax_cents": 12000,
+      "gross_cents": 59999
+     },
+     {
+      "gross_before_discount_cents": 524554,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 524554,
+      "tax_cents": 131139,
+      "gross_cents": 655693
+     },
+     {
+      "gross_before_discount_cents": 17242,
+      "line_discount_cents": 5747,
+      "cart_discount_share_cents": 0,
+      "net_cents": 11495,
+      "tax_cents": 0,
+      "gross_cents": 11495
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 240493,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 497737,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 3990642,
+    "discount_cents": 179308,
+    "tax_cents": 997660,
+    "total_cents": 4988302,
+    "lines": [
+     {
+      "gross_before_discount_cents": 1683451,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 0,
+      "net_cents": 1342761,
+      "tax_cents": 335690,
+      "gross_cents": 1678451
+     },
+     {
+      "gross_before_discount_cents": 3484159,
+      "line_discount_cents": 174308,
+      "cart_discount_share_cents": 0,
+      "net_cents": 2647881,
+      "tax_cents": 661970,
+      "gross_cents": 3309851
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 211692,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 338958,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 351972,
+    "discount_cents": 381171,
+    "tax_cents": 56316,
+    "total_cents": 408288,
+    "lines": [
+     {
+      "gross_before_discount_cents": 423384,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 211692,
+      "net_cents": 182493,
+      "tax_cents": 29199,
+      "gross_cents": 211692
+     },
+     {
+      "gross_before_discount_cents": 338958,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 169479,
+      "net_cents": 169479,
+      "tax_cents": 27117,
+      "gross_cents": 196596
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 477097,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 327855,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 177977,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 214208,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 1882760,
+    "discount_cents": 101664,
+    "tax_cents": 58753,
+    "total_cents": 1941513,
+    "lines": [
+     {
+      "gross_before_discount_cents": 238549,
+      "line_discount_cents": 11927,
+      "cart_discount_share_cents": 2960,
+      "net_cents": 223662,
+      "tax_cents": 35786,
+      "gross_cents": 259448
+     },
+     {
+      "gross_before_discount_cents": 163928,
+      "line_discount_cents": 59637,
+      "cart_discount_share_cents": 1362,
+      "net_cents": 102929,
+      "tax_cents": 16469,
+      "gross_cents": 119398
+     },
+     {
+      "gross_before_discount_cents": 88989,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 1161,
+      "net_cents": 81230,
+      "tax_cents": 6498,
+      "gross_cents": 87728
+     },
+     {
+      "gross_before_discount_cents": 1499456,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 19517,
+      "net_cents": 1474939,
+      "tax_cents": 0,
+      "gross_cents": 1474939
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 380884,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 495945,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 125352,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 447959,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 1775342,
+    "discount_cents": 258109,
+    "tax_cents": 284055,
+    "total_cents": 2059397,
+    "lines": [
+     {
+      "gross_before_discount_cents": 952210,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 35188,
+      "net_cents": 790450,
+      "tax_cents": 126472,
+      "gross_cents": 916922
+     },
+     {
+      "gross_before_discount_cents": 557938,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 20620,
+      "net_cents": 463205,
+      "tax_cents": 74113,
+      "gross_cents": 537318
+     },
+     {
+      "gross_before_discount_cents": 313380,
+      "line_discount_cents": 31438,
+      "cart_discount_share_cents": 10420,
+      "net_cents": 234071,
+      "tax_cents": 37451,
+      "gross_cents": 271522
+     },
+     {
+      "gross_before_discount_cents": 447959,
+      "line_discount_cents": 149305,
+      "cart_discount_share_cents": 11038,
+      "net_cents": 287616,
+      "tax_cents": 46019,
+      "gross_cents": 333635
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 295023,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 459607,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 311763,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 447681,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 107778,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 774634,
+    "discount_cents": 37376,
+    "tax_cents": 56051,
+    "total_cents": 830685,
+    "lines": [
+     {
+      "gross_before_discount_cents": 295023,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 355,
+      "net_cents": 294568,
+      "tax_cents": 0,
+      "gross_cents": 294568
+     },
+     {
+      "gross_before_discount_cents": 153049,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 178,
+      "net_cents": 127475,
+      "tax_cents": 20396,
+      "gross_cents": 147871
+     },
+     {
+      "gross_before_discount_cents": 311763,
+      "line_discount_cents": 31176,
+      "cart_discount_share_cents": 337,
+      "net_cents": 259491,
+      "tax_cents": 20759,
+      "gross_cents": 280250
+     },
+     {
+      "gross_before_discount_cents": 448,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 1,
+      "net_cents": 385,
+      "tax_cents": 62,
+      "gross_cents": 447
+     },
+     {
+      "gross_before_discount_cents": 107778,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 129,
+      "net_cents": 92715,
+      "tax_cents": 14834,
+      "gross_cents": 107549
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 361538,
+     "quantity_milli": 333,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 99333,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 201686,
+    "discount_cents": 18039,
+    "tax_cents": 41526,
+    "total_cents": 243212,
+    "lines": [
+     {
+      "gross_before_discount_cents": 120392,
+      "line_discount_cents": 17039,
+      "cart_discount_share_cents": 510,
+      "net_cents": 102843,
+      "tax_cents": 25711,
+      "gross_cents": 128554
+     },
+     {
+      "gross_before_discount_cents": 99333,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 490,
+      "net_cents": 98843,
+      "tax_cents": 15815,
+      "gross_cents": 114658
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 383536,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 573591,
+    "discount_cents": 101707,
+    "tax_cents": 91774,
+    "total_cents": 665365,
+    "lines": [
+     {
+      "gross_before_discount_cents": 767072,
+      "line_discount_cents": 76707,
+      "cart_discount_share_cents": 25000,
+      "net_cents": 573591,
+      "tax_cents": 91774,
+      "gross_cents": 665365
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 401331,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 405979,
+     "quantity_milli": 333,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 299289,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 447055,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 990219,
+    "discount_cents": 402280,
+    "tax_cents": 131157,
+    "total_cents": 1121376,
+    "lines": [
+     {
+      "gross_before_discount_cents": 802662,
+      "line_discount_cents": 267527,
+      "cart_discount_share_cents": 12349,
+      "net_cents": 484061,
+      "tax_cents": 38725,
+      "gross_cents": 522786
+     },
+     {
+      "gross_before_discount_cents": 135191,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 3004,
+      "net_cents": 127187,
+      "tax_cents": 31797,
+      "gross_cents": 158984
+     },
+     {
+      "gross_before_discount_cents": 299289,
+      "line_discount_cents": 99753,
+      "cart_discount_share_cents": 4604,
+      "net_cents": 194932,
+      "tax_cents": 31189,
+      "gross_cents": 226121
+     },
+     {
+      "gross_before_discount_cents": 223528,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 5043,
+      "net_cents": 184039,
+      "tax_cents": 29446,
+      "gross_cents": 213485
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 295169,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 387158,
+     "quantity_milli": 1,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 495575,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 299484,
+    "discount_cents": 33402,
+    "tax_cents": 74754,
+    "total_cents": 374238,
+    "lines": [
+     {
+      "gross_before_discount_cents": 332065,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 33196,
+      "net_cents": 298769,
+      "tax_cents": 74692,
+      "gross_cents": 373461
+     },
+     {
+      "gross_before_discount_cents": 387,
+      "line_discount_cents": 19,
+      "cart_discount_share_cents": 37,
+      "net_cents": 331,
+      "tax_cents": 0,
+      "gross_cents": 331
+     },
+     {
+      "gross_before_discount_cents": 496,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 50,
+      "net_cents": 384,
+      "tax_cents": 62,
+      "gross_cents": 446
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 263167,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 85190,
+    "discount_cents": 39579,
+    "tax_cents": 6815,
+    "total_cents": 92005,
+    "lines": [
+     {
+      "gross_before_discount_cents": 131584,
+      "line_discount_cents": 11579,
+      "cart_discount_share_cents": 28000,
+      "net_cents": 85190,
+      "tax_cents": 6815,
+      "gross_cents": 92005
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 295607,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 229028,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 637891,
+    "discount_cents": 152576,
+    "tax_cents": 159473,
+    "total_cents": 797364,
+    "lines": [
+     {
+      "gross_before_discount_cents": 591214,
+      "line_discount_cents": 59121,
+      "cart_discount_share_cents": 13303,
+      "net_cents": 518790,
+      "tax_cents": 129698,
+      "gross_cents": 648488
+     },
+     {
+      "gross_before_discount_cents": 229028,
+      "line_discount_cents": 76335,
+      "cart_discount_share_cents": 3817,
+      "net_cents": 119101,
+      "tax_cents": 29775,
+      "gross_cents": 148876
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 132810,
+     "quantity_milli": 1,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 267916,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1519105,
+    "discount_cents": 356438,
+    "tax_cents": 2,
+    "total_cents": 1519107,
+    "lines": [
+     {
+      "gross_before_discount_cents": 133,
+      "line_discount_cents": 107,
+      "cart_discount_share_cents": 3,
+      "net_cents": 21,
+      "tax_cents": 2,
+      "gross_cents": 23
+     },
+     {
+      "gross_before_discount_cents": 1875412,
+      "line_discount_cents": 187541,
+      "cart_discount_share_cents": 168787,
+      "net_cents": 1519084,
+      "tax_cents": 0,
+      "gross_cents": 1519084
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 419287,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 138055,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 3000486,
+    "discount_cents": 3551,
+    "tax_cents": 469585,
+    "total_cents": 3470071,
+    "lines": [
+     {
+      "gross_before_discount_cents": 2935009,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 0,
+      "net_cents": 2934909,
+      "tax_cents": 469585,
+      "gross_cents": 3404494
+     },
+     {
+      "gross_before_discount_cents": 69028,
+      "line_discount_cents": 3451,
+      "cart_discount_share_cents": 0,
+      "net_cents": 65577,
+      "tax_cents": 0,
+      "gross_cents": 65577
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 236347,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 0,
+    "discount_cents": 236,
+    "tax_cents": 0,
+    "total_cents": 0,
+    "lines": [
+     {
+      "gross_before_discount_cents": 236,
+      "line_discount_cents": 236,
+      "cart_discount_share_cents": 0,
+      "net_cents": 0,
+      "tax_cents": 0,
+      "gross_cents": 0
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 418352,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 106663,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 69624,
+    "discount_cents": 37457,
+    "tax_cents": 5593,
+    "total_cents": 75217,
+    "lines": [
+     {
+      "gross_before_discount_cents": 418,
+      "line_discount_cents": 121,
+      "cart_discount_share_cents": 7,
+      "net_cents": 290,
+      "tax_cents": 46,
+      "gross_cents": 336
+     },
+     {
+      "gross_before_discount_cents": 106663,
+      "line_discount_cents": 35551,
+      "cart_discount_share_cents": 1778,
+      "net_cents": 69334,
+      "tax_cents": 5547,
+      "gross_cents": 74881
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 222194,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 16528,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 1569233,
+    "discount_cents": 2653,
+    "tax_cents": 251078,
+    "total_cents": 1820311,
+    "lines": [
+     {
+      "gross_before_discount_cents": 1555358,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 991,
+      "net_cents": 1554367,
+      "tax_cents": 248699,
+      "gross_cents": 1803066
+     },
+     {
+      "gross_before_discount_cents": 16528,
+      "line_discount_cents": 1653,
+      "cart_discount_share_cents": 9,
+      "net_cents": 14866,
+      "tax_cents": 2379,
+      "gross_cents": 17245
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 126318,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 416082,
+     "quantity_milli": 1,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 818912,
+    "discount_cents": 239,
+    "tax_cents": 65560,
+    "total_cents": 884472,
+    "lines": [
+     {
+      "gross_before_discount_cents": 884226,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 0,
+      "net_cents": 818635,
+      "tax_cents": 65491,
+      "gross_cents": 884126
+     },
+     {
+      "gross_before_discount_cents": 416,
+      "line_discount_cents": 139,
+      "cart_discount_share_cents": 0,
+      "net_cents": 277,
+      "tax_cents": 69,
+      "gross_cents": 346
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 316480,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 320436,
+    "discount_cents": 35604,
+    "tax_cents": 80109,
+    "total_cents": 400545,
+    "lines": [
+     {
+      "gross_before_discount_cents": 356040,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 35604,
+      "net_cents": 320436,
+      "tax_cents": 80109,
+      "gross_cents": 400545
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 56424,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 67226,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 320073,
+     "quantity_milli": 500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 39006,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 171460,
+    "discount_cents": 251784,
+    "tax_cents": 36819,
+    "total_cents": 208279,
+    "lines": [
+     {
+      "gross_before_discount_cents": 63477,
+      "line_discount_cents": 6348,
+      "cart_discount_share_cents": 28564,
+      "net_cents": 22852,
+      "tax_cents": 5713,
+      "gross_cents": 28565
+     },
+     {
+      "gross_before_discount_cents": 134452,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 67176,
+      "net_cents": 67176,
+      "tax_cents": 10748,
+      "gross_cents": 77924
+     },
+     {
+      "gross_before_discount_cents": 160037,
+      "line_discount_cents": 53340,
+      "cart_discount_share_cents": 53349,
+      "net_cents": 53348,
+      "tax_cents": 13337,
+      "gross_cents": 66685
+     },
+     {
+      "gross_before_discount_cents": 78012,
+      "line_discount_cents": 7801,
+      "cart_discount_share_cents": 35106,
+      "net_cents": 28084,
+      "tax_cents": 7021,
+      "gross_cents": 35105
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 29062,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 51598,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 422313,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 128823,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 3346628,
+    "discount_cents": 44495,
+    "tax_cents": 11756,
+    "total_cents": 3358384,
+    "lines": [
+     {
+      "gross_before_discount_cents": 9678,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 9678,
+      "tax_cents": 1548,
+      "gross_cents": 11226
+     },
+     {
+      "gross_before_discount_cents": 103196,
+      "line_discount_cents": 39395,
+      "cart_discount_share_cents": 0,
+      "net_cents": 63801,
+      "tax_cents": 10208,
+      "gross_cents": 74009
+     },
+     {
+      "gross_before_discount_cents": 2956191,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 0,
+      "net_cents": 2956091,
+      "tax_cents": 0,
+      "gross_cents": 2956091
+     },
+     {
+      "gross_before_discount_cents": 322058,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 0,
+      "net_cents": 317058,
+      "tax_cents": 0,
+      "gross_cents": 317058
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 299599,
+     "quantity_milli": 1,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 323,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 0,
+    "discount_cents": 2561,
+    "tax_cents": 0,
+    "total_cents": 0,
+    "lines": [
+     {
+      "gross_before_discount_cents": 300,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 300,
+      "net_cents": 0,
+      "tax_cents": 0,
+      "gross_cents": 0
+     },
+     {
+      "gross_before_discount_cents": 2261,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 2261,
+      "net_cents": 0,
+      "tax_cents": 0,
+      "gross_cents": 0
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 354624,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 423402,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 343749,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 143018,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 572700,
+    "discount_cents": 634212,
+    "tax_cents": 91631,
+    "total_cents": 664331,
+    "lines": [
+     {
+      "gross_before_discount_cents": 355,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 178,
+      "net_cents": 153,
+      "tax_cents": 24,
+      "gross_cents": 177
+     },
+     {
+      "gross_before_discount_cents": 423402,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 209538,
+      "net_cents": 208864,
+      "tax_cents": 33418,
+      "gross_cents": 242282
+     },
+     {
+      "gross_before_discount_cents": 687498,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 344302,
+      "net_cents": 295859,
+      "tax_cents": 47337,
+      "gross_cents": 343196
+     },
+     {
+      "gross_before_discount_cents": 143018,
+      "line_discount_cents": 7151,
+      "cart_discount_share_cents": 68043,
+      "net_cents": 67824,
+      "tax_cents": 10852,
+      "gross_cents": 78676
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 334240,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 133413,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 485662,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 201285,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 1405322,
+    "discount_cents": 1000,
+    "tax_cents": 161170,
+    "total_cents": 1566492,
+    "lines": [
+     {
+      "gross_before_discount_cents": 334240,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 238,
+      "net_cents": 334002,
+      "tax_cents": 83501,
+      "gross_cents": 417503
+     },
+     {
+      "gross_before_discount_cents": 133,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 115,
+      "tax_cents": 18,
+      "gross_cents": 133
+     },
+     {
+      "gross_before_discount_cents": 971324,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 691,
+      "net_cents": 970633,
+      "tax_cents": 77651,
+      "gross_cents": 1048284
+     },
+     {
+      "gross_before_discount_cents": 100643,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 71,
+      "net_cents": 100572,
+      "tax_cents": 0,
+      "gross_cents": 100572
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 454513,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 379062,
+    "discount_cents": 75451,
+    "tax_cents": 0,
+    "total_cents": 379062,
+    "lines": [
+     {
+      "gross_before_discount_cents": 454513,
+      "line_discount_cents": 50451,
+      "cart_discount_share_cents": 25000,
+      "net_cents": 379062,
+      "tax_cents": 0,
+      "gross_cents": 379062
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 99874,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 80887,
+    "discount_cents": 25000,
+    "tax_cents": 6471,
+    "total_cents": 87358,
+    "lines": [
+     {
+      "gross_before_discount_cents": 112358,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 25000,
+      "net_cents": 80887,
+      "tax_cents": 6471,
+      "gross_cents": 87358
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 12440,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 267732,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 489235,
+     "quantity_milli": 1,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 331561,
+    "discount_cents": 216044,
+    "tax_cents": 81217,
+    "total_cents": 412778,
+    "lines": [
+     {
+      "gross_before_discount_cents": 12440,
+      "line_discount_cents": 622,
+      "cart_discount_share_cents": 1182,
+      "net_cents": 9848,
+      "tax_cents": 788,
+      "gross_cents": 10636
+     },
+     {
+      "gross_before_discount_cents": 535464,
+      "line_discount_cents": 178470,
+      "cart_discount_share_cents": 35700,
+      "net_cents": 321294,
+      "tax_cents": 80324,
+      "gross_cents": 401618
+     },
+     {
+      "gross_before_discount_cents": 489,
+      "line_discount_cents": 24,
+      "cart_discount_share_cents": 46,
+      "net_cents": 419,
+      "tax_cents": 105,
+      "gross_cents": 524
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 183004,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 9014,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 18296,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 112761,
+    "discount_cents": 15065,
+    "tax_cents": 11095,
+    "total_cents": 123856,
+    "lines": [
+     {
+      "gross_before_discount_cents": 91502,
+      "line_discount_cents": 9150,
+      "cart_discount_share_cents": 0,
+      "net_cents": 82352,
+      "tax_cents": 6588,
+      "gross_cents": 88940
+     },
+     {
+      "gross_before_discount_cents": 18028,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 18028,
+      "tax_cents": 4507,
+      "gross_cents": 22535
+     },
+     {
+      "gross_before_discount_cents": 18296,
+      "line_discount_cents": 5915,
+      "cart_discount_share_cents": 0,
+      "net_cents": 12381,
+      "tax_cents": 0,
+      "gross_cents": 12381
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 291508,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 32889,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 354016,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 263486,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 55328,
+    "discount_cents": 6936,
+    "tax_cents": 4475,
+    "total_cents": 59803,
+    "lines": [
+     {
+      "gross_before_discount_cents": 292,
+      "line_discount_cents": 97,
+      "cart_discount_share_cents": 20,
+      "net_cents": 175,
+      "tax_cents": 28,
+      "gross_cents": 203
+     },
+     {
+      "gross_before_discount_cents": 65778,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 6568,
+      "net_cents": 54731,
+      "tax_cents": 4379,
+      "gross_cents": 59110
+     },
+     {
+      "gross_before_discount_cents": 354,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 35,
+      "net_cents": 275,
+      "tax_cents": 44,
+      "gross_cents": 319
+     },
+     {
+      "gross_before_discount_cents": 263,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 16,
+      "net_cents": 147,
+      "tax_cents": 24,
+      "gross_cents": 171
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 54350,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 226362,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 40268,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 486379,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 486342,
+    "discount_cents": 24031,
+    "tax_cents": 44191,
+    "total_cents": 530533,
+    "lines": [
+     {
+      "gross_before_discount_cents": 108700,
+      "line_discount_cents": 5535,
+      "cart_discount_share_cents": 2786,
+      "net_cents": 100379,
+      "tax_cents": 8030,
+      "gross_cents": 108409
+     },
+     {
+      "gross_before_discount_cents": 113181,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 3056,
+      "net_cents": 110125,
+      "tax_cents": 17620,
+      "gross_cents": 127745
+     },
+     {
+      "gross_before_discount_cents": 45302,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 1223,
+      "net_cents": 44079,
+      "tax_cents": 0,
+      "gross_cents": 44079
+     },
+     {
+      "gross_before_discount_cents": 243190,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 6431,
+      "net_cents": 231759,
+      "tax_cents": 18541,
+      "gross_cents": 250300
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 383738,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 290675,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 179126,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 331655,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 867216,
+    "discount_cents": 979319,
+    "tax_cents": 77433,
+    "total_cents": 944649,
+    "lines": [
+     {
+      "gross_before_discount_cents": 767476,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 384116,
+      "net_cents": 383260,
+      "tax_cents": 0,
+      "gross_cents": 383260
+     },
+     {
+      "gross_before_discount_cents": 327009,
+      "line_discount_cents": 32701,
+      "cart_discount_share_cents": 147318,
+      "net_cents": 146990,
+      "tax_cents": 23518,
+      "gross_cents": 170508
+     },
+     {
+      "gross_before_discount_cents": 447815,
+      "line_discount_cents": 49782,
+      "cart_discount_share_cents": 199239,
+      "net_cents": 171374,
+      "tax_cents": 27420,
+      "gross_cents": 198794
+     },
+     {
+      "gross_before_discount_cents": 331655,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 165963,
+      "net_cents": 165592,
+      "tax_cents": 26495,
+      "gross_cents": 192087
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 95161,
+     "quantity_milli": 333,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 427713,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 439390,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 412062,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 347761,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 3950467,
+    "discount_cents": 754683,
+    "tax_cents": 81388,
+    "total_cents": 4031855,
+    "lines": [
+     {
+      "gross_before_discount_cents": 31689,
+      "line_discount_cents": 8169,
+      "cart_discount_share_cents": 2352,
+      "net_cents": 21168,
+      "tax_cents": 5292,
+      "gross_cents": 26460
+     },
+     {
+      "gross_before_discount_cents": 1069283,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 106928,
+      "net_cents": 962355,
+      "tax_cents": 0,
+      "gross_cents": 962355
+     },
+     {
+      "gross_before_discount_cents": 3075730,
+      "line_discount_cents": 307573,
+      "cart_discount_share_cents": 276816,
+      "net_cents": 2491341,
+      "tax_cents": 0,
+      "gross_cents": 2491341
+     },
+     {
+      "gross_before_discount_cents": 137217,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 13722,
+      "net_cents": 123495,
+      "tax_cents": 19759,
+      "gross_cents": 143254
+     },
+     {
+      "gross_before_discount_cents": 391231,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 39123,
+      "net_cents": 352108,
+      "tax_cents": 56337,
+      "gross_cents": 408445
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 289969,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 167004,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 75518,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 419138,
+     "quantity_milli": 1,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 884876,
+    "discount_cents": 51280,
+    "tax_cents": 68508,
+    "total_cents": 953384,
+    "lines": [
+     {
+      "gross_before_discount_cents": 579938,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 15934,
+      "net_cents": 564004,
+      "tax_cents": 45120,
+      "gross_cents": 609124
+     },
+     {
+      "gross_before_discount_cents": 167004,
+      "line_discount_cents": 16700,
+      "cart_discount_share_cents": 4130,
+      "net_cents": 146174,
+      "tax_cents": 23388,
+      "gross_cents": 169562
+     },
+     {
+      "gross_before_discount_cents": 188795,
+      "line_discount_cents": 9440,
+      "cart_discount_share_cents": 4928,
+      "net_cents": 174427,
+      "tax_cents": 0,
+      "gross_cents": 174427
+     },
+     {
+      "gross_before_discount_cents": 419,
+      "line_discount_cents": 140,
+      "cart_discount_share_cents": 8,
+      "net_cents": 271,
+      "tax_cents": 0,
+      "gross_cents": 271
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 78709,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 408393,
+     "quantity_milli": 333,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 109071,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 835097,
+    "discount_cents": 73730,
+    "tax_cents": 130148,
+    "total_cents": 965245,
+    "lines": [
+     {
+      "gross_before_discount_cents": 550963,
+      "line_discount_cents": 55096,
+      "cart_discount_share_cents": 0,
+      "net_cents": 495867,
+      "tax_cents": 79339,
+      "gross_cents": 575206
+     },
+     {
+      "gross_before_discount_cents": 135995,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 135995,
+      "tax_cents": 0,
+      "gross_cents": 135995
+     },
+     {
+      "gross_before_discount_cents": 272678,
+      "line_discount_cents": 18634,
+      "cart_discount_share_cents": 0,
+      "net_cents": 203235,
+      "tax_cents": 50809,
+      "gross_cents": 254044
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 444077,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 474777,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 423189,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 175853,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1115643,
+    "discount_cents": 77123,
+    "tax_cents": 99675,
+    "total_cents": 1215318,
+    "lines": [
+     {
+      "gross_before_discount_cents": 444077,
+      "line_discount_cents": 22304,
+      "cart_discount_share_cents": 10544,
+      "net_cents": 411229,
+      "tax_cents": 0,
+      "gross_cents": 411229
+     },
+     {
+      "gross_before_discount_cents": 474777,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 11870,
+      "net_cents": 462907,
+      "tax_cents": 74065,
+      "gross_cents": 536972
+     },
+     {
+      "gross_before_discount_cents": 211595,
+      "line_discount_cents": 21160,
+      "cart_discount_share_cents": 4761,
+      "net_cents": 160064,
+      "tax_cents": 25610,
+      "gross_cents": 185674
+     },
+     {
+      "gross_before_discount_cents": 87927,
+      "line_discount_cents": 4396,
+      "cart_discount_share_cents": 2088,
+      "net_cents": 81443,
+      "tax_cents": 0,
+      "gross_cents": 81443
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 378794,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 108814,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 845626,
+    "discount_cents": 73535,
+    "tax_cents": 79244,
+    "total_cents": 924870,
+    "lines": [
+     {
+      "gross_before_discount_cents": 757588,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 839,
+      "net_cents": 700694,
+      "tax_cents": 56055,
+      "gross_cents": 756749
+     },
+     {
+      "gross_before_discount_cents": 217628,
+      "line_discount_cents": 72535,
+      "cart_discount_share_cents": 161,
+      "net_cents": 144932,
+      "tax_cents": 23189,
+      "gross_cents": 168121
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 374645,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 128538,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 438625,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1571314,
+    "discount_cents": 370101,
+    "tax_cents": 138438,
+    "total_cents": 1709752,
+    "lines": [
+     {
+      "gross_before_discount_cents": 936613,
+      "line_discount_cents": 93661,
+      "cart_discount_share_cents": 84295,
+      "net_cents": 758657,
+      "tax_cents": 121385,
+      "gross_cents": 880042
+     },
+     {
+      "gross_before_discount_cents": 144605,
+      "line_discount_cents": 7230,
+      "cart_discount_share_cents": 13738,
+      "net_cents": 106584,
+      "tax_cents": 17053,
+      "gross_cents": 123637
+     },
+     {
+      "gross_before_discount_cents": 877250,
+      "line_discount_cents": 92725,
+      "cart_discount_share_cents": 78452,
+      "net_cents": 706073,
+      "tax_cents": 0,
+      "gross_cents": 706073
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 310964,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 295851,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 2375247,
+    "discount_cents": 32096,
+    "tax_cents": 332791,
+    "total_cents": 2708038,
+    "lines": [
+     {
+      "gross_before_discount_cents": 621928,
+      "line_discount_cents": 31096,
+      "cart_discount_share_cents": 222,
+      "net_cents": 590610,
+      "tax_cents": 47249,
+      "gross_cents": 637859
+     },
+     {
+      "gross_before_discount_cents": 2070957,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 778,
+      "net_cents": 1784637,
+      "tax_cents": 285542,
+      "gross_cents": 2070179
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 165105,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 476489,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 426100,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 528681,
+    "discount_cents": 723383,
+    "tax_cents": 125328,
+    "total_cents": 654009,
+    "lines": [
+     {
+      "gross_before_discount_cents": 185743,
+      "line_discount_cents": 9387,
+      "cart_discount_share_cents": 88178,
+      "net_cents": 76016,
+      "tax_cents": 12162,
+      "gross_cents": 88178
+     },
+     {
+      "gross_before_discount_cents": 1191223,
+      "line_discount_cents": 59561,
+      "cart_discount_share_cents": 565831,
+      "net_cents": 452665,
+      "tax_cents": 113166,
+      "gross_cents": 565831
+     },
+     {
+      "gross_before_discount_cents": 426,
+      "line_discount_cents": 426,
+      "cart_discount_share_cents": 0,
+      "net_cents": 0,
+      "tax_cents": 0,
+      "gross_cents": 0
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 240323,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 465674,
+     "quantity_milli": 333,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 213332,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 296026,
+    "discount_cents": 365735,
+    "tax_cents": 21335,
+    "total_cents": 317361,
+    "lines": [
+     {
+      "gross_before_discount_cents": 80028,
+      "line_discount_cents": 4101,
+      "cart_discount_share_cents": 40920,
+      "net_cents": 35007,
+      "tax_cents": 5601,
+      "gross_cents": 40608
+     },
+     {
+      "gross_before_discount_cents": 155069,
+      "line_discount_cents": 15507,
+      "cart_discount_share_cents": 75215,
+      "net_cents": 64347,
+      "tax_cents": 0,
+      "gross_cents": 64347
+     },
+     {
+      "gross_before_discount_cents": 426664,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 229892,
+      "net_cents": 196672,
+      "tax_cents": 15734,
+      "gross_cents": 212406
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 482913,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 266715,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 696337,
+    "discount_cents": 53291,
+    "tax_cents": 90077,
+    "total_cents": 786414,
+    "lines": [
+     {
+      "gross_before_discount_cents": 482913,
+      "line_discount_cents": 53291,
+      "cart_discount_share_cents": 0,
+      "net_cents": 429622,
+      "tax_cents": 68740,
+      "gross_cents": 498362
+     },
+     {
+      "gross_before_discount_cents": 266715,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 266715,
+      "tax_cents": 21337,
+      "gross_cents": 288052
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 37516,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 437501,
+     "quantity_milli": 333,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 202382,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 425506,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 302183,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 3297268,
+    "discount_cents": 9221,
+    "tax_cents": 584189,
+    "total_cents": 3881457,
+    "lines": [
+     {
+      "gross_before_discount_cents": 42206,
+      "line_discount_cents": 4221,
+      "cart_discount_share_cents": 0,
+      "net_cents": 37985,
+      "tax_cents": 6078,
+      "gross_cents": 44063
+     },
+     {
+      "gross_before_discount_cents": 145688,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 145688,
+      "tax_cents": 36422,
+      "gross_cents": 182110
+     },
+     {
+      "gross_before_discount_cents": 67393,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 0,
+      "net_cents": 62393,
+      "tax_cents": 9983,
+      "gross_cents": 72376
+     },
+     {
+      "gross_before_discount_cents": 2978542,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 2567709,
+      "tax_cents": 410833,
+      "gross_cents": 2978542
+     },
+     {
+      "gross_before_discount_cents": 604366,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 483493,
+      "tax_cents": 120873,
+      "gross_cents": 604366
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 160990,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 128792,
+    "discount_cents": 0,
+    "tax_cents": 32198,
+    "total_cents": 160990,
+    "lines": [
+     {
+      "gross_before_discount_cents": 160990,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 128792,
+      "tax_cents": 32198,
+      "gross_cents": 160990
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 194607,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 230148,
+     "quantity_milli": 333,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 234587,
+    "discount_cents": 36659,
+    "tax_cents": 26408,
+    "total_cents": 260995,
+    "lines": [
+     {
+      "gross_before_discount_cents": 194607,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 4863,
+      "net_cents": 189644,
+      "tax_cents": 15172,
+      "gross_cents": 204816
+     },
+     {
+      "gross_before_discount_cents": 76639,
+      "line_discount_cents": 30544,
+      "cart_discount_share_cents": 1152,
+      "net_cents": 44943,
+      "tax_cents": 11236,
+      "gross_cents": 56179
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 448929,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 55316,
+     "quantity_milli": 333,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 482314,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 829454,
+    "discount_cents": 136443,
+    "tax_cents": 100171,
+    "total_cents": 929625,
+    "lines": [
+     {
+      "gross_before_discount_cents": 505045,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 50505,
+      "net_cents": 420870,
+      "tax_cents": 33670,
+      "gross_cents": 454540
+     },
+     {
+      "gross_before_discount_cents": 18420,
+      "line_discount_cents": 1021,
+      "cart_discount_share_cents": 1740,
+      "net_cents": 12527,
+      "tax_cents": 3132,
+      "gross_cents": 15659
+     },
+     {
+      "gross_before_discount_cents": 542603,
+      "line_discount_cents": 32130,
+      "cart_discount_share_cents": 51047,
+      "net_cents": 396057,
+      "tax_cents": 63369,
+      "gross_cents": 459426
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 174193,
+     "quantity_milli": 500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 70548,
+    "discount_cents": 16549,
+    "tax_cents": 17637,
+    "total_cents": 88185,
+    "lines": [
+     {
+      "gross_before_discount_cents": 87097,
+      "line_discount_cents": 8710,
+      "cart_discount_share_cents": 7839,
+      "net_cents": 70548,
+      "tax_cents": 17637,
+      "gross_cents": 88185
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 125432,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 443767,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 313719,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 138253,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 511570,
+    "discount_cents": 541872,
+    "tax_cents": 90866,
+    "total_cents": 602436,
+    "lines": [
+     {
+      "gross_before_discount_cents": 250864,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 125664,
+      "net_cents": 100160,
+      "tax_cents": 25040,
+      "gross_cents": 125200
+     },
+     {
+      "gross_before_discount_cents": 444,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 222,
+      "net_cents": 222,
+      "tax_cents": 36,
+      "gross_cents": 258
+     },
+     {
+      "gross_before_discount_cents": 784298,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 392874,
+      "net_cents": 391424,
+      "tax_cents": 62628,
+      "gross_cents": 454052
+     },
+     {
+      "gross_before_discount_cents": 46038,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 23012,
+      "net_cents": 19764,
+      "tax_cents": 3162,
+      "gross_cents": 22926
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 197395,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 198136,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 225941,
+    "discount_cents": 11000,
+    "tax_cents": 36151,
+    "total_cents": 262092,
+    "lines": [
+     {
+      "gross_before_discount_cents": 197395,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 759,
+      "net_cents": 165203,
+      "tax_cents": 26433,
+      "gross_cents": 191636
+     },
+     {
+      "gross_before_discount_cents": 65979,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 241,
+      "net_cents": 60738,
+      "tax_cents": 9718,
+      "gross_cents": 70456
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 342709,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 149883,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 713864,
+    "discount_cents": 720865,
+    "tax_cents": 15400,
+    "total_cents": 729264,
+    "lines": [
+     {
+      "gross_before_discount_cents": 385548,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 193044,
+      "net_cents": 192504,
+      "tax_cents": 15400,
+      "gross_cents": 207904
+     },
+     {
+      "gross_before_discount_cents": 1049181,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 522821,
+      "net_cents": 521360,
+      "tax_cents": 0,
+      "gross_cents": 521360
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 328222,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 94244,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 228826,
+    "discount_cents": 30301,
+    "tax_cents": 18306,
+    "total_cents": 247132,
+    "lines": [
+     {
+      "gross_before_discount_cents": 164111,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 15492,
+      "net_cents": 137610,
+      "tax_cents": 11009,
+      "gross_cents": 148619
+     },
+     {
+      "gross_before_discount_cents": 106025,
+      "line_discount_cents": 5301,
+      "cart_discount_share_cents": 9508,
+      "net_cents": 91216,
+      "tax_cents": 7297,
+      "gross_cents": 98513
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 186047,
+     "quantity_milli": 500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 42938,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 216023,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 279525,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 1161046,
+    "discount_cents": 59617,
+    "tax_cents": 232298,
+    "total_cents": 1393344,
+    "lines": [
+     {
+      "gross_before_discount_cents": 93024,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 4005,
+      "net_cents": 89019,
+      "tax_cents": 22255,
+      "gross_cents": 111274
+     },
+     {
+      "gross_before_discount_cents": 300566,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 12941,
+      "net_cents": 287625,
+      "tax_cents": 46020,
+      "gross_cents": 333645
+     },
+     {
+      "gross_before_discount_cents": 432046,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 18601,
+      "net_cents": 356418,
+      "tax_cents": 57027,
+      "gross_cents": 413445
+     },
+     {
+      "gross_before_discount_cents": 559050,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 24070,
+      "net_cents": 427984,
+      "tax_cents": 106996,
+      "gross_cents": 534980
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 103578,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 345576,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 214281,
+    "discount_cents": 226281,
+    "tax_cents": 32422,
+    "total_cents": 246703,
+    "lines": [
+     {
+      "gross_before_discount_cents": 51789,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 23503,
+      "net_cents": 23286,
+      "tax_cents": 1863,
+      "gross_cents": 25149
+     },
+     {
+      "gross_before_discount_cents": 388773,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 192778,
+      "net_cents": 190995,
+      "tax_cents": 30559,
+      "gross_cents": 221554
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 7921,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 9291,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 169834,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 199572,
+    "discount_cents": 35000,
+    "tax_cents": 45115,
+    "total_cents": 244687,
+    "lines": [
+     {
+      "gross_before_discount_cents": 55447,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 6172,
+      "net_cents": 49275,
+      "tax_cents": 7884,
+      "gross_cents": 57159
+     },
+     {
+      "gross_before_discount_cents": 9291,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 478,
+      "net_cents": 3813,
+      "tax_cents": 610,
+      "gross_cents": 4423
+     },
+     {
+      "gross_before_discount_cents": 169834,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 18350,
+      "net_cents": 146484,
+      "tax_cents": 36621,
+      "gross_cents": 183105
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 328641,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 2237100,
+    "discount_cents": 63387,
+    "tax_cents": 178968,
+    "total_cents": 2416068,
+    "lines": [
+     {
+      "gross_before_discount_cents": 2300487,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 58387,
+      "net_cents": 2237100,
+      "tax_cents": 178968,
+      "gross_cents": 2416068
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 209052,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 31947,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 343531,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 384690,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 261480,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 512037,
+    "discount_cents": 282749,
+    "tax_cents": 19540,
+    "total_cents": 531577,
+    "lines": [
+     {
+      "gross_before_discount_cents": 235184,
+      "line_discount_cents": 23518,
+      "cart_discount_share_cents": 30034,
+      "net_cents": 181632,
+      "tax_cents": 14531,
+      "gross_cents": 196163
+     },
+     {
+      "gross_before_discount_cents": 35940,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 5100,
+      "net_cents": 30840,
+      "tax_cents": 4934,
+      "gross_cents": 35774
+     },
+     {
+      "gross_before_discount_cents": 344,
+      "line_discount_cents": 115,
+      "cart_discount_share_cents": 33,
+      "net_cents": 169,
+      "tax_cents": 27,
+      "gross_cents": 196
+     },
+     {
+      "gross_before_discount_cents": 385,
+      "line_discount_cents": 39,
+      "cart_discount_share_cents": 49,
+      "net_cents": 297,
+      "tax_cents": 48,
+      "gross_cents": 345
+     },
+     {
+      "gross_before_discount_cents": 522960,
+      "line_discount_cents": 174403,
+      "cart_discount_share_cents": 49458,
+      "net_cents": 299099,
+      "tax_cents": 0,
+      "gross_cents": 299099
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 420015,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 131350,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 275826,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 313369,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 2875943,
+    "discount_cents": 163346,
+    "tax_cents": 426211,
+    "total_cents": 3302154,
+    "lines": [
+     {
+      "gross_before_discount_cents": 2940105,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 74375,
+      "net_cents": 2470457,
+      "tax_cents": 395273,
+      "gross_cents": 2865730
+     },
+     {
+      "gross_before_discount_cents": 131350,
+      "line_discount_cents": 43779,
+      "cart_discount_share_cents": 2215,
+      "net_cents": 68285,
+      "tax_cents": 17071,
+      "gross_cents": 85356
+     },
+     {
+      "gross_before_discount_cents": 275826,
+      "line_discount_cents": 18791,
+      "cart_discount_share_cents": 6502,
+      "net_cents": 250533,
+      "tax_cents": 0,
+      "gross_cents": 250533
+     },
+     {
+      "gross_before_discount_cents": 104352,
+      "line_discount_cents": 15435,
+      "cart_discount_share_cents": 2249,
+      "net_cents": 86668,
+      "tax_cents": 13867,
+      "gross_cents": 100535
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 183221,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 61584,
+     "quantity_milli": 1,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 127569,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 611380,
+    "discount_cents": 74043,
+    "tax_cents": 123202,
+    "total_cents": 734582,
+    "lines": [
+     {
+      "gross_before_discount_cents": 366442,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 37183,
+      "net_cents": 329259,
+      "tax_cents": 52681,
+      "gross_cents": 381940
+     },
+     {
+      "gross_before_discount_cents": 62,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 6,
+      "net_cents": 52,
+      "tax_cents": 4,
+      "gross_cents": 56
+     },
+     {
+      "gross_before_discount_cents": 318923,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 31854,
+      "net_cents": 282069,
+      "tax_cents": 70517,
+      "gross_cents": 352586
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 285116,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 424303,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 558903,
+    "discount_cents": 51593,
+    "tax_cents": 80021,
+    "total_cents": 638924,
+    "lines": [
+     {
+      "gross_before_discount_cents": 142558,
+      "line_discount_cents": 12128,
+      "cart_discount_share_cents": 3484,
+      "net_cents": 117543,
+      "tax_cents": 9403,
+      "gross_cents": 126946
+     },
+     {
+      "gross_before_discount_cents": 477341,
+      "line_discount_cents": 23867,
+      "cart_discount_share_cents": 12114,
+      "net_cents": 441360,
+      "tax_cents": 70618,
+      "gross_cents": 511978
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 167086,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 152608,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 207990,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 169246,
+    "discount_cents": 19061,
+    "tax_cents": 26,
+    "total_cents": 169272,
+    "lines": [
+     {
+      "gross_before_discount_cents": 187972,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 18787,
+      "net_cents": 169085,
+      "tax_cents": 0,
+      "gross_cents": 169085
+     },
+     {
+      "gross_before_discount_cents": 153,
+      "line_discount_cents": 153,
+      "cart_discount_share_cents": 0,
+      "net_cents": 0,
+      "tax_cents": 0,
+      "gross_cents": 0
+     },
+     {
+      "gross_before_discount_cents": 208,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 21,
+      "net_cents": 161,
+      "tax_cents": 26,
+      "gross_cents": 187
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 161806,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 482478,
+     "quantity_milli": 333,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 29322,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 155158,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 314547,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1916922,
+    "discount_cents": 375352,
+    "tax_cents": 194678,
+    "total_cents": 2111600,
+    "lines": [
+     {
+      "gross_before_discount_cents": 53881,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 5388,
+      "net_cents": 48493,
+      "tax_cents": 7759,
+      "gross_cents": 56252
+     },
+     {
+      "gross_before_discount_cents": 160665,
+      "line_discount_cents": 53650,
+      "cart_discount_share_cents": 10702,
+      "net_cents": 96313,
+      "tax_cents": 0,
+      "gross_cents": 96313
+     },
+     {
+      "gross_before_discount_cents": 205254,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 20515,
+      "net_cents": 184639,
+      "tax_cents": 46160,
+      "gross_cents": 230799
+     },
+     {
+      "gross_before_discount_cents": 1086106,
+      "line_discount_cents": 108611,
+      "cart_discount_share_cents": 97749,
+      "net_cents": 879746,
+      "tax_cents": 140759,
+      "gross_cents": 1020505
+     },
+     {
+      "gross_before_discount_cents": 786368,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 78637,
+      "net_cents": 707731,
+      "tax_cents": 0,
+      "gross_cents": 707731
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 254997,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 261355,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 482407,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 388945,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 3800891,
+    "discount_cents": 994326,
+    "tax_cents": 255380,
+    "total_cents": 4056271,
+    "lines": [
+     {
+      "gross_before_discount_cents": 1784979,
+      "line_discount_cents": 89249,
+      "cart_discount_share_cents": 169949,
+      "net_cents": 1315328,
+      "tax_cents": 210453,
+      "gross_cents": 1525781
+     },
+     {
+      "gross_before_discount_cents": 261,
+      "line_discount_cents": 26,
+      "cart_discount_share_cents": 24,
+      "net_cents": 211,
+      "tax_cents": 34,
+      "gross_cents": 245
+     },
+     {
+      "gross_before_discount_cents": 542708,
+      "line_discount_cents": 180985,
+      "cart_discount_share_cents": 36252,
+      "net_cents": 280578,
+      "tax_cents": 44893,
+      "gross_cents": 325471
+     },
+     {
+      "gross_before_discount_cents": 2722615,
+      "line_discount_cents": 272262,
+      "cart_discount_share_cents": 245579,
+      "net_cents": 2204774,
+      "tax_cents": 0,
+      "gross_cents": 2204774
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 237586,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 59396,
+    "discount_cents": 59397,
+    "tax_cents": 9503,
+    "total_cents": 68899,
+    "lines": [
+     {
+      "gross_before_discount_cents": 118793,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 59397,
+      "net_cents": 59396,
+      "tax_cents": 9503,
+      "gross_cents": 68899
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 157623,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 490701,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 144713,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 445582,
+    "discount_cents": 224949,
+    "tax_cents": 63768,
+    "total_cents": 509350,
+    "lines": [
+     {
+      "gross_before_discount_cents": 52488,
+      "line_discount_cents": 5249,
+      "cart_discount_share_cents": 1181,
+      "net_cents": 39705,
+      "tax_cents": 6353,
+      "gross_cents": 46058
+     },
+     {
+      "gross_before_discount_cents": 552039,
+      "line_discount_cents": 183995,
+      "cart_discount_share_cents": 9201,
+      "net_cents": 358843,
+      "tax_cents": 57415,
+      "gross_cents": 416258
+     },
+     {
+      "gross_before_discount_cents": 72357,
+      "line_discount_cents": 24117,
+      "cart_discount_share_cents": 1206,
+      "net_cents": 47034,
+      "tax_cents": 0,
+      "gross_cents": 47034
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 416181,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 57581,
+    "discount_cents": 71794,
+    "tax_cents": 9213,
+    "total_cents": 66794,
+    "lines": [
+     {
+      "gross_before_discount_cents": 138588,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 66794,
+      "net_cents": 57581,
+      "tax_cents": 9213,
+      "gross_cents": 66794
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 455145,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 94008,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 170421,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 4456593,
+    "discount_cents": 580425,
+    "tax_cents": 590450,
+    "total_cents": 5047043,
+    "lines": [
+     {
+      "gross_before_discount_cents": 3186015,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 96979,
+      "net_cents": 3089036,
+      "tax_cents": 494246,
+      "gross_cents": 3583282
+     },
+     {
+      "gross_before_discount_cents": 658056,
+      "line_discount_cents": 37903,
+      "cart_discount_share_cents": 18877,
+      "net_cents": 601276,
+      "tax_cents": 96204,
+      "gross_cents": 697480
+     },
+     {
+      "gross_before_discount_cents": 1192947,
+      "line_discount_cents": 402609,
+      "cart_discount_share_cents": 24057,
+      "net_cents": 766281,
+      "tax_cents": 0,
+      "gross_cents": 766281
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 87063,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 254977,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 395911,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 112738,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1283010,
+    "discount_cents": 88282,
+    "tax_cents": 108983,
+    "total_cents": 1391993,
+    "lines": [
+     {
+      "gross_before_discount_cents": 217658,
+      "line_discount_cents": 72645,
+      "cart_discount_share_cents": 0,
+      "net_cents": 125011,
+      "tax_cents": 20002,
+      "gross_cents": 145013
+     },
+     {
+      "gross_before_discount_cents": 127489,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 0,
+      "net_cents": 122489,
+      "tax_cents": 9799,
+      "gross_cents": 132288
+     },
+     {
+      "gross_before_discount_cents": 989778,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 989778,
+      "tax_cents": 79182,
+      "gross_cents": 1068960
+     },
+     {
+      "gross_before_discount_cents": 56369,
+      "line_discount_cents": 10637,
+      "cart_discount_share_cents": 0,
+      "net_cents": 45732,
+      "tax_cents": 0,
+      "gross_cents": 45732
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 211305,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 483731,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 330362,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 1994237,
+    "discount_cents": 97746,
+    "tax_cents": 159539,
+    "total_cents": 2153776,
+    "lines": [
+     {
+      "gross_before_discount_cents": 528263,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 256,
+      "net_cents": 528007,
+      "tax_cents": 42241,
+      "gross_cents": 570248
+     },
+     {
+      "gross_before_discount_cents": 967462,
+      "line_discount_cents": 96746,
+      "cart_discount_share_cents": 423,
+      "net_cents": 805827,
+      "tax_cents": 64466,
+      "gross_cents": 870293
+     },
+     {
+      "gross_before_discount_cents": 660724,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 321,
+      "net_cents": 660403,
+      "tax_cents": 52832,
+      "gross_cents": 713235
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 176550,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 1626,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 194216,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 480466,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1367560,
+    "discount_cents": 2533334,
+    "tax_cents": 319708,
+    "total_cents": 1687268,
+    "lines": [
+     {
+      "gross_before_discount_cents": 88275,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 44088,
+      "net_cents": 38006,
+      "tax_cents": 6081,
+      "gross_cents": 44087
+     },
+     {
+      "gross_before_discount_cents": 3252,
+      "line_discount_cents": 163,
+      "cart_discount_share_cents": 1544,
+      "net_cents": 1332,
+      "tax_cents": 213,
+      "gross_cents": 1545
+     },
+     {
+      "gross_before_discount_cents": 485540,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 240270,
+      "net_cents": 207129,
+      "tax_cents": 33141,
+      "gross_cents": 240270
+     },
+     {
+      "gross_before_discount_cents": 3363262,
+      "line_discount_cents": 1121075,
+      "cart_discount_share_cents": 1121094,
+      "net_cents": 1121093,
+      "tax_cents": 280273,
+      "gross_cents": 1401366
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 185488,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 361074,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 413840,
+    "discount_cents": 168585,
+    "tax_cents": 88474,
+    "total_cents": 502314,
+    "lines": [
+     {
+      "gross_before_discount_cents": 463720,
+      "line_discount_cents": 154558,
+      "cart_discount_share_cents": 0,
+      "net_cents": 247330,
+      "tax_cents": 61832,
+      "gross_cents": 309162
+     },
+     {
+      "gross_before_discount_cents": 180537,
+      "line_discount_cents": 14027,
+      "cart_discount_share_cents": 0,
+      "net_cents": 166510,
+      "tax_cents": 26642,
+      "gross_cents": 193152
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 419066,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 476429,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 382592,
+    "discount_cents": 49275,
+    "tax_cents": 30607,
+    "total_cents": 413199,
+    "lines": [
+     {
+      "gross_before_discount_cents": 209533,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 20453,
+      "net_cents": 184080,
+      "tax_cents": 14726,
+      "gross_cents": 198806
+     },
+     {
+      "gross_before_discount_cents": 238215,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 23822,
+      "net_cents": 198512,
+      "tax_cents": 15881,
+      "gross_cents": 214393
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 49702,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 342550,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 289776,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 2393233,
+    "discount_cents": 97182,
+    "tax_cents": 334090,
+    "total_cents": 2727323,
+    "lines": [
+     {
+      "gross_before_discount_cents": 347914,
+      "line_discount_cents": 34791,
+      "cart_discount_share_cents": 7956,
+      "net_cents": 305167,
+      "tax_cents": 0,
+      "gross_cents": 305167
+     },
+     {
+      "gross_before_discount_cents": 114069,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 2898,
+      "net_cents": 111171,
+      "tax_cents": 17787,
+      "gross_cents": 128958
+     },
+     {
+      "gross_before_discount_cents": 2028432,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 51537,
+      "net_cents": 1976895,
+      "tax_cents": 316303,
+      "gross_cents": 2293198
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 36337,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 0,
+    "discount_cents": 36,
+    "tax_cents": 0,
+    "total_cents": 0,
+    "lines": [
+     {
+      "gross_before_discount_cents": 36,
+      "line_discount_cents": 36,
+      "cart_discount_share_cents": 0,
+      "net_cents": 0,
+      "tax_cents": 0,
+      "gross_cents": 0
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 47430,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 319819,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 90225,
+     "quantity_milli": 333,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 141927,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 508110,
+    "discount_cents": 60490,
+    "tax_cents": 30420,
+    "total_cents": 538530,
+    "lines": [
+     {
+      "gross_before_discount_cents": 47430,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 4823,
+      "net_cents": 42607,
+      "tax_cents": 6817,
+      "gross_cents": 49424
+     },
+     {
+      "gross_before_discount_cents": 159910,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 16251,
+      "net_cents": 143559,
+      "tax_cents": 0,
+      "gross_cents": 143559
+     },
+     {
+      "gross_before_discount_cents": 30045,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 3045,
+      "net_cents": 26900,
+      "tax_cents": 0,
+      "gross_cents": 26900
+     },
+     {
+      "gross_before_discount_cents": 354818,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 36071,
+      "net_cents": 295044,
+      "tax_cents": 23603,
+      "gross_cents": 318647
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 289474,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 363636,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 324930,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 1567629,
+    "discount_cents": 90086,
+    "tax_cents": 193799,
+    "total_cents": 1761428,
+    "lines": [
+     {
+      "gross_before_discount_cents": 723685,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 10818,
+      "net_cents": 712767,
+      "tax_cents": 57021,
+      "gross_cents": 769788
+     },
+     {
+      "gross_before_discount_cents": 363636,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 5437,
+      "net_cents": 358199,
+      "tax_cents": 57312,
+      "gross_cents": 415511
+     },
+     {
+      "gross_before_discount_cents": 649860,
+      "line_discount_cents": 64986,
+      "cart_discount_share_cents": 8745,
+      "net_cents": 496663,
+      "tax_cents": 79466,
+      "gross_cents": 576129
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 151002,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 489851,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 186123,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 101740,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 937924,
+    "discount_cents": 65282,
+    "tax_cents": 136478,
+    "total_cents": 1074402,
+    "lines": [
+     {
+      "gross_before_discount_cents": 169877,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 169877,
+      "tax_cents": 13590,
+      "gross_cents": 183467
+     },
+     {
+      "gross_before_discount_cents": 551082,
+      "line_discount_cents": 55108,
+      "cart_discount_share_cents": 0,
+      "net_cents": 495974,
+      "tax_cents": 79356,
+      "gross_cents": 575330
+     },
+     {
+      "gross_before_discount_cents": 209388,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 180507,
+      "tax_cents": 28881,
+      "gross_cents": 209388
+     },
+     {
+      "gross_before_discount_cents": 101740,
+      "line_discount_cents": 10174,
+      "cart_discount_share_cents": 0,
+      "net_cents": 91566,
+      "tax_cents": 14651,
+      "gross_cents": 106217
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 387061,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 65234,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 157206,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 297908,
+    "discount_cents": 72940,
+    "tax_cents": 74456,
+    "total_cents": 372364,
+    "lines": [
+     {
+      "gross_before_discount_cents": 387,
+      "line_discount_cents": 129,
+      "cart_discount_share_cents": 26,
+      "net_cents": 232,
+      "tax_cents": 37,
+      "gross_cents": 269
+     },
+     {
+      "gross_before_discount_cents": 130468,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 13047,
+      "net_cents": 93937,
+      "tax_cents": 23484,
+      "gross_cents": 117421
+     },
+     {
+      "gross_before_discount_cents": 314412,
+      "line_discount_cents": 31441,
+      "cart_discount_share_cents": 28297,
+      "net_cents": 203739,
+      "tax_cents": 50935,
+      "gross_cents": 254674
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 202452,
+     "quantity_milli": 333,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 201708,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 14721,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 45391,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 29111,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 402855,
+    "discount_cents": 39787,
+    "tax_cents": 80844,
+    "total_cents": 483699,
+    "lines": [
+     {
+      "gross_before_discount_cents": 67417,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 1686,
+      "net_cents": 65731,
+      "tax_cents": 0,
+      "gross_cents": 65731
+     },
+     {
+      "gross_before_discount_cents": 403416,
+      "line_discount_cents": 20171,
+      "cart_discount_share_cents": 9581,
+      "net_cents": 298931,
+      "tax_cents": 74733,
+      "gross_cents": 373664
+     },
+     {
+      "gross_before_discount_cents": 36803,
+      "line_discount_cents": 1840,
+      "cart_discount_share_cents": 874,
+      "net_cents": 34089,
+      "tax_cents": 5454,
+      "gross_cents": 39543
+     },
+     {
+      "gross_before_discount_cents": 45,
+      "line_discount_cents": 45,
+      "cart_discount_share_cents": 0,
+      "net_cents": 0,
+      "tax_cents": 0,
+      "gross_cents": 0
+     },
+     {
+      "gross_before_discount_cents": 9694,
+      "line_discount_cents": 5485,
+      "cart_discount_share_cents": 105,
+      "net_cents": 4104,
+      "tax_cents": 657,
+      "gross_cents": 4761
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 456527,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1107910,
+    "discount_cents": 33408,
+    "tax_cents": 0,
+    "total_cents": 1107910,
+    "lines": [
+     {
+      "gross_before_discount_cents": 1141318,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 28408,
+      "net_cents": 1107910,
+      "tax_cents": 0,
+      "gross_cents": 1107910
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 489693,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 173576,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 461266,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 193332,
+     "quantity_milli": 333,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 480697,
+    "discount_cents": 189885,
+    "tax_cents": 98478,
+    "total_cents": 579175,
+    "lines": [
+     {
+      "gross_before_discount_cents": 490,
+      "line_discount_cents": 490,
+      "cart_discount_share_cents": 0,
+      "net_cents": 0,
+      "tax_cents": 0,
+      "gross_cents": 0
+     },
+     {
+      "gross_before_discount_cents": 86788,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 86788,
+      "tax_cents": 0,
+      "gross_cents": 86788
+     },
+     {
+      "gross_before_discount_cents": 518924,
+      "line_discount_cents": 177957,
+      "cart_discount_share_cents": 0,
+      "net_cents": 340967,
+      "tax_cents": 85242,
+      "gross_cents": 426209
+     },
+     {
+      "gross_before_discount_cents": 64380,
+      "line_discount_cents": 11438,
+      "cart_discount_share_cents": 0,
+      "net_cents": 52942,
+      "tax_cents": 13236,
+      "gross_cents": 66178
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 230644,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 103690,
+    "discount_cents": 11632,
+    "tax_cents": 16590,
+    "total_cents": 120280,
+    "lines": [
+     {
+      "gross_before_discount_cents": 115322,
+      "line_discount_cents": 11632,
+      "cart_discount_share_cents": 0,
+      "net_cents": 103690,
+      "tax_cents": 16590,
+      "gross_cents": 120280
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 303077,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 70971,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 82238,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 338910,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 140382,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 1001582,
+    "discount_cents": 30745,
+    "tax_cents": 172379,
+    "total_cents": 1173961,
+    "lines": [
+     {
+      "gross_before_discount_cents": 303077,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 266,
+      "net_cents": 261044,
+      "tax_cents": 41767,
+      "gross_cents": 302811
+     },
+     {
+      "gross_before_discount_cents": 141942,
+      "line_discount_cents": 7097,
+      "cart_discount_share_cents": 118,
+      "net_cents": 134727,
+      "tax_cents": 33682,
+      "gross_cents": 168409
+     },
+     {
+      "gross_before_discount_cents": 205595,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 180,
+      "net_cents": 176996,
+      "tax_cents": 28319,
+      "gross_cents": 205315
+     },
+     {
+      "gross_before_discount_cents": 169455,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 144,
+      "net_cents": 141647,
+      "tax_cents": 22664,
+      "gross_cents": 164311
+     },
+     {
+      "gross_before_discount_cents": 350955,
+      "line_discount_cents": 17548,
+      "cart_discount_share_cents": 292,
+      "net_cents": 287168,
+      "tax_cents": 45947,
+      "gross_cents": 333115
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 446433,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 845544,
+    "discount_cents": 47322,
+    "tax_cents": 0,
+    "total_cents": 845544,
+    "lines": [
+     {
+      "gross_before_discount_cents": 892866,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 47322,
+      "net_cents": 845544,
+      "tax_cents": 0,
+      "gross_cents": 845544
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 240807,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 323900,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 498696,
+    "discount_cents": 855880,
+    "tax_cents": 78786,
+    "total_cents": 577482,
+    "lines": [
+     {
+      "gross_before_discount_cents": 602018,
+      "line_discount_cents": 30101,
+      "cart_discount_share_cents": 285959,
+      "net_cents": 228766,
+      "tax_cents": 57192,
+      "gross_cents": 285958
+     },
+     {
+      "gross_before_discount_cents": 809750,
+      "line_discount_cents": 269890,
+      "cart_discount_share_cents": 269930,
+      "net_cents": 269930,
+      "tax_cents": 21594,
+      "gross_cents": 291524
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 451778,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 734176,
+    "discount_cents": 395269,
+    "tax_cents": 0,
+    "total_cents": 734176,
+    "lines": [
+     {
+      "gross_before_discount_cents": 1129445,
+      "line_discount_cents": 376444,
+      "cart_discount_share_cents": 18825,
+      "net_cents": 734176,
+      "tax_cents": 0,
+      "gross_cents": 734176
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 69050,
+     "quantity_milli": 333,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 75654,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 16454,
+     "quantity_milli": 333,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 146677,
+    "discount_cents": 37573,
+    "tax_cents": 33358,
+    "total_cents": 180035,
+    "lines": [
+     {
+      "gross_before_discount_cents": 22994,
+      "line_discount_cents": 7299,
+      "cart_discount_share_cents": 1914,
+      "net_cents": 12760,
+      "tax_cents": 1021,
+      "gross_cents": 13781
+     },
+     {
+      "gross_before_discount_cents": 189135,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 22452,
+      "net_cents": 129346,
+      "tax_cents": 32337,
+      "gross_cents": 161683
+     },
+     {
+      "gross_before_discount_cents": 5479,
+      "line_discount_cents": 274,
+      "cart_discount_share_cents": 634,
+      "net_cents": 4571,
+      "tax_cents": 0,
+      "gross_cents": 4571
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 352367,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 352367,
+    "discount_cents": 440459,
+    "tax_cents": 88092,
+    "total_cents": 440459,
+    "lines": [
+     {
+      "gross_before_discount_cents": 880918,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 440459,
+      "net_cents": 352367,
+      "tax_cents": 88092,
+      "gross_cents": 440459
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 62842,
+     "quantity_milli": 500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 29850,
+    "discount_cents": 1571,
+    "tax_cents": 7463,
+    "total_cents": 37313,
+    "lines": [
+     {
+      "gross_before_discount_cents": 31421,
+      "line_discount_cents": 1571,
+      "cart_discount_share_cents": 0,
+      "net_cents": 29850,
+      "tax_cents": 7463,
+      "gross_cents": 37313
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 20630,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 61119,
+     "quantity_milli": 333,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 130407,
+    "discount_cents": 15608,
+    "tax_cents": 18748,
+    "total_cents": 149155,
+    "lines": [
+     {
+      "gross_before_discount_cents": 144410,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 3485,
+      "net_cents": 117177,
+      "tax_cents": 18748,
+      "gross_cents": 135925
+     },
+     {
+      "gross_before_discount_cents": 20353,
+      "line_discount_cents": 6784,
+      "cart_discount_share_cents": 339,
+      "net_cents": 13230,
+      "tax_cents": 0,
+      "gross_cents": 13230
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 269910,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 331310,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 260936,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 429106,
+     "quantity_milli": 1,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 158659,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 894732,
+    "discount_cents": 1733935,
+    "tax_cents": 197103,
+    "total_cents": 1091835,
+    "lines": [
+     {
+      "gross_before_discount_cents": 1889370,
+      "line_discount_cents": 629727,
+      "cart_discount_share_cents": 629822,
+      "net_cents": 629821,
+      "tax_cents": 157455,
+      "gross_cents": 787276
+     },
+     {
+      "gross_before_discount_cents": 331310,
+      "line_discount_cents": 110426,
+      "cart_discount_share_cents": 110442,
+      "net_cents": 110442,
+      "tax_cents": 27611,
+      "gross_cents": 138053
+     },
+     {
+      "gross_before_discount_cents": 260936,
+      "line_discount_cents": 86970,
+      "cart_discount_share_cents": 86983,
+      "net_cents": 74985,
+      "tax_cents": 11998,
+      "gross_cents": 86983
+     },
+     {
+      "gross_before_discount_cents": 429,
+      "line_discount_cents": 43,
+      "cart_discount_share_cents": 193,
+      "net_cents": 154,
+      "tax_cents": 39,
+      "gross_cents": 193
+     },
+     {
+      "gross_before_discount_cents": 158659,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 79329,
+      "net_cents": 79330,
+      "tax_cents": 0,
+      "gross_cents": 79330
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 231104,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 497207,
+    "discount_cents": 1000,
+    "tax_cents": 79553,
+    "total_cents": 576760,
+    "lines": [
+     {
+      "gross_before_discount_cents": 577760,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 1000,
+      "net_cents": 497207,
+      "tax_cents": 79553,
+      "gross_cents": 576760
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 453521,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 225873,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 236839,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1011580,
+    "discount_cents": 100200,
+    "tax_cents": 174643,
+    "total_cents": 1186223,
+    "lines": [
+     {
+      "gross_before_discount_cents": 907042,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 0,
+      "net_cents": 781847,
+      "tax_cents": 125095,
+      "gross_cents": 906942
+     },
+     {
+      "gross_before_discount_cents": 112937,
+      "line_discount_cents": 11294,
+      "cart_discount_share_cents": 0,
+      "net_cents": 87623,
+      "tax_cents": 14020,
+      "gross_cents": 101643
+     },
+     {
+      "gross_before_discount_cents": 266444,
+      "line_discount_cents": 88806,
+      "cart_discount_share_cents": 0,
+      "net_cents": 142110,
+      "tax_cents": 35528,
+      "gross_cents": 177638
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 293724,
+     "quantity_milli": 500,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 120794,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 461324,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 364264,
+     "quantity_milli": 333,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 1588872,
+    "discount_cents": 2008439,
+    "tax_cents": 254385,
+    "total_cents": 1843257,
+    "lines": [
+     {
+      "gross_before_discount_cents": 146862,
+      "line_discount_cents": 14686,
+      "cart_discount_share_cents": 67099,
+      "net_cents": 52062,
+      "tax_cents": 13015,
+      "gross_cents": 65077
+     },
+     {
+      "gross_before_discount_cents": 120794,
+      "line_discount_cents": 6040,
+      "cart_discount_share_cents": 58254,
+      "net_cents": 56500,
+      "tax_cents": 4520,
+      "gross_cents": 61020
+     },
+     {
+      "gross_before_discount_cents": 3229268,
+      "line_discount_cents": 322927,
+      "cart_discount_share_cents": 1475394,
+      "net_cents": 1430947,
+      "tax_cents": 228952,
+      "gross_cents": 1659899
+     },
+     {
+      "gross_before_discount_cents": 121300,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 59039,
+      "net_cents": 49363,
+      "tax_cents": 7898,
+      "gross_cents": 57261
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 361237,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 414964,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 388519,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 204735,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 78159,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 938934,
+    "discount_cents": 1420923,
+    "tax_cents": 129760,
+    "total_cents": 1068694,
+    "lines": [
+     {
+      "gross_before_discount_cents": 406392,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 203146,
+      "net_cents": 175126,
+      "tax_cents": 28020,
+      "gross_cents": 203146
+     },
+     {
+      "gross_before_discount_cents": 414964,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 207482,
+      "net_cents": 178864,
+      "tax_cents": 28618,
+      "gross_cents": 207482
+     },
+     {
+      "gross_before_discount_cents": 971298,
+      "line_discount_cents": 328734,
+      "cart_discount_share_cents": 321282,
+      "net_cents": 276967,
+      "tax_cents": 44315,
+      "gross_cents": 321282
+     },
+     {
+      "gross_before_discount_cents": 511838,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 255869,
+      "net_cents": 255869,
+      "tax_cents": 20470,
+      "gross_cents": 276339
+     },
+     {
+      "gross_before_discount_cents": 156318,
+      "line_discount_cents": 52101,
+      "cart_discount_share_cents": 52109,
+      "net_cents": 52108,
+      "tax_cents": 8337,
+      "gross_cents": 60445
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 360750,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 500,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 496086,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 35037,
+     "quantity_milli": 2500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 70792,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 196269,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1699413,
+    "discount_cents": 218,
+    "tax_cents": 208360,
+    "total_cents": 1907773,
+    "lines": [
+     {
+      "gross_before_discount_cents": 361,
+      "line_discount_cents": 118,
+      "cart_discount_share_cents": 0,
+      "net_cents": 243,
+      "tax_cents": 39,
+      "gross_cents": 282
+     },
+     {
+      "gross_before_discount_cents": 1240215,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 1148347,
+      "tax_cents": 91868,
+      "gross_cents": 1240215
+     },
+     {
+      "gross_before_discount_cents": 87593,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 87593,
+      "tax_cents": 7007,
+      "gross_cents": 94600
+     },
+     {
+      "gross_before_discount_cents": 70792,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 0,
+      "net_cents": 70692,
+      "tax_cents": 11311,
+      "gross_cents": 82003
+     },
+     {
+      "gross_before_discount_cents": 392538,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 392538,
+      "tax_cents": 98135,
+      "gross_cents": 490673
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 425266,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 100
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 1959574,
+    "discount_cents": 1017288,
+    "tax_cents": 313532,
+    "total_cents": 2273106,
+    "lines": [
+     {
+      "gross_before_discount_cents": 2976862,
+      "line_discount_cents": 992288,
+      "cart_discount_share_cents": 25000,
+      "net_cents": 1959574,
+      "tax_cents": 313532,
+      "gross_cents": 2273106
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 413867,
+     "quantity_milli": 1,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 317878,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 80165,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 172207,
+    "discount_cents": 265985,
+    "tax_cents": 27524,
+    "total_cents": 199731,
+    "lines": [
+     {
+      "gross_before_discount_cents": 414,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 233,
+      "net_cents": 181,
+      "tax_cents": 0,
+      "gross_cents": 181
+     },
+     {
+      "gross_before_discount_cents": 357613,
+      "line_discount_cents": 35761,
+      "cart_discount_share_cents": 181327,
+      "net_cents": 140525,
+      "tax_cents": 22484,
+      "gross_cents": 163009
+     },
+     {
+      "gross_before_discount_cents": 80165,
+      "line_discount_cents": 8017,
+      "cart_discount_share_cents": 40647,
+      "net_cents": 31501,
+      "tax_cents": 5040,
+      "gross_cents": 36541
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 225480,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 131972,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 28151,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 347958,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 194110,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 1000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 1303183,
+    "discount_cents": 350339,
+    "tax_cents": 29763,
+    "total_cents": 1332946,
+    "lines": [
+     {
+      "gross_before_discount_cents": 225,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 23,
+      "net_cents": 174,
+      "tax_cents": 28,
+      "gross_cents": 202
+     },
+     {
+      "gross_before_discount_cents": 923804,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 91880,
+      "net_cents": 826924,
+      "tax_cents": 0,
+      "gross_cents": 826924
+     },
+     {
+      "gross_before_discount_cents": 197057,
+      "line_discount_cents": 9853,
+      "cart_discount_share_cents": 18720,
+      "net_cents": 156004,
+      "tax_cents": 12480,
+      "gross_cents": 168484
+     },
+     {
+      "gross_before_discount_cents": 173979,
+      "line_discount_cents": 57987,
+      "cart_discount_share_cents": 11599,
+      "net_cents": 104393,
+      "tax_cents": 0,
+      "gross_cents": 104393
+     },
+     {
+      "gross_before_discount_cents": 388220,
+      "line_discount_cents": 129394,
+      "cart_discount_share_cents": 25883,
+      "net_cents": 215688,
+      "tax_cents": 17255,
+      "gross_cents": 232943
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 199374,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 160327,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 57311,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 1000,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 457842,
+    "discount_cents": 11662,
+    "tax_cents": 29741,
+    "total_cents": 487583,
+    "lines": [
+     {
+      "gross_before_discount_cents": 224296,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 0,
+      "net_cents": 224196,
+      "tax_cents": 0,
+      "gross_cents": 224196
+     },
+     {
+      "gross_before_discount_cents": 160327,
+      "line_discount_cents": 100,
+      "cart_discount_share_cents": 0,
+      "net_cents": 138127,
+      "tax_cents": 22100,
+      "gross_cents": 160227
+     },
+     {
+      "gross_before_discount_cents": 114622,
+      "line_discount_cents": 11462,
+      "cart_discount_share_cents": 0,
+      "net_cents": 95519,
+      "tax_cents": 7641,
+      "gross_cents": 103160
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 17773,
+     "quantity_milli": 1,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 230052,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 104987,
+     "quantity_milli": 500,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 1000,
+   "expected": {
+    "subtotal_cents": 47896,
+    "discount_cents": 1000,
+    "tax_cents": 3847,
+    "total_cents": 51743,
+    "lines": [
+     {
+      "gross_before_discount_cents": 18,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 0,
+      "net_cents": 18,
+      "tax_cents": 1,
+      "gross_cents": 19
+     },
+     {
+      "gross_before_discount_cents": 230,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 5,
+      "net_cents": 194,
+      "tax_cents": 31,
+      "gross_cents": 225
+     },
+     {
+      "gross_before_discount_cents": 52494,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 995,
+      "net_cents": 47684,
+      "tax_cents": 3815,
+      "gross_cents": 51499
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 237918,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 459776,
+     "quantity_milli": 500,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 174423,
+    "discount_cents": 174424,
+    "tax_cents": 27908,
+    "total_cents": 202331,
+    "lines": [
+     {
+      "gross_before_discount_cents": 118959,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 59480,
+      "net_cents": 59479,
+      "tax_cents": 9517,
+      "gross_cents": 68996
+     },
+     {
+      "gross_before_discount_cents": 229888,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 114944,
+      "net_cents": 114944,
+      "tax_cents": 18391,
+      "gross_cents": 133335
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 146468,
+     "quantity_milli": 500,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": true,
+     "discount_bps": 500,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 382892,
+     "quantity_milli": 1,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-2",
+     "name": "Item 2",
+     "unit_price_cents": 54781,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    },
+    {
+     "item_id": "item-3",
+     "name": "Item 3",
+     "unit_price_cents": 14529,
+     "quantity_milli": 2000,
+     "tax_rate_bps": 0,
+     "tax_is_inclusive": false,
+     "discount_bps": 0,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-4",
+     "name": "Item 4",
+     "unit_price_cents": 353703,
+     "quantity_milli": 333,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 5000
+    }
+   ],
+   "cart_discount_bps": 5000,
+   "cart_discount_cents": 0,
+   "expected": {
+    "subtotal_cents": 153976,
+    "discount_cents": 171841,
+    "tax_cents": 8385,
+    "total_cents": 162361,
+    "lines": [
+     {
+      "gross_before_discount_cents": 73234,
+      "line_discount_cents": 3662,
+      "cart_discount_share_cents": 34786,
+      "net_cents": 34786,
+      "tax_cents": 0,
+      "gross_cents": 34786
+     },
+     {
+      "gross_before_discount_cents": 383,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 191,
+      "net_cents": 166,
+      "tax_cents": 26,
+      "gross_cents": 192
+     },
+     {
+      "gross_before_discount_cents": 109562,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 52281,
+      "net_cents": 52281,
+      "tax_cents": 4182,
+      "gross_cents": 56463
+     },
+     {
+      "gross_before_discount_cents": 29058,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 14529,
+      "net_cents": 14529,
+      "tax_cents": 0,
+      "gross_cents": 14529
+     },
+     {
+      "gross_before_discount_cents": 117783,
+      "line_discount_cents": 5000,
+      "cart_discount_share_cents": 56392,
+      "net_cents": 52214,
+      "tax_cents": 4177,
+      "gross_cents": 56391
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 18919,
+     "quantity_milli": 7000,
+     "tax_rate_bps": 2500,
+     "tax_is_inclusive": true,
+     "discount_bps": 3333,
+     "discount_cents": 100
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 232842,
+     "quantity_milli": 333,
+     "tax_rate_bps": 800,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 0,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 120874,
+    "discount_cents": 69240,
+    "tax_cents": 19855,
+    "total_cents": 140729,
+    "lines": [
+     {
+      "gross_before_discount_cents": 132433,
+      "line_discount_cents": 44240,
+      "cart_discount_share_cents": 13304,
+      "net_cents": 59911,
+      "tax_cents": 14978,
+      "gross_cents": 74889
+     },
+     {
+      "gross_before_discount_cents": 77536,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 11696,
+      "net_cents": 60963,
+      "tax_cents": 4877,
+      "gross_cents": 65840
+     }
+    ]
+   }
+  },
+  {
+   "lines": [
+    {
+     "item_id": "item-0",
+     "name": "Item 0",
+     "unit_price_cents": 5453,
+     "quantity_milli": 1125,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": false,
+     "discount_bps": 3333,
+     "discount_cents": 0
+    },
+    {
+     "item_id": "item-1",
+     "name": "Item 1",
+     "unit_price_cents": 53214,
+     "quantity_milli": 1000,
+     "tax_rate_bps": 1600,
+     "tax_is_inclusive": true,
+     "discount_bps": 0,
+     "discount_cents": 0
+    }
+   ],
+   "cart_discount_bps": 250,
+   "cart_discount_cents": 25000,
+   "expected": {
+    "subtotal_cents": 26917,
+    "discount_cents": 28478,
+    "tax_cents": 4306,
+    "total_cents": 31223,
+    "lines": [
+     {
+      "gross_before_discount_cents": 6135,
+      "line_discount_cents": 2045,
+      "cart_discount_share_cents": 1887,
+      "net_cents": 2203,
+      "tax_cents": 352,
+      "gross_cents": 2555
+     },
+     {
+      "gross_before_discount_cents": 53214,
+      "line_discount_cents": 0,
+      "cart_discount_share_cents": 24546,
+      "net_cents": 24714,
+      "tax_cents": 3954,
+      "gross_cents": 28668
+     }
+    ]
+   }
+  }
+ ]
+}

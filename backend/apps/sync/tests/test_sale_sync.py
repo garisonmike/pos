@@ -614,46 +614,197 @@ class TestWhatTheTillClaimedItCameTo:
 
         assert response.json()["results"][0]["status"] == "accepted"
 
-    def test_a_till_that_undercharged_has_its_sale_held_back(
+
+@pytest.mark.django_db
+class TestATillThatUndercharged:
+    """The likeliest offline failure there is: a price goes up while a till is
+    disconnected, so the cash that came in is less than the sale comes to.
+
+    A live sale is right to refuse that - the cashier is holding too few notes
+    and the customer is still standing there. A synced sale is finished. The
+    goods are gone and the money is in the drawer, so refusing it would leave
+    the books without cash the shop physically has.
+    """
+
+    def _raise_price_then_sync(self, client, cashier, device, item, *, tendered=18000):
+        with tenant_context(cashier.tenant_id):
+            item.price_cents = 20000
+            item.save()
+
+        return client.post(
+            SYNC,
+            batch(device, [offline_sale(item, tendered=tendered, total_cents=18000)]),
+            format="json",
+        ).json()["results"][0]
+
+    def test_the_sale_is_accepted_not_rejected(
         self, client_cashier_a, cashier_a, device_a, item_a, stock_a
     ):
-        """Pins current behaviour, which is **not** settled design.
+        device, _token = device_a
+        result = self._raise_price_then_sync(client_cashier_a, cashier_a, device, item_a)
 
-        A till carrying yesterday's price list collects the old, lower price.
-        The server prices the cart higher, so the tender no longer covers it and
-        ``take_cash`` refuses with ``insufficient_tender`` - which rolls the
-        whole sale back and hands the till a ``rejected`` verdict.
+        assert result["status"] == "accepted"
+        assert "offline_shortfall" in result["flags"]
 
-        Nothing is lost: the till keeps the row and shows it to a person, which
-        is what ``rejected`` is for. But it does contradict the rule this
-        subsystem is built on - that a completed sale is a fact the server does
-        not refuse - and the case is the *likeliest* offline failure there is,
-        because prices go up while tills are disconnected.
+    def test_the_sale_settles_paid(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a
+    ):
+        device, _token = device_a
+        result = self._raise_price_then_sync(client_cashier_a, cashier_a, device, item_a)
 
-        Whether the shortfall should be a write-off, a debt on the sale, or an
-        authorised discount is a question about the shop's money, not about this
-        code, so it is recorded rather than guessed at. See progress.md.
-        """
         with tenant_context(cashier_a.tenant_id):
-            item_a.price_cents = 20000
+            sale = Sale.objects.get(pk=result["sale_id"])
+
+        assert sale.state == SaleState.PAID
+        assert sale.receipt_number is not None
+
+    def test_the_stock_moves_because_the_goods_left(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a
+    ):
+        device, _token = device_a
+        self._raise_price_then_sync(client_cashier_a, cashier_a, device, item_a)
+
+        with tenant_context(cashier_a.tenant_id):
+            assert StockItem.objects.get(pk=stock_a.pk).quantity == 39
+
+    def test_the_shortfall_is_recorded_to_the_cent(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a
+    ):
+        device, _token = device_a
+        result = self._raise_price_then_sync(client_cashier_a, cashier_a, device, item_a)
+
+        with tenant_context(cashier_a.tenant_id):
+            sale = Sale.objects.get(pk=result["sale_id"])
+
+        assert sale.total_cents == 20000
+        assert sale.offline_shortfall_cents == 2000
+
+    def test_a_discrepancy_is_raised_with_the_shortfall_and_its_reason(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a
+    ):
+        device, _token = device_a
+        self._raise_price_then_sync(client_cashier_a, cashier_a, device, item_a)
+
+        with tenant_context(cashier_a.tenant_id):
+            discrepancy = SaleDiscrepancy.objects.get(
+                kind=SaleDiscrepancy.Kind.OFFLINE_SHORTFALL
+            )
+
+        assert discrepancy.context["shortfall_cents"] == 2000
+        assert discrepancy.context["tendered_cents"] == 18000
+        assert discrepancy.context["due_cents"] == 20000
+        assert discrepancy.context["reason"] == "price_changed_while_offline"
+        assert discrepancy.is_open
+
+    def test_the_drawer_reconciles_against_what_was_actually_taken(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a
+    ):
+        """The payment ledger must hold the cash that is really in the drawer,
+        not the price the sale should have fetched."""
+        device, _token = device_a
+        result = self._raise_price_then_sync(client_cashier_a, cashier_a, device, item_a)
+
+        with tenant_context(cashier_a.tenant_id):
+            sale = Sale.objects.get(pk=result["sale_id"])
+            payments = list(sale.payments.all())
+
+        assert len(payments) == 1
+        assert payments[0].amount_cents == 18000
+        assert payments[0].tendered_cents == 18000
+        assert payments[0].change_cents == 0
+
+    def test_the_sale_is_not_marked_overpaid(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a
+    ):
+        """Writing the shortfall off must not make the reduced total look
+        exceeded by the cash that came in."""
+        device, _token = device_a
+        result = self._raise_price_then_sync(client_cashier_a, cashier_a, device, item_a)
+
+        with tenant_context(cashier_a.tenant_id):
+            assert Sale.objects.get(pk=result["sale_id"]).is_overpaid is False
+
+    def test_a_sale_that_paid_in_full_records_no_shortfall(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a
+    ):
+        device, _token = device_a
+        result = client_cashier_a.post(
+            SYNC, batch(device, [offline_sale(item_a)]), format="json"
+        ).json()["results"][0]
+
+        assert result["flags"] == []
+        with tenant_context(cashier_a.tenant_id):
+            sale = Sale.objects.get(pk=result["sale_id"])
+            assert sale.offline_shortfall_cents == 0
+            assert SaleDiscrepancy.objects.filter(
+                kind=SaleDiscrepancy.Kind.OFFLINE_SHORTFALL
+            ).count() == 0
+
+    def test_a_till_that_overpaid_is_still_handled_as_overpayment(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a
+    ):
+        """Absorbing shortfalls must not swallow the opposite case."""
+        device, _token = device_a
+        with tenant_context(cashier_a.tenant_id):
+            item_a.price_cents = 16000
             item_a.save()
 
-        device, _token = device_a
-        response = client_cashier_a.post(
+        result = client_cashier_a.post(
             SYNC,
-            batch(device, [offline_sale(item_a, tendered=18000, total_cents=18000)]),
+            batch(device, [offline_sale(item_a, tendered=18000)]),
             format="json",
-        )
-
-        result = response.json()["results"][0]
-        assert result["status"] == "rejected"
-        assert result["code"] == "insufficient_tender"
+        ).json()["results"][0]
 
         with tenant_context(cashier_a.tenant_id):
-            assert Sale.objects.count() == 0
-            # The stock did not move either, though the goods did leave the shop.
-            assert StockItem.objects.get(pk=stock_a.pk).quantity == 40
+            sale = Sale.objects.get(pk=result["sale_id"])
+            # Read inside the binding: the payment rows are tenant-isolated
+            # too, and a lazy relation evaluated outside it returns nothing.
+            change = sale.payments.first().change_cents
 
+        assert sale.offline_shortfall_cents == 0
+        # Tendered above the total is change handed back, not an overpayment.
+        assert change == 2000
+        assert sale.is_overpaid is False
+
+    def test_a_shortfall_survives_cash_rounding(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a
+    ):
+        """The shortfall is measured against the rounded figure the till would
+        actually have asked for, or take_cash would refuse after all."""
+        device, _token = device_a
+        with tenant_context(cashier_a.tenant_id):
+            item_a.price_cents = 20049
+            item_a.save()
+
+        result = client_cashier_a.post(
+            SYNC,
+            batch(device, [offline_sale(item_a, tendered=18000)]),
+            format="json",
+        ).json()["results"][0]
+
+        assert result["status"] == "accepted"
+        with tenant_context(cashier_a.tenant_id):
+            sale = Sale.objects.get(pk=result["sale_id"])
+
+        assert sale.state == SaleState.PAID
+        # 20049 rounds to 20000, so the gap is 2000 rather than 2049.
+        assert sale.offline_shortfall_cents == 2000
+
+    def test_a_refund_cannot_return_money_that_never_arrived(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a
+    ):
+        """The written-off part was never collected, so it cannot be given
+        back. Refundable is capped at what actually came in."""
+        from apps.sales.services import ledger_position
+
+        device, _token = device_a
+        result = self._raise_price_then_sync(client_cashier_a, cashier_a, device, item_a)
+
+        with tenant_context(cashier_a.tenant_id):
+            sale = Sale.objects.get(pk=result["sale_id"])
+            position = ledger_position(sale)
+
+        assert position.refundable_cents == 18000
 
 @pytest.mark.django_db
 class TestOneBadSaleDoesNotStrandTheRest:

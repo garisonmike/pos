@@ -3,8 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/api_client.dart';
 import 'core/session_store.dart';
 import 'data/auth_repository.dart';
+import 'data/cart/checkout_service.dart';
 import 'data/catalog_repository.dart';
 import 'data/models.dart';
+import 'data/outbox/database.dart';
+import 'data/outbox/outbox_repository.dart';
+import 'data/outbox/pin_lockout.dart';
+import 'data/printing/escpos.dart';
 
 /// Where the API lives.
 ///
@@ -37,6 +42,43 @@ final authRepositoryProvider = Provider<AuthRepository>(
 final catalogRepositoryProvider = Provider<CatalogRepository>(
   (ref) => CatalogRepository(ref.watch(apiClientProvider)),
 );
+
+/// The till's own database.
+///
+/// One instance for the life of the app. Opening a second connection to the
+/// same file would let two writers disagree about the outbox, which is the one
+/// table where a lost row is lost money.
+final outboxDatabaseProvider = Provider<OutboxDatabase>((ref) {
+  final db = OutboxDatabase();
+  ref.onDispose(db.close);
+  return db;
+});
+
+final pinLockoutProvider = Provider<PinLockout>(
+  (ref) => PinLockout(ref.watch(outboxDatabaseProvider)),
+);
+
+final outboxProvider = Provider<OutboxRepository>(
+  (ref) => OutboxRepository(
+    database: ref.watch(outboxDatabaseProvider),
+    transport: ApiSyncTransport(ref.watch(apiClientProvider)),
+    lockout: ref.watch(pinLockoutProvider),
+  ),
+);
+
+final checkoutServiceProvider = Provider<CheckoutService>(
+  (ref) => CheckoutService(
+    transport: ApiCheckoutTransport(ref.watch(apiClientProvider)),
+    outbox: ref.watch(outboxProvider),
+  ),
+);
+
+/// Where receipts are printed.
+///
+/// An in-memory transport until a Bluetooth printer is paired. A till with no
+/// printer must still be able to sell - the receipt is the one part of a sale
+/// that can wait.
+final printerProvider = Provider<PrinterTransport>((ref) => InMemoryPrinter());
 
 /// Which of the three states this till is in.
 ///

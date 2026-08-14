@@ -28,7 +28,11 @@ class Money {
       (match) => '${match[1]},',
     );
 
-    return '${negative ? '-' : ''}$currency $grouped.$fraction';
+    // No currency means no separator either. A leading space is invisible in
+    // code and obvious on a receipt, where it pushes a column of figures one
+    // character out of alignment.
+    final prefix = currency.isEmpty ? '' : '$currency ';
+    return '${negative ? '-' : ''}$prefix$grouped.$fraction';
   }
 
   @override

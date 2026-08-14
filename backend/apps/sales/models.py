@@ -204,6 +204,19 @@ class Sale(TenantOwnedModel, UUIDModel, TimeStampedModel):
         ),
     )
 
+    offline_shortfall_cents = models.BigIntegerField(
+        default=0,
+        help_text=(
+            "Money this sale should have collected and never will, because the "
+            "till was pricing from a stale catalogue while it had no "
+            "connection. Only ever written by sync ingest, never by a live "
+            "till. Kept separate from the total so that what the sale should "
+            "have come to and what the shop settled for stay separately "
+            "visible - folded into the total it would be indistinguishable "
+            "from a cheaper sale, and the pattern would never be spotted."
+        ),
+    )
+
     is_overpaid = models.BooleanField(
         default=False,
         help_text=(
@@ -514,6 +527,10 @@ class SaleDiscrepancy(TenantOwnedModel, UUIDModel, TimeStampedModel):
             "Offline discount approved against a PIN that has since changed",
         )
         UNKNOWN_DEVICE = "UNKNOWN_DEVICE", "Sale claimed a till this business does not own"
+        OFFLINE_SHORTFALL = (
+            "OFFLINE_SHORTFALL",
+            "Offline till collected less than the sale came to",
+        )
 
     sale = models.ForeignKey(
         Sale, on_delete=models.PROTECT, related_name="discrepancies", null=True, blank=True

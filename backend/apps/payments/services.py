@@ -134,7 +134,11 @@ def initiate_stk(*, sale: Sale, phone: str, user, client_uuid=None) -> PaymentIn
             "M-Pesa is not set up for this business yet.", "mpesa_not_configured"
         )
 
-    outstanding = ledger_position(sale).outstanding_cents + sale.rounding_adjustment_cents
+    # Cash rounding is folded into the position itself, so this is simply what
+    # the customer still owes. It used to add the adjustment back by hand here,
+    # which was a local patch over ledger_position not knowing about it - and
+    # every other caller was quietly getting the wrong figure.
+    outstanding = ledger_position(sale).outstanding_cents
     if outstanding <= 0:
         raise StkError("There is nothing left to pay on this sale.", "nothing_due")
 

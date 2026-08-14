@@ -17,6 +17,7 @@ from django.db import transaction
 from apps.accounts.constants import UserRole
 from apps.core.models import AuditAction, AuditLog
 from apps.core.tenancy import tenant_context
+from apps.inventory.models import StockItem
 from apps.sales.models import Sale
 from apps.sales.states import ALLOWED_TRANSITIONS, SaleState
 
@@ -548,3 +549,66 @@ class TestCheckoutRefusals:
         client_cashier_a.post(CHECKOUT, body(item_a), format="json")
 
         assert client_owner_b.get("/api/v1/sales/").json()["results"] == []
+
+
+@pytest.mark.django_db
+class TestCashRoundingSettlesTheSale:
+    """A total that is not a whole shilling must still finish the sale.
+
+    Regression. ``ledger_position`` used to read ``total_cents`` raw while
+    ``take_cash`` charged the *rounded* figure, so the two disagreed by up to
+    fifty cents and the sale never reached PAID: the customer's money was
+    taken, no receipt number was allocated and the stock never moved. Almost
+    every real sale hits this, because a VAT-inclusive price rarely lands on a
+    whole shilling.
+
+    ``initiate_stk`` had been patched around it locally, which is what a
+    missing concept looks like from the inside.
+    """
+
+    def _sell_at(self, client, cashier, item, price_cents, tendered):
+        with tenant_context(cashier.tenant_id):
+            item.price_cents = price_cents
+            item.save()
+        return client.post(
+            CHECKOUT,
+            {
+                "lines": [{"item_id": str(item.id), "quantity": "1"}],
+                "tendered_cents": tendered,
+            },
+            format="json",
+        )
+
+    def test_a_total_rounded_down_still_settles(
+        self, client_cashier_a, cashier_a, item_a, stock_a
+    ):
+        body = self._sell_at(client_cashier_a, cashier_a, item_a, 18049, 18000).json()
+
+        assert body["state"] == SaleState.PAID
+        assert body["receipt_number"] is not None
+        assert body["rounding_adjustment_cents"] == -49
+
+    def test_a_total_rounded_up_still_settles(
+        self, client_cashier_a, cashier_a, item_a, stock_a
+    ):
+        body = self._sell_at(client_cashier_a, cashier_a, item_a, 18051, 18100).json()
+
+        assert body["state"] == SaleState.PAID
+        assert body["rounding_adjustment_cents"] == 49
+
+    def test_the_stock_moves_on_a_rounded_sale(
+        self, client_cashier_a, cashier_a, item_a, stock_a
+    ):
+        self._sell_at(client_cashier_a, cashier_a, item_a, 18049, 18000)
+
+        with tenant_context(cashier_a.tenant_id):
+            assert StockItem.objects.get(pk=stock_a.pk).quantity == 39
+
+    def test_a_rounded_sale_is_not_reported_as_overpaid(
+        self, client_cashier_a, cashier_a, item_a, stock_a
+    ):
+        """Rounding up means the customer pays a few cents more than the goods
+        listed at. That is the rounding, not an overpayment to refund."""
+        body = self._sell_at(client_cashier_a, cashier_a, item_a, 18051, 18100).json()
+
+        assert body["is_overpaid"] is False

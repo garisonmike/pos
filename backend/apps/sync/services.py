@@ -34,6 +34,7 @@ from apps.accounts.constants import UserRole
 from apps.accounts.models import Device, User
 from apps.core.audit import record_audit
 from apps.core.models import AuditAction
+from apps.core.money import round_cash
 from apps.sales.authorization import AuthorizationMethod
 from apps.sales.models import Sale, SaleDiscrepancy
 from apps.sales.services import CheckoutError, LineRequest, create_sale, take_cash
@@ -209,12 +210,21 @@ def replay_sale(*, tenant, store, cashier, device, payload: dict, request=None) 
 
     _flag_totals_mismatch(sale=sale, claimed=payload.get("total_cents"), flags=flags)
 
+    round_to_shilling = payload.get("round_to_shilling", True)
+    flags.extend(
+        _absorb_shortfall(
+            sale=sale,
+            tendered_cents=payload["tendered_cents"],
+            round_to_shilling=round_to_shilling,
+        )
+    )
+
     try:
         take_cash(
             sale=sale,
             tendered_cents=payload["tendered_cents"],
             user=cashier,
-            round_to_shilling=payload.get("round_to_shilling", True),
+            round_to_shilling=round_to_shilling,
         )
     except CheckoutError as exc:
         # The sale exists and the goods are gone, so this cannot roll back the
@@ -282,6 +292,62 @@ def _apply_offline_authorization(*, tenant, sale, cashier, authorization, reques
         after={"attempted_authorizer": username, "claimed_pin_version": claimed_version},
     )
     return ["stale_authorization"]
+
+
+def _absorb_shortfall(*, sale, tendered_cents: int, round_to_shilling: bool) -> list[str]:
+    """Settle a sale the till undercharged, rather than refusing it.
+
+    This is the likeliest offline failure there is. A price goes up while a
+    till is disconnected, the till collects yesterday's lower price, and at
+    sync the server prices the cart higher than the cash that came in.
+
+    ``take_cash`` refuses that with ``insufficient_tender``, and it is right to
+    for a live sale - a cashier holding too few notes has not finished, and the
+    correct answer is to ask for the rest while the customer is standing there.
+    But a sale arriving through sync is *finished*. The customer paid what they
+    were asked and left with the goods. Refusing it would leave the shop's books
+    without money the shop physically has, and the stock still on the shelf in a
+    system where it is not.
+
+    So the difference is recorded as its own quantity, the ledger closes, and
+    the sale settles PAID for what was actually collected. Nothing here decides
+    what the shop does about the gap - that is a person's call after the fact,
+    the same as every other discrepancy this system surfaces rather than
+    resolves.
+
+    Returns the flags to report back to the till.
+    """
+    due = sale.total_cents
+    if round_to_shilling:
+        # Match what take_cash will ask for, or the shortfall would be off by
+        # up to the rounding increment and take_cash would refuse after all.
+        due = round_cash(due)
+
+    shortfall = due - tendered_cents
+    if shortfall <= 0:
+        return []
+
+    sale.offline_shortfall_cents = shortfall
+    sale.save(update_fields=["offline_shortfall_cents", "updated_at"])
+
+    SaleDiscrepancy.objects.create(
+        tenant=sale.tenant,
+        sale=sale,
+        kind=SaleDiscrepancy.Kind.OFFLINE_SHORTFALL,
+        detail=(
+            f"The till collected {tendered_cents} cents for a sale the server "
+            f"prices at {due} cents, so {shortfall} cents will not be "
+            "collected. The price almost certainly changed while this till was "
+            "offline. The sale is settled for what was taken."
+        ),
+        context={
+            "tendered_cents": tendered_cents,
+            "due_cents": due,
+            "shortfall_cents": shortfall,
+            "reason": "price_changed_while_offline",
+        },
+    )
+    return ["offline_shortfall"]
 
 
 def _flag_totals_mismatch(*, sale, claimed, flags: list[str]) -> None:

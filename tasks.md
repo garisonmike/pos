@@ -253,7 +253,8 @@ rather than planned up front.
 - [x] Sequential per-tenant receipt numbers, allocated under a row lock
 - [x] Receipt text for a 32-character thermal printer
 - [x] Receipt PDF, branded per tenant, 80mm
-- [ ] ESC/POS printing from the till
+- [x] ESC/POS printing from the till, with the byte building kept pure so the layout is testable without a printer
+- [x] Printer failure never looks like a failed sale *(the money is already in the drawer; the receipt is the one part that can wait)*
 
 ### Offline sync
 - [x] Catalogue delta pull on a server-chosen cursor, read **before** the queries so a concurrent write cannot be skipped
@@ -269,8 +270,22 @@ rather than planned up front.
 - [x] Authoriser's role re-checked at sync, so a till claiming a cashier approved a discount is caught
 - [x] Device totals compared and disagreements flagged, server figure standing
 - [x] `_resolve_store` extracted to `apps/stores/selection.py` *(three callers now; a branch resolved one way at the till and another at sync would file the same stock movement against different shops)*
-- [ ] Two offline devices selling the last unit: both accepted, stock negative, flagged
-- [ ] Flutter: drift queue wired to the cart, checkout, offline indicator
+- [x] A till that undercharged settles for what it collected, with the shortfall recorded as its own quantity and flagged for a person *(the price changed while it was offline; refusing the sale would leave the books without cash the shop physically has)*
+- [x] Cash rounding folded into `ledger_position` *(discovered while fixing the above: `take_cash` charged the rounded figure while the ledger read the raw total, so **any** cash sale not landing on a whole shilling took the money and never settled — no receipt number, no stock movement. `initiate_stk` had been patching around it locally.)*
+- [x] Two offline devices selling the last unit: both accepted, stock negative, flagged, and a replay does not oversell further
+- [x] Flutter: cart, tender pad, finished-sale screen, offline indicator
+- [x] Device pricing mirrored from the server, pinned by a fixture the **server** generates *(two implementations of the same arithmetic drift unless something forces them together)*
+- [x] `client_uuid` generated before the online attempt and reused when queueing *(a request that hangs and succeeds invisibly must not become a second sale)*
+- [x] A refusal is distinguished from a failure to reach the server: one is kept for a person, the other is retried
+
+### Account management
+- [ ] **Separate offline approval code, replacing the cached PIN hash** *(from the offline-sync finding: `GET /sync/catalog/` sends a manager's `pin_hash` to the till so an offline check has something to verify against. A PIN is four to six digits, so that hash is brute-forceable by anyone holding the tablet — and the same PIN signs in. A stolen till is a stolen manager PIN.)*
+  - [ ] `offline_approval_hash` and `offline_approval_version` on `User`, replacing `pin_hash` in the catalogue download
+  - [ ] Set and rotate it independently of the sign-in PIN, so revoking it does not lock anyone out of the till
+  - [ ] Rotate on staff departure without touching their password or PIN
+  - [ ] Till screen for entering it, distinct from PIN entry so the two are never confused
+  - [ ] Test that a cashier's approval material is still never downloaded
+  - [ ] Test that revoking it stops offline approvals while sign-in keeps working
 
 ### Still to do
 - [ ] Shift open/close with cash drawer reconciliation

@@ -5,6 +5,73 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-14 — The selling screens, printing, and a live bug found underneath
+
+**Worked on:** the undercharge fix the last entry flagged, then the till side of
+selling.
+
+**Finished:**
+
+- Sync now settles an undercharged sale instead of refusing it.
+- Cart, tender pad and finished-sale screens, with the offline indicator.
+- ESC/POS printing, byte building kept pure.
+- The two-tills-sold-the-last-unit case, end to end.
+
+**A real bug, found while fixing the undercharge case.**
+
+Working out how the shortfall should interact with cash rounding, I found that
+`ledger_position` read `total_cents` raw while `take_cash` charged the
+*rounded* figure. They disagreed by up to fifty cents, so **any** cash sale
+whose total was not a whole shilling took the customer's money and never
+settled: no receipt number, no stock movement, sale left at `OPEN`. With
+VAT-inclusive pricing that is most sales. I confirmed it against the live
+checkout endpoint before believing it.
+
+`initiate_stk` had been adding the adjustment back by hand at its own call
+site, which is what a missing concept looks like from the inside. Settlement is
+now decided against `collectable_cents = total + rounding - written_off`, and
+the local patch is gone.
+
+**Decisions, and why:**
+
+**The shortfall is its own quantity, not a reduced total.** Folded into the
+total it would be indistinguishable from a cheaper sale, and a till running a
+stale price list for a month would never be spotted. `take_cash`'s
+`insufficient_tender` guard is untouched for a live sale, where a cashier
+holding too few notes genuinely has not finished.
+
+**The device prices carts a second time, and a fixture the server generates
+holds the two together.** I did not want two implementations of the same
+arithmetic, but the alternative is telling a cashier there is no total until
+the network comes back. So `gen_pricing_fixture.py` prices 120 awkward carts on
+the server and the Dart test asserts every figure to the cent. It matched on
+the first run.
+
+**`client_uuid` is generated before the online attempt, not after it fails.**
+The normal failure here is a request that hangs and succeeded invisibly. A
+fresh identifier at queue time would make the sync create a second sale for
+money taken once.
+
+**A refusal is not a failure to connect.** A 403 proves the server is reachable,
+so it must not put the till into the offline state and send a cashier hunting
+for a network fault that is not there. Refusals keep the cart so the cashier can
+fix them while the customer is still at the counter; only connectivity-shaped
+failures and 5xx are queued.
+
+**Three defects my own tests caught, worth recording:**
+
+- Long item names were not truncated at all, so any real product name wrapped
+  every row on the paper.
+- The tender screen overflowed on a short viewport, which would have put the
+  keypad off-screen on a small tablet.
+- `Money.format(currency: '')` emitted a leading space, pushing every bare
+  figure one character out of alignment in a column.
+
+**Come back to:** shift open/close with cash drawer reconciliation - planned
+separately, since it is new territory and it counts cash.
+
+---
+
 ## 2026-08-14 — Offline sync
 
 **Worked on:** the sync endpoints, the till's outbox database, and the offline
@@ -61,31 +128,36 @@ network was up.
 
 **Flagging, because it touches money and I would rather say it now — two things.**
 
-**1. A till that undercharged has its whole sale rejected.** This is the
-likeliest offline failure there is: a price goes up while a till is
-disconnected, the till collects yesterday's lower price, and at sync the server
-prices the cart higher. `take_cash` then refuses with `insufficient_tender`,
-which rolls the sale back and hands the till a `rejected` verdict.
+**1. Fixed: a till that undercharged now settles instead of being refused.**
+A price goes up while a till is disconnected, the till collects yesterday's
+lower price, and at sync the cash is short. That used to be rejected, which
+left the books without money the shop physically has and the stock on the shelf
+in a system where it was not.
 
-Nothing is lost — the till keeps the row and shows it to a person, which is
-exactly what `rejected` is for. But it contradicts the rule this whole
-subsystem is built on: *a completed sale is a fact, not a request, and the
-server does not refuse one.* The goods left the shop and the stock does not
-move.
+Sync now records the gap as `Sale.offline_shortfall_cents`, closes the ledger
+against it and settles the sale `PAID` for what was collected, with stock
+moving. `take_cash`'s `insufficient_tender` guard is untouched for a live sale,
+where a cashier holding too few notes genuinely has not finished. An
+`OFFLINE_SHORTFALL` discrepancy carries the amount and the reason; what the
+shop does about the gap stays a human decision.
 
-I have not guessed at the fix, because the three sensible answers differ in
-what they do to the shop's money, and that is the owner's call, not mine:
+The shortfall is its own quantity, not a reduced total — folded into the total
+it would look like a cheaper sale, and a till running a stale price list for a
+month would never be spotted.
 
-- **Write off the shortfall.** Sale settles at what was collected, difference
-  recorded as a discrepancy. Simplest, and loses the least paperwork.
-- **Carry it as a debt.** Sale lands at the server's price and sits in
-  `AWAITING_PAYMENT` short by the difference, with stock moved anyway. Honest,
-  but leaves rows nobody will ever close on a price change nobody will chase.
-- **Treat it as an unauthorised discount.** Fits the existing gate, but it
-  means the system hands out discounts nobody approved.
+**And a real bug found underneath it.** Working out how the shortfall should
+interact with cash rounding, I found that `ledger_position` read `total_cents`
+raw while `take_cash` charged the *rounded* figure. They disagreed by up to
+fifty cents, so **any** cash sale whose total was not a whole shilling took the
+customer's money and never settled: no receipt number, no stock movement, sale
+left sitting at `OPEN`. With VAT-inclusive pricing that is most sales. I
+confirmed it against the live checkout endpoint before believing it.
 
-Pinned by `test_a_till_that_undercharged_has_its_sale_held_back`, which asserts
-the current behaviour and says in its docstring that it is not settled design.
+`initiate_stk` had been adding the adjustment back by hand at its own call
+site, which is exactly what a missing concept looks like from the inside.
+Rounding is now part of `LedgerPosition`, settlement is decided against
+`collectable_cents = total + rounding - written_off`, and the local patch is
+gone. Four regression tests in the cash-checkout suite.
 
 **2. A stolen till is a stolen manager PIN.** `GET /sync/catalog/` sends `pin_hash` down so an offline check has something to
 verify against — managers only, never cashiers. But a PIN is four to six

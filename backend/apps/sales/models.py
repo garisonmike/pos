@@ -390,6 +390,30 @@ class RefundLine(TenantOwnedModel, UUIDModel, TimeStampedModel):
         return f"{self.quantity} x {self.sale_line_id}"
 
 
+class ReceiptCounter(TenantOwnedModel, TimeStampedModel):
+    """The last receipt number issued to a business.
+
+    One row per business. Locked for the duration of each allocation, which is
+    what makes the series gapless rather than merely unique.
+    """
+
+    last_number = models.BigIntegerField(default=0)
+    prefix = models.CharField(
+        max_length=12,
+        default="INV",
+        help_text="Printed before the number, e.g. INV-2026-000001.",
+    )
+
+    class Meta:
+        db_table = "sales_receipt_counter"
+        constraints = [
+            models.UniqueConstraint(fields=["tenant"], name="one_receipt_counter_per_tenant")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.prefix}: {self.last_number}"
+
+
 class SaleDiscrepancy(TenantOwnedModel, UUIDModel, TimeStampedModel):
     """Something about a sale that a person needs to look at.
 

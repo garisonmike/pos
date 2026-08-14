@@ -45,6 +45,8 @@ end of the day:
   replays safely — the same sale arriving twice is recognised, never duplicated.
 - **Shifts.** Open a drawer with a counted float, record cash in and out, and
   close it with a blind count that the system checks against what it expected.
+  *Server-side only so far* - the API is complete and tested, but the till has
+  no screen for it yet.
 
 See [tasks.md](tasks.md) for what is done and what is next, and
 [progress.md](progress.md) for a dated log of decisions.

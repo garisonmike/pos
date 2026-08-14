@@ -66,9 +66,16 @@ which is also why adding it did not disturb any existing test.
 **Milestone 3 closed out:** README, ARCHITECTURE, CHANGELOG 0.3.0, tasks.md and
 this log all brought current.
 
-**Come back to:** the offline approval code, tracked under account management.
-It is the one real security gap this milestone leaves open, and it wants its own
-credential surface rather than being bolted onto sync.
+**Left undone, and worth being plain about:** shifts are server-side only. The
+models, the reconciliation and the endpoints are built and tested, but there is
+no cashier screen for opening or closing a drawer - a shop would have to drive
+it through the API, which is not a shop feature. Recorded in the CHANGELOG's
+known limitations and in tasks.md rather than left to be discovered.
+
+**Come back to:** those screens, and the offline approval code tracked under
+account management. The latter is the one real security gap this milestone
+leaves open, and it wants its own credential surface rather than being bolted
+onto sync.
 
 ---
 

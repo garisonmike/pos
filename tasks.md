@@ -301,6 +301,8 @@ rather than planned up front.
 - [x] A manager may close somebody else's drawer; it is recorded as `FORCED_CLOSE`
 - [x] Shifts are optional — a shop that never opens one goes on selling
 - [x] 53 tests
+- [ ] **Flutter: open/close drawer screens** *(the API is complete and tested; there is no cashier screen for it yet, so a shop would have to drive it through the API)*
+- [ ] Flutter: cash in/out from the till
 
 ### Still to do
 - [ ] SMS receipt *(stretch)*

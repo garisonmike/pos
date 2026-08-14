@@ -98,6 +98,10 @@ keep selling when the network drops, and count the drawer at the end of the day.
 - A shift's total and the sales total will not tie out without reading both.
   Deliberate; every discrepancy carries a foreign key to its shift so the join
   is a query when reporting arrives.
+- **Shifts are server-side only.** The models, the reconciliation and the API
+  are built and tested, but there is no cashier screen for opening or closing a
+  drawer - a shop would have to drive it through the API. The till screens for
+  it are the first thing outstanding from this milestone.
 
 ---
 

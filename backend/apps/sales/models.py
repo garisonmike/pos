@@ -124,6 +124,41 @@ class Sale(TenantOwnedModel, UUIDModel, TimeStampedModel):
     cart_discount_bps = models.PositiveIntegerField(default=0)
     cart_discount_cents = models.BigIntegerField(default=0)
 
+    # ---- Who allowed the discount ---------------------------------------
+    #
+    # A discount is the simplest way to move money out of a shop, so the
+    # approval is part of the sale rather than a note beside it. Recorded as
+    # both a foreign key and a label, following the audit trail's pattern: a
+    # manager who is later renamed or removed must not blank the record of what
+    # they approved.
+
+    discount_authorized_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        related_name="authorized_discounts",
+        null=True,
+        blank=True,
+    )
+    discount_authorized_label = models.CharField(
+        max_length=150,
+        blank=True,
+        help_text="Who approved it, captured as text so it survives the account changing.",
+    )
+    discount_authorization_reason = models.TextField(
+        blank=True, help_text="Required whenever a discount is applied."
+    )
+    discount_authorized_at = models.DateTimeField(null=True, blank=True)
+    discount_authorized_via = models.CharField(
+        max_length=12,
+        blank=True,
+        help_text=(
+            "SESSION when a manager rang it up themselves, PIN or PASSWORD when "
+            "a manager approved a cashier's sale at the till, OFFLINE when the "
+            "device verified it with no connection - which is weaker, and "
+            "recorded as such rather than quietly equated with the others."
+        ),
+    )
+
     rounding_adjustment_cents = models.IntegerField(
         default=0,
         help_text=(

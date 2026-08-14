@@ -486,7 +486,9 @@ def refund_sale(
     elif amount_cents is not None:
         refund_amount = amount_cents
     else:
-        raise CheckoutError("Say which lines are being refunded, or an amount.", "nothing_specified")
+        raise CheckoutError(
+            "Say which lines are being refunded, or an amount.", "nothing_specified"
+        )
 
     if refund_amount <= 0:
         raise CheckoutError("A refund must be more than zero.", "bad_amount")

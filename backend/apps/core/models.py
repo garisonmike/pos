@@ -84,6 +84,8 @@ class AuditAction(models.TextChoices):
     STOCK_ADJUST = "STOCK_ADJUST", "Stock adjusted"
     VOID = "VOID", "Voided"
     REFUND = "REFUND", "Refunded"
+    DISCOUNT_AUTHORIZED = "DISCOUNT_AUTHORIZED", "Discount authorised"
+    DISCOUNT_REFUSED = "DISCOUNT_REFUSED", "Discount authorisation refused"
 
 
 class AuditLog(TimeStampedModel):

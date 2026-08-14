@@ -164,27 +164,88 @@ rather than planned up front.
 - [ ] Background job for imports over 5,000 rows *(refused with a clear message for now, rather than carrying a worker nothing needs yet)*
 - [ ] Per-branch price overrides *(seam left open: resolve as `override ?? item.price`)*
 
-## Milestone 3 — Sales and checkout
+## Milestone 3 — Sales, payments, receipts and offline sync · [#3](https://github.com/garisonmike/pos/issues/3)
 
-- [ ] GitHub issue with scope and acceptance criteria
-- [ ] `Sale`, `SaleLine`, `Payment`, `Refund` models
-- [ ] Cart building, barcode and search lookup
-- [ ] Line-item and cart-level discounts
-- [ ] Tax calculation respecting per-item `is_inclusive`
-- [ ] Cash payment with shilling rounding recorded
-- [ ] M-Pesa STK Push via Daraja, with callback handling
-- [ ] Split payments
-- [ ] Voids and partial refunds, manager and above, audited
-- [ ] Receipt generation: printable and PDF, branded per tenant
-- [ ] SMS receipt *(stretch)*
+### Groundwork
+- [x] GitHub issue with scope and acceptance criteria
+- [x] Audit redaction fixed before any credential model existed *(discovered: `REDACTED_FIELDS` matched whole keys, so `consumer_secret` and `passkey` would have been written to a manager-readable table in clear)*
+- [x] Redaction now substring-matched and recursive into nested dicts and lists
+
+### Cart arithmetic — `apps/sales/pricing.py`
+- [x] Line extension with fractional quantities for goods sold by weight
+- [x] Line discounts, percentage and fixed amount, both applying together
+- [x] Whole-cart discounts
+- [x] Cart discount apportioned across lines **before** tax, since each line carries its own rate
+- [x] Largest-remainder apportionment, deterministic, parts always summing to the whole
+- [x] Tax per line against that line's own rate and `is_inclusive`
+- [x] Mixed inclusive and exclusive lines totalling correctly on one sale
+- [x] Round per line then sum, never round a total
+- [x] Cash tender and change
+- [x] 241 tests, apportionment property walked from one cent upward across five weightings
+
+### Sale state machine — `apps/sales/states.py`
+- [x] `OPEN`, `AWAITING_PAYMENT`, `PAID`, `PARTIALLY_REFUNDED`, `REFUNDED`, `VOID`
+- [x] `ALLOWED_TRANSITIONS` table, with every legal move asserted
+- [x] **A paid sale cannot be voided** — asserted three ways
+- [x] All 36 state pairs swept, so nothing is legal by omission
+- [x] Terminal states are genuinely terminal
+- [x] `LedgerPosition`: outstanding, overpaid, refundable
+- [x] `derive_state` separated from `ALLOWED_TRANSITIONS` *(discovered: one table was doing two jobs — the table governs what a person may do, deriving governs what the ledgers say, and a stale cache must be able to catch up across more than one edge)*
+- [x] `VOID` is sticky against every ledger, which the callback guard relies on
+- [x] `CREDITABLE_STATES` is `AWAITING_PAYMENT` alone
+
+### Data model
+- [x] `Sale` with client uuid, receipt number, provisional reference, cached state
+- [x] `SaleLine` snapshotting name, price, discounts, tax rate **and** `is_inclusive`
+- [x] `Payment`, append-only, split payments as several rows
+- [x] `Refund` and `RefundLine`, append-only, with a per-line restock flag
+- [x] `SaleDiscrepancy` for totals mismatch, negative stock, overpayment, late payment
+- [x] `ReceiptCounter` *(discovered: it lived outside `models.py`, so Django never discovered it and `makemigrations` reported no changes)*
+- [x] `MpesaCredential`, Fernet-encrypted, key separate from `SECRET_KEY`
+- [x] `PaymentIntent` with client uuid, checkout request id and callback token
+- [x] `MpesaCallback` recording every callback including refusals
+- [x] Migrations with RLS on all ten money tables
+- [x] `payment_intent` policy moved to `0002` *(discovered: sales and payments reference each other, so Django defers those FKs **and the tenant column with them**)*
+
+### Sale services — `apps/sales/services.py`
+- [x] `create_sale` pricing from the catalogue
+- [x] `recompute_state` as the single writer of `Sale.state`
+- [x] `ledger_position` summing the rows rather than trusting a running total
+- [x] `take_cash` through the same ledger and state machine as M-Pesa
+- [x] Cash rounding to the shilling, difference recorded on the sale
+- [x] Receipt number allocated under a row lock inside the sale's transaction
+- [x] Stock moved on settlement, negative surfaced as a discrepancy
+- [x] `void_sale`, reason mandatory
+- [x] `refund_sale` at the price actually charged, including discount share
+- [x] Refund restock, honouring the per-line flag
+
+### Guards
+- [x] Client-supplied prices ignored on non-variable items
+- [x] Variable price floor: `price_cents` is a minimum, not a suggestion *(decided this milestone; going below is a discount, which leaves a trail)*
+- [x] Void checks the ledger independently of the cached state, proved by forcing the cache to disagree
+- [x] Items from another business refused at the service layer
+- [x] Unavailable items cannot be rung up
+- [x] 19 negative-path tests
+
+### Outstanding
+- [ ] Manager authorization for discounts *(discovered: `create_sale` accepts discounts with no authority check at all; unreachable until the endpoint exists, live the moment it does)*
+- [ ] Cash checkout API end to end
+- [ ] Split payments across cash and M-Pesa
+- [ ] `MpesaCredential` API, write-only
+- [ ] STK push client against the Daraja sandbox
+- [ ] Callback: four idempotency keys, terminal-state guard, suspect path
+- [ ] Safaricom IP allowlist, mandatory on production credentials
+- [ ] Reconciliation job for lapsed intents
+- [ ] Unresolved suspect callbacks and discrepancies in the platform console
+- [ ] Receipt PDF, branded per tenant
+- [ ] ESC/POS printing from the till
 - [ ] Offline sync: catalogue delta pull
 - [ ] Offline sync: sale batch ingest with `client_uuid` idempotency
-- [ ] `StockDiscrepancy` for offline sales that drive stock negative
-- [ ] Device registration and sale attribution
+- [ ] Sync rejects a payload replayed with another business's token and device
+- [ ] Two offline devices selling the last unit: both accepted, stock negative, flagged
+- [ ] Flutter: drift queue, cart, checkout, offline indicator
 - [ ] Shift open/close with cash drawer reconciliation
-- [ ] Flutter: cart, checkout, payment, receipt screens
-- [ ] Flutter: SQLite outbox and sync engine
-- [ ] Tests: idempotent replay, price snapshotting, offline conflict handling
+- [ ] SMS receipt *(stretch)*
 
 ## Milestone 4 — Compliance layer
 

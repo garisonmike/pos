@@ -662,6 +662,28 @@ A device that was offline while its business was suspended can still sync sales
 it already completed — that money was taken. It is blocked from starting new
 ones. Sync accepts; checkout refuses.
 
+### Open: offline discount authorisation has no lockout
+
+A discount needs a manager's approval, and online that approval is a username
+plus their PIN verified server-side — where the existing PIN lockout applies, so
+a wrong PIN counts against the same device and user counters as a sign-in.
+
+Offline, the device verifies that PIN **locally** against its cached user
+record, and there is no lockout on that path. A stolen till taken deliberately
+offline therefore gets unlimited, unlogged guesses at a manager's four digits,
+after which every discount it rings up looks authorised.
+
+This is narrower than it first appears — amendment to the online design means a
+manager running the till alone authorises from their own session, so the local
+path is only needed for *cashier delegates to a different manager while
+offline*. But it is a real gap and it is open. Not solved yet; recorded here so
+it is not discovered later as a surprise.
+
+Plausible answers when it is addressed: a local attempt counter in the device's
+own storage (weak — the attacker holds the device), signing the cached PIN hash
+with a server key so an offline verification can be re-checked at sync, or
+simply refusing discounts offline and accepting the counter friction.
+
 ### Clock skew
 
 Both `device_created_at` and `server_received_at` are stored. All reporting uses

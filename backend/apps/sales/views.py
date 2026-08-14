@@ -14,6 +14,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db import transaction
+from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -27,6 +28,7 @@ from apps.sales.authorization import (
     resolve_discount_authorization,
 )
 from apps.sales.models import Sale
+from apps.sales.receipt_render import receipt_filename, render_pdf, render_text
 from apps.sales.serializers import (
     CashCheckoutSerializer,
     MpesaCheckoutSerializer,
@@ -299,6 +301,43 @@ class SaleViewSet(viewsets.ReadOnlyModelViewSet):
         body = SaleSerializer(sale, context=self.get_serializer_context()).data
         body["payment_intent"] = PaymentIntentSerializer(intent).data
         return Response(body, status=status.HTTP_202_ACCEPTED)
+
+    @extend_schema(
+        summary="The receipt for a sale",
+        description=(
+            "Two renderings from the same source, so they cannot disagree about "
+            "what was sold. `?format=pdf` returns a PDF sized like a till roll; "
+            "the default returns plain text laid out for a 58mm thermal "
+            "printer, which the till sends over Bluetooth as ESC/POS.\n\n"
+            "Reads the sale's own snapshotted lines, so a receipt reprinted next "
+            "year shows the price that was charged rather than today's."
+        ),
+        responses={200: OpenApiResponse(description="text/plain")},
+    )
+    @action(detail=True, methods=["get"])
+    def receipt(self, request, pk=None):
+        return HttpResponse(
+            render_text(self.get_object()), content_type="text/plain; charset=utf-8"
+        )
+
+    @extend_schema(
+        summary="The receipt for a sale, as a PDF",
+        description=(
+            "The same receipt as the text route, rendered on a page sized like a "
+            "till roll rather than A4 - so a shop can print it on either without "
+            "the text stranded in the corner of a mostly empty sheet.\n\n"
+            "A separate route rather than a `?format=` parameter: DRF reserves "
+            "that name for its own content negotiation, and overloading it makes "
+            "the endpoint 404 for a reason nobody would guess."
+        ),
+        responses={200: OpenApiResponse(description="application/pdf")},
+    )
+    @action(detail=True, methods=["get"], url_path="receipt/pdf")
+    def receipt_pdf(self, request, pk=None):
+        sale = self.get_object()
+        response = HttpResponse(render_pdf(sale), content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="{receipt_filename(sale)}"'
+        return response
 
     @extend_schema(
         summary="Void an unpaid sale",

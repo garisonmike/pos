@@ -18,7 +18,9 @@ from apps.accounts.models import Device, User
 from apps.core.audit import record_audit
 from apps.core.middleware import clear_tenant_status_cache
 from apps.core.models import AuditAction, AuditLog
+from apps.payments.models import MpesaCallback, MpesaCredential
 from apps.platform_admin.sites import platform_admin_site
+from apps.sales.models import SaleDiscrepancy
 from apps.stores.models import Store
 from apps.tenants.models import Tenant, TenantModule
 
@@ -168,6 +170,161 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_filter = ("action", "entity_type", "tenant")
     search_fields = ("actor_label", "entity_id", "reason")
     date_hierarchy = "created_at"
+
+    def has_add_permission(self, request) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Money that needs a person
+#
+# Both of these exist because something happened that the software will not
+# resolve on its own: a payment arrived for a sale that had moved on, or a sale
+# drove stock below zero. Real money sitting unapplied needs a human to notice
+# within hours, not at the end of a reporting period - so they are here rather
+# than waiting for the reporting milestone.
+#
+# Read-only throughout. These are ledger-adjacent records, and a console that
+# could edit them would be a way to alter the evidence of what happened.
+# ---------------------------------------------------------------------------
+
+
+class OpenIssueFilter(admin.SimpleListFilter):
+    """Unresolved first, because that is the only view worth acting on."""
+
+    title = "status"
+    parameter_name = "state"
+
+    def lookups(self, request, model_admin):
+        return [("open", "Needs attention"), ("resolved", "Resolved")]
+
+    def queryset(self, request, queryset):
+        if self.value() == "open":
+            return queryset.filter(resolved_at__isnull=True)
+        if self.value() == "resolved":
+            return queryset.filter(resolved_at__isnull=False)
+        return queryset
+
+
+@admin.register(MpesaCallback, site=platform_admin_site)
+class MpesaCallbackAdmin(admin.ModelAdmin):
+    """Every M-Pesa callback received, and what was done with it.
+
+    The suspect ones are the point: a payment that arrived for a voided sale,
+    or from an address not on a business's allowlist, is money the shop may be
+    holding and has not applied to anything.
+    """
+
+    list_display = (
+        "created_at",
+        "tenant",
+        "outcome",
+        "suspect_reason",
+        "amount_display",
+        "mpesa_receipt_number",
+        "needs_attention",
+    )
+    list_filter = ("outcome", "suspect_reason", OpenIssueFilter, "tenant")
+    search_fields = ("checkout_request_id", "mpesa_receipt_number", "phone")
+    date_hierarchy = "created_at"
+    readonly_fields = tuple(
+        field.name for field in MpesaCallback._meta.fields
+    ) + ("pretty_payload",)
+    exclude = ("raw_payload",)
+
+    @admin.display(description="Amount")
+    def amount_display(self, obj):
+        if obj.amount_cents is None:
+            return "-"
+        return f"{obj.amount_cents / 100:,.2f}"
+
+    @admin.display(description="Needs attention", boolean=True)
+    def needs_attention(self, obj):
+        return obj.needs_attention
+
+    @admin.display(description="What Safaricom sent")
+    def pretty_payload(self, obj):
+        """The raw payload, kept for disputes.
+
+        Shown as stored rather than summarised, because when a customer insists
+        they paid, what arrived verbatim is the thing worth reading.
+        """
+        import json
+
+        return json.dumps(obj.raw_payload, indent=2)
+
+    def has_add_permission(self, request) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        """A refused callback is evidence. It does not get tidied away."""
+        return False
+
+
+@admin.register(SaleDiscrepancy, site=platform_admin_site)
+class SaleDiscrepancyAdmin(admin.ModelAdmin):
+    """Sales that need a person to look at them.
+
+    Never a reason to reject a sale - the money already moved - so these are
+    recorded and surfaced instead, exactly as a stock adjustment that goes
+    negative is surfaced rather than refused.
+    """
+
+    list_display = ("created_at", "tenant", "kind", "short_detail", "is_open")
+    list_filter = ("kind", OpenIssueFilter, "tenant")
+    search_fields = ("detail",)
+    date_hierarchy = "created_at"
+    readonly_fields = tuple(field.name for field in SaleDiscrepancy._meta.fields)
+
+    @admin.display(description="Detail")
+    def short_detail(self, obj):
+        return obj.detail[:80] + ("..." if len(obj.detail) > 80 else "")
+
+    @admin.display(description="Open", boolean=True)
+    def is_open(self, obj):
+        return obj.is_open
+
+    def has_add_permission(self, request) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False
+
+
+@admin.register(MpesaCredential, site=platform_admin_site)
+class MpesaCredentialAdmin(admin.ModelAdmin):
+    """Which businesses have M-Pesa set up, and against which environment.
+
+    Deliberately does not show the credentials themselves. They are encrypted at
+    rest, and a console that decrypted them onto a page would undo that for the
+    sake of a field nobody needs to read.
+    """
+
+    list_display = ("tenant", "shortcode", "environment", "is_active", "last_verified_at")
+    list_filter = ("environment", "is_active")
+    search_fields = ("shortcode",)
+    fields = (
+        "tenant",
+        "shortcode",
+        "environment",
+        "is_active",
+        "allowed_callback_ips",
+        "last_verified_at",
+        "last_error",
+    )
+    readonly_fields = fields
 
     def has_add_permission(self, request) -> bool:
         return False

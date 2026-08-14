@@ -232,6 +232,11 @@ MPESA_INTENT_TIMEOUT_SECONDS = env.int("MPESA_INTENT_TIMEOUT_SECONDS", default=9
 # a test can install one without pretending to be a different deployment.
 DARAJA_CLIENT_FACTORY = None
 
+# How long past a prompt's expiry to wait before asking Daraja what happened.
+# On top of the prompt's own window, so a customer still entering their PIN is
+# not chased with a question Daraja cannot yet answer.
+MPESA_RECONCILE_GRACE_SECONDS = env.int("MPESA_RECONCILE_GRACE_SECONDS", default=120)
+
 # Till PIN lockout. See apps.accounts.lockout for why this is a lockout rather
 # than only a request-rate limit.
 PIN_LOCKOUT_MAX_ATTEMPTS = env.int("PIN_LOCKOUT_MAX_ATTEMPTS", default=5)

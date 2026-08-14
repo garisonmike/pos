@@ -749,6 +749,131 @@ M-Pesa) and partial refunds are ordinary rows rather than special cases.
 
 ---
 
+## Taking money by M-Pesa
+
+STK Push via Daraja: the cashier rings up, the customer gets a prompt on their
+phone, and a callback confirms. Each business brings its **own** credentials —
+Safaricom issues production ones to a registered business, not to whoever runs
+the software — encrypted at rest with a key that is deliberately not
+`SECRET_KEY`, since rotating Django's secret must not destroy every tenant's
+payment configuration.
+
+### Four idempotency keys
+
+Each catches a different real failure, and each is a database constraint rather
+than an intention:
+
+| Key | Stops |
+|---|---|
+| `PaymentIntent.client_uuid` | the till retrying its own request after a timeout |
+| `PaymentIntent.checkout_request_id` | two intents claiming one Daraja push |
+| `MpesaCallback.checkout_request_id` | **Safaricom retrying a callback**, which it does routinely |
+| `Payment.mpesa_receipt_number` | one real movement of money credited twice by *any* path |
+
+A duplicate returns the same acknowledgement as the first delivery. Anything
+else would make Safaricom retry a callback we have deliberately refused.
+
+### One guarded settlement path
+
+`settle_intent()` is the only way M-Pesa money reaches a sale. The callback uses
+it; so does the reconciliation job. Two implementations of "is this sale still
+creditable" would eventually disagree, and the disagreement would show up as a
+customer charged twice.
+
+The guard reads **ground truth**, exactly as `void_sale` does — and the split is
+worth being precise about:
+
+- *State facts* — void, and whether a prompt is outstanding — have no ledger row
+  to derive them from, so they come from the state column.
+- *Money facts* — has this been paid, has it been refunded — are summed from the
+  ledger every time.
+
+So a sale whose column says `AWAITING_PAYMENT` but whose payments already cover
+it is **refused**, because the money is what decides. There is a test that forces
+the column to lie and confirms the callback is held rather than applied.
+
+Anything held becomes a `SUSPECT` callback and raises a discrepancy. Not
+credited, not dropped: money the shop may be holding and has not applied.
+
+### How a callback finds its business
+
+A callback carries no tenant and no credential, so the token in its URL is the
+only thing that can resolve it — 32 bytes of randomness, derived from **nothing**,
+because anything derived is a value someone can attempt to construct.
+
+That lookup is the third and last place `bypass_rls()` is reached, and it is one
+statement: a single `SELECT ... WHERE callback_token = %s LIMIT 1`, no joins, no
+writes, nothing else in the block. The moment an intent is found its tenant is
+bound and everything after is ordinary tenant-scoped code. A test asserts this
+prefix contains exactly one route.
+
+### The IP allowlist, and the proxy assumption
+
+**The deployment assumption: exactly one trusted proxy in front of Django** — a
+single nginx, Caddy or load balancer terminating TLS, matching the
+single-Compose-route shape this already deploys in.
+
+That assumption matters because `X-Forwarded-For` is built left to right and
+each proxy *appends* what it saw:
+
+```
+X-Forwarded-For: <whatever the client sent>, <address our proxy saw>
+                  ^ unverified, attacker-controlled  ^ the only entry we believe
+```
+
+So the **last** entry is read, not the first. Reading the first — the common
+default, and what this code originally did — is exactly backwards for a security
+decision: it is the entry most under an attacker's control, and anyone could
+claim to be Safaricom by typing an address into a header.
+
+How many hops to count back is configuration, and **production refuses to start
+without it** (`pos.E004`), because neither guess is safe: too few reads a
+caller-supplied entry and credits forgeries, too many reads nothing and refuses
+every real callback.
+
+The allowlist itself applies **only on production credentials**. Sandbox skips it
+entirely, so a business integrating from behind an unpredictable address is
+never blocked while no real money is moving. A production business with an
+**empty** list fails closed — "not configured" must not look identical to
+"configured correctly".
+
+### Lost callbacks, and why reconciliation exists
+
+A lost callback is at least as likely as a duplicated one, and no amount of
+idempotency helps with a message that never came. `reconcile_mpesa` asks Daraja
+what happened to any prompt that has gone quiet, run from cron every couple of
+minutes.
+
+It cannot double-credit against a callback landing at the same moment: both take
+`select_for_update` on the intent first, so one waits for the other and the
+loser finds it no longer pending.
+
+One wrinkle worth knowing: Daraja's status query confirms *whether* a payment
+succeeded but does not return the M-Pesa receipt code — only the callback carries
+that. Crediting with a blank reference would disable the one constraint that
+catches a double credit by any path, so a reconciled payment carries the
+checkout request id under a visible `RECON-` prefix instead: unique per attempt,
+and obviously not an M-Pesa code. A late callback then finds the intent settled,
+is recorded rather than credited again, and its payload preserves the true
+receipt code on the callback row.
+
+### Overpayment
+
+Two successful pushes genuinely charge a customer twice. Both payments are
+recorded — refusing to record money the customer actually sent would put the
+books further from the truth — and `is_overpaid` blocks completion until a
+manager refunds the difference. To keep this rare rather than merely survivable,
+a second push is refused while one is still live on that sale.
+
+### Refunds
+
+Recorded and settled outside the system. Automated M-Pesa refunds need the B2C
+product, its own credentials and a funded float, which a small shop does not
+have on day one — so the ledger stays correct and the shop settles it the way
+they already do. An unsettled refund stays visibly unsettled.
+
+---
+
 ## Auditing
 
 Audit entries are written by calling `record_audit()` explicitly, not by

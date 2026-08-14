@@ -34,3 +34,12 @@ TENANT_STATUS_CACHE_SECONDS = 0
 # making dozens of sign-in calls would trip them for reasons unrelated to what
 # it is asserting. The tests that care about throttling turn them back on.
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {"pin-login": None, "login": None}
+
+# Tests drive requests directly, with no proxy in front.
+TRUSTED_PROXY_HOPS = 0
+
+# A fixed key so the encrypted-credential tests can round-trip. Fernet output is
+# randomised per encryption, so a constant key here still proves nothing about
+# ciphertext being predictable - it only lets the tests decrypt what they wrote.
+DARAJA_ENCRYPTION_KEY = "43febadkU_EsOJwi_H2XjCeFZmuyri-njh-JIfqJMho="
+MPESA_CALLBACK_BASE_URL = "https://pos.test"

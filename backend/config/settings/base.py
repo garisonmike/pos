@@ -203,6 +203,15 @@ CACHES = {
     }
 }
 
+# How many proxies of ours sit in front of Django. Decides which
+# X-Forwarded-For entry is believed when the M-Pesa callback allowlist checks
+# where a request came from: with one trusted proxy the LAST entry is the one it
+# appended, and everything to its left is whatever the caller sent.
+#
+# None rather than 0 on purpose - production refuses to start until it is set,
+# because neither guess is safe. See apps/core/checks.py, pos.E004.
+TRUSTED_PROXY_HOPS = env.int("TRUSTED_PROXY_HOPS", default=None)
+
 # Encrypts each tenant's Daraja credentials at rest. Deliberately separate from
 # SECRET_KEY: that key is rotated for its own reasons - a leak, a policy, a new
 # deployment - and rotating it must not destroy every tenant's payment
@@ -218,6 +227,10 @@ MPESA_CALLBACK_BASE_URL = env("MPESA_CALLBACK_BASE_URL", default="http://localho
 # minute; a little longer here avoids declaring a payment lapsed while the
 # customer is still typing their PIN.
 MPESA_INTENT_TIMEOUT_SECONDS = env.int("MPESA_INTENT_TIMEOUT_SECONDS", default=90)
+
+# Swapped for a fake in tests. A setting rather than an environment sniff, so
+# a test can install one without pretending to be a different deployment.
+DARAJA_CLIENT_FACTORY = None
 
 # Till PIN lockout. See apps.accounts.lockout for why this is a lockout rather
 # than only a request-rate limit.

@@ -20,6 +20,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.core.permissions import IsCashierOrAbove, IsManagerOrAbove
+from apps.payments.services import StkError, initiate_stk
 from apps.sales.authorization import (
     DiscountNotAuthorized,
     record_authorization,
@@ -28,6 +29,8 @@ from apps.sales.authorization import (
 from apps.sales.models import Sale
 from apps.sales.serializers import (
     CashCheckoutSerializer,
+    MpesaCheckoutSerializer,
+    PaymentIntentSerializer,
     SaleSerializer,
 )
 from apps.sales.services import CheckoutError, LineRequest, create_sale, take_cash, void_sale
@@ -190,6 +193,112 @@ class SaleViewSet(viewsets.ReadOnlyModelViewSet):
             SaleSerializer(sale, context=self.get_serializer_context()).data,
             status=status.HTTP_201_CREATED,
         )
+
+    @extend_schema(
+        summary="Ring up a sale and prompt the customer to pay by M-Pesa",
+        description=(
+            "Prices the cart the same way the cash route does, then sends an "
+            "STK push. The sale comes back **awaiting payment**, not paid - the "
+            "customer still has to enter their PIN, and the receipt number is "
+            "allocated when the money actually lands.\n\n"
+            "Discounts need exactly the same authority as on the cash route.\n\n"
+            "Refuses with 409 while a prompt is already waiting on this sale. "
+            "Two prompts answered by an obliging customer are two real "
+            "payments, and nothing downstream can un-take money that was sent."
+        ),
+        request=MpesaCheckoutSerializer,
+        responses={
+            202: SaleSerializer,
+            400: OpenApiResponse(description="Refused"),
+            403: OpenApiResponse(description="Discount without authority"),
+            409: OpenApiResponse(description="A prompt is already waiting on this sale"),
+        },
+    )
+    @action(detail=False, methods=["post"], url_path="checkout/mpesa")
+    def mpesa_checkout(self, request):
+        serializer = MpesaCheckoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        store, store_error = self._resolve_store(request, data.get("store_id"))
+        if store_error is not None:
+            return store_error
+
+        # The same gate as cash, called the same way. A discount is a discount
+        # however the customer pays.
+        authorization = None
+        if data["_has_discount"]:
+            try:
+                authorization = resolve_discount_authorization(
+                    actor=request.user,
+                    payload=data.get("discount_authorization"),
+                    request=request,
+                )
+            except DiscountNotAuthorized as exc:
+                return Response(
+                    {"detail": exc.detail, "code": exc.code},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        lines = [
+            LineRequest(
+                item_id=str(line["item_id"]),
+                quantity=Decimal(str(line["quantity"])),
+                unit_price_cents=line.get("unit_price_cents"),
+                discount_bps=line.get("discount_bps", 0),
+                discount_cents=line.get("discount_cents", 0),
+            )
+            for line in data["lines"]
+        ]
+
+        try:
+            with transaction.atomic():
+                sale = create_sale(
+                    tenant=request.user.tenant,
+                    store=store,
+                    cashier=request.user,
+                    lines=lines,
+                    cart_discount_bps=data.get("cart_discount_bps", 0),
+                    cart_discount_cents=data.get("cart_discount_cents", 0),
+                    client_uuid=data.get("client_uuid"),
+                    customer_phone=data["phone"],
+                    note=data.get("note", ""),
+                )
+
+                if authorization is not None:
+                    for field, value in authorization.as_sale_fields().items():
+                        setattr(sale, field, value)
+                    sale.save(
+                        update_fields=[*authorization.as_sale_fields().keys(), "updated_at"]
+                    )
+
+                intent = initiate_stk(
+                    sale=sale,
+                    phone=data["phone"],
+                    user=request.user,
+                    client_uuid=data.get("payment_client_uuid"),
+                )
+
+                if authorization is not None:
+                    record_authorization(
+                        sale=sale,
+                        authorization=authorization,
+                        actor=request.user,
+                        request=request,
+                    )
+        except CheckoutError as exc:
+            return Response(
+                {"detail": exc.detail, "code": exc.code}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except StkError as exc:
+            return Response(
+                {"detail": exc.detail, "code": exc.code}, status=exc.status
+            )
+
+        sale.refresh_from_db()
+        body = SaleSerializer(sale, context=self.get_serializer_context()).data
+        body["payment_intent"] = PaymentIntentSerializer(intent).data
+        return Response(body, status=status.HTTP_202_ACCEPTED)
 
     @extend_schema(
         summary="Void an unpaid sale",

@@ -163,16 +163,10 @@ def record_audit(
 
 
 def _client_ip(request) -> str | None:
-    """Best-effort client address.
+    """Best-effort client address for the audit trail."""
+    from apps.core.net import client_ip
 
-    ``X-Forwarded-For`` is trusted only for its first entry, and only because
-    this is expected to sit behind a proxy that sets it. It is recorded as
-    context for an investigation, never used for authorisation.
-    """
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip() or None
-    return request.META.get("REMOTE_ADDR") or None
+    return client_ip(request)
 
 
 def diff_fields(

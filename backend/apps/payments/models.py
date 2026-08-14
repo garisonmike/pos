@@ -266,6 +266,18 @@ class MpesaCallback(TenantOwnedModel, UUIDModel, TimeStampedModel):
     crediting the sale again.
     """
 
+    # Both nullable, for the same case: a callback whose token matched no
+    # intent has no business to belong to. It is still recorded - an unknown
+    # token is either someone scanning or a bug of ours, and both are worth
+    # being able to see. Such a row is visible only from the platform surface,
+    # since the isolation policy matches nothing when the tenant is null.
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.PROTECT,
+        related_name="mpesa_callbacks",
+        null=True,
+        blank=True,
+    )
     intent = models.ForeignKey(
         PaymentIntent,
         on_delete=models.PROTECT,

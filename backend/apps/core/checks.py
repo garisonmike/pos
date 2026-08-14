@@ -104,6 +104,43 @@ def check_secret_key(app_configs, **kwargs) -> list:
 
 
 @register(deploy=False)
+def check_trusted_proxy_hops(app_configs, **kwargs) -> list:
+    """Refuse to run in production without an explicit trusted-hop count.
+
+    The M-Pesa callback allowlist decides whether real money is credited by
+    reading a client address out of ``X-Forwarded-For``. Which entry of that
+    header to believe depends entirely on how many proxies of ours sit in
+    front - and there is no safe default to fall back on:
+
+    * Guess too few and we read an entry the caller supplied, so anyone can
+      claim to be Safaricom and have a forged callback credited.
+    * Guess too many and we read nothing, so every genuine callback is refused.
+
+    Zero is correct only when Django is exposed directly, which is not how this
+    deploys. So production must say, rather than have the software assume.
+    """
+    if settings.DEBUG:
+        return []
+
+    if getattr(settings, "TRUSTED_PROXY_HOPS", None) is None:
+        return [
+            Error(
+                "TRUSTED_PROXY_HOPS is not set.",
+                hint=(
+                    "Set it to the number of proxies of yours in front of "
+                    "Django - 1 for a single nginx, Caddy or load balancer "
+                    "terminating TLS, which is the usual shape. It decides "
+                    "which X-Forwarded-For entry the M-Pesa callback allowlist "
+                    "believes, so a wrong value either lets a forged callback "
+                    "through or refuses every real one."
+                ),
+                id="pos.E004",
+            )
+        ]
+    return []
+
+
+@register(deploy=False)
 def check_cache_is_shared(app_configs, **kwargs) -> list:
     """Warn when the cache is per-process in a deployment.
 

@@ -12,3 +12,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 # deliberately uses the same backend as production, because the till lockout
 # depends on counters being shared across processes and a local-memory cache
 # would hide that difference until it mattered.
+
+# Nothing sits in front of Django in development, so the socket address is the
+# real one and X-Forwarded-For is ignored.
+TRUSTED_PROXY_HOPS = 0

@@ -31,6 +31,7 @@ from apps.sales.serializers import (
     SaleSerializer,
 )
 from apps.sales.services import CheckoutError, LineRequest, create_sale, take_cash, void_sale
+from apps.sales.states import IllegalTransition
 from apps.stores.models import Store
 
 
@@ -216,9 +217,14 @@ class SaleViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(
                 {"detail": exc.detail, "code": exc.code}, status=status.HTTP_400_BAD_REQUEST
             )
-        except Exception as exc:  # IllegalTransition
+        except IllegalTransition as exc:
+            # Named rather than caught broadly on purpose. A bare `except
+            # Exception` here would turn a genuine bug into a polite 400,
+            # reporting our own fault as the caller's bad input - and on an
+            # endpoint that moves money, a bug that looks like a validation
+            # error is a bug nobody investigates.
             return Response(
-                {"detail": str(exc), "code": "illegal_transition"},
+                {"detail": exc.detail, "code": "illegal_transition"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

@@ -135,10 +135,21 @@ class ComplianceDocument(TenantOwnedModel, UUIDModel, TimeStampedModel):
     kind = models.CharField(max_length=12, choices=DocumentKind.choices)
 
     invoice_number = models.BigIntegerField(
-        help_text="Gapless per business. Allocated inside the sale's own transaction."
+        null=True,
+        blank=True,
+        help_text=(
+            "Gapless per business, allocated inside the sale's own "
+            "transaction. **Null when nothing will be filed against this "
+            "document** - a business under no regime, or an offline sale that "
+            "has not synced. Putting either in the tax series would claim a "
+            "filing that will never happen. Postgres treats nulls as distinct, "
+            "so the unique constraint still holds."
+        ),
     )
     invoice_code = models.CharField(
-        max_length=40, help_text="The number as it is printed, e.g. TI-2026-000001."
+        max_length=40,
+        blank=True,
+        help_text="The number as it is printed, e.g. TI-2026-000001. Empty when unnumbered.",
     )
 
     #: The credit note's original. Null on an invoice.
@@ -237,7 +248,16 @@ class ComplianceDocument(TenantOwnedModel, UUIDModel, TimeStampedModel):
         ]
 
     def __str__(self) -> str:
-        return self.invoice_code
+        return self.invoice_code or f"unnumbered {self.kind.lower()} on {self.sale_id}"
+
+    @property
+    def is_numbered(self) -> bool:
+        """Whether this document is part of the business's tax series.
+
+        An unnumbered one is a record that a customer asked for a tax invoice
+        from a shop that is not registered. Worth keeping; not worth filing.
+        """
+        return self.invoice_number is not None
 
     @property
     def is_credit_note(self) -> bool:

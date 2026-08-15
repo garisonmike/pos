@@ -5,6 +5,57 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-15 — Hardening the compliance layer, and its back office
+
+**Worked on:** the three hardenings, then the settings and export endpoints
+that were outstanding.
+
+**Finished:**
+
+- `issue_invoice` re-reads the sale from the database rather than trusting the
+  instance it was handed. That is the mistake the sync path made, and the
+  checkout view avoided only by remembering to refresh. Verifying at the
+  boundary also stops stale totals being frozen onto a tax document, which the
+  state check alone would not have.
+- Unregistered businesses keep the document and take no number. Same rule as an
+  offline sale: a number is taken only when something will be filed against it.
+  The export excludes unnumbered documents; the document list does not, because
+  they are not hidden from the shop, only from the return.
+- An unrecognised compliance mode still falls back to the null adapter, but now
+  writes a `COMPLIANCE_MODE_UNKNOWN` audit entry - one per affected document,
+  deliberately not deduplicated. A silent fallback means a registered business
+  quietly stops filing and nobody finds out until a return is due. Documents are
+  also in the platform console now, where a run of failures or a stream of
+  unnumbered documents is visible to the operator.
+- Settings and export endpoints, plus a read-only document list.
+
+**Decisions, and why:**
+
+**Settings sit above Manager.** Getting the regime wrong means declaring tax
+that is not owed, or failing to declare tax that is. Both land on the owner, not
+on whoever was managing that afternoon.
+
+**The invoice prefix is frozen once the series has started.** Changing it
+mid-way would produce two spellings of one gapless sequence, and a filer could
+not tell whether anything was missing between them. Resending the *same* prefix
+is not treated as a change, so a settings screen that PATCHes the whole form
+does not trip over it.
+
+**The counter is read-only on that surface.** A counter that can be set by hand
+is not a gapless series.
+
+**Found again, the hard way:** DRF reserves `format` for content negotiation and
+answers **404** on an unrecognised one - it does not ignore it. I used
+`?format=pdf` on the export and got a 404 that looked like a missing URL. The
+receipt endpoints were split into separate paths for exactly this reason in
+milestone 3, and I repeated the mistake anyway. Now split the same way, with a
+test that pins the 404 rather than asserting the tidier behaviour I assumed.
+
+**Come back to:** nothing outstanding on milestone 4's scope. The compliance
+layer has models, adapters, numbering, export and a back office.
+
+---
+
 ## 2026-08-15 — The compliance layer
 
 **Worked on:** milestone 4. Invoice numbering, the immutable document, the

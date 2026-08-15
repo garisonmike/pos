@@ -1238,6 +1238,28 @@ cannot have one on the spot.
 verification against real guidance before a VAT-registered client relies on it —
 same caveat as the eTIMS scope note below.
 
+### A number is taken only when something will be filed
+
+`invoice_number` is **null** whenever nothing will be filed against the
+document: a business under no regime, or an offline sale that has not synced.
+Both are the same rule — putting either in the tax series would claim a filing
+that will never happen, and the series is the thing a revenue authority reads.
+
+An unregistered shop that is handed a buyer PIN still gets the document
+recorded, unnumbered. A customer asked, and that request is worth a trace; it is
+just not part of any return, so the export excludes it. Postgres treats nulls as
+distinct, so the unique constraint on `(tenant, invoice_number)` still holds
+however many there are.
+
+### Settlement is read from the database, never from the caller
+
+`issue_invoice` re-reads the sale rather than trusting the instance it was
+handed. `take_cash` settles its own re-fetched row under a lock, so a caller's
+object is routinely still `OPEN` with stale totals — a mistake the sync path
+actually made and the checkout view avoided only by remembering to refresh.
+Verifying at the boundary means a fourth call site cannot repeat it, and it also
+stops stale totals being frozen onto a tax document.
+
 ### Documents are immutable
 
 A `ComplianceDocument` is frozen once issued. A correction is a credit note
@@ -1279,6 +1301,33 @@ the shop.
 
 An unknown mode falls back to the null adapter rather than raising. A setting
 that has drifted must stop a shop *submitting*, not stop it selling.
+
+But a silent fallback means a registered business quietly stops filing and
+nobody finds out until a return is due, so the fallback writes a
+`COMPLIANCE_MODE_UNKNOWN` audit entry — one per affected document, deliberately
+not deduplicated. Every mis-filed sale deserves its own record, and a condition
+that should never occur is worth being noisy about when it does. Documents are
+also listed in the platform console, where a run of `FAILED` submissions or a
+stream of unnumbered documents is visible to the operator.
+
+### The back office
+
+| Endpoint | Gate | Why |
+|---|---|---|
+| `GET /compliance/settings/` | any staff | A till needs to know whether to ask for a buyer PIN |
+| `PATCH /compliance/settings/` | **Owner** | Changing the regime decides whether the business declares tax at all. Wrong in one direction declares tax that is not owed; in the other, fails to declare tax that is. Both land on the owner. Audited as `COMPLIANCE_MODE_CHANGED` with old and new value and the actor. |
+| `GET /compliance/export/` and `/export/pdf/` | Manager+ | The back office's own filing work; a manager doing the monthly return should not need the owner's account |
+| `GET /compliance/documents/` | Manager+ | Read-only. A document is immutable, and an endpoint that appeared to edit one would lie about what the system does. |
+
+The invoice prefix is frozen once the series has started — changing it mid-way
+would produce two spellings of one gapless sequence, and a filer could not tell
+whether anything was missing between them. The counter itself is read-only on
+this surface: a counter that can be set by hand is not a gapless series.
+
+The PDF is a **separate path**, not `?format=pdf`. DRF reserves `format` for
+content negotiation and answers 404 on an unrecognised one, so a format
+parameter here would look like a missing URL rather than a bad request. The
+receipt endpoints are split for the same reason.
 
 ---
 

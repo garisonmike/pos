@@ -63,6 +63,46 @@ def mode_for(tenant) -> str:
     return getattr(tenant, "compliance_mode", ComplianceMode.NONE)
 
 
+def resolve_adapter(tenant, *, request=None):
+    """The adapter for a business, complaining loudly if the mode is unknown.
+
+    ``adapter_for`` falls back to the null adapter rather than raising, which
+    is right: a setting that has drifted - a regime withdrawn, a value
+    hand-edited - must stop a shop *submitting*, not stop it selling. But a
+    silent fallback means a registered business quietly stops filing, and
+    nobody finds out until a return is due.
+
+    So the fallback leaves a trace. One audit entry per affected document, not
+    deduplicated: every sale that was mis-filed deserves its own record, and a
+    condition that should never occur is worth being noisy about when it does.
+    """
+    mode = mode_for(tenant)
+    adapter = adapter_for(mode)
+
+    if mode not in KNOWN_MODES:
+        record_audit(
+            action=AuditAction.COMPLIANCE_MODE_UNKNOWN,
+            entity_type="tenants.Tenant",
+            entity_id=str(tenant.id),
+            tenant_id=tenant.id,
+            request=request,
+            reason=f"Unknown compliance mode {mode!r}",
+            after={
+                "configured_mode": mode,
+                "fell_back_to": adapter.name,
+                "known_modes": sorted(KNOWN_MODES),
+                "consequence": "Nothing will be submitted for this business.",
+            },
+        )
+
+    return adapter
+
+
+#: The modes that resolve to a real adapter. Anything else is a drifted
+#: setting, and reaching for one is worth recording.
+KNOWN_MODES = frozenset(ComplianceMode.values)
+
+
 @transaction.atomic
 def issue_invoice(
     *, sale: Sale, buyer_pin: str = "", user=None, request=None
@@ -73,6 +113,14 @@ def issue_invoice(
     taken is a declaration of revenue the shop does not have, and a void that
     followed would leave it standing.
     """
+    # Re-read from the database rather than trusting what the caller is
+    # holding. ``take_cash`` settles its own re-fetched row under a lock, so a
+    # caller's instance is routinely still OPEN with stale totals - which is
+    # exactly the mistake the sync path made. Verifying here means a fourth
+    # call site cannot repeat it, and it costs one indexed read on a path that
+    # already writes several rows.
+    sale = Sale.objects.select_related("tenant").get(pk=sale.pk)
+
     if sale.state not in (SaleState.PAID, SaleState.PARTIALLY_REFUNDED, SaleState.REFUNDED):
         raise ComplianceError(
             "A tax invoice can only be raised for a settled sale.",
@@ -94,9 +142,17 @@ def issue_invoice(
         )
 
     tenant = sale.tenant
-    number, code = allocate_invoice_number(tenant)
+    adapter = resolve_adapter(tenant, request=request)
     breakdown = tax_breakdown_for(sale)
-    adapter = adapter_for(mode_for(tenant))
+
+    # A number is taken only when something will be filed against it. A
+    # business under no regime still gets the document recorded - a customer
+    # asked for one, and that request is worth a trace - but putting it in the
+    # tax series would claim a filing that will never happen. Same reasoning as
+    # an offline sale having no number until it lands.
+    number, code = (
+        allocate_invoice_number(tenant) if adapter.submits else (None, "")
+    )
 
     document = ComplianceDocument.objects.create(
         tenant=tenant,
@@ -166,8 +222,10 @@ def issue_credit_note(
         )
 
     tenant = original.tenant
-    number, code = allocate_invoice_number(tenant)
-    adapter = adapter_for(mode_for(tenant))
+    adapter = resolve_adapter(tenant, request=request)
+    number, code = (
+        allocate_invoice_number(tenant) if adapter.submits else (None, "")
+    )
 
     document = ComplianceDocument.objects.create(
         tenant=tenant,

@@ -15,6 +15,7 @@ from __future__ import annotations
 from django.contrib import admin, messages
 
 from apps.accounts.models import Device, User
+from apps.compliance.models import ComplianceDocument
 from apps.core.audit import record_audit
 from apps.core.middleware import clear_tenant_status_cache
 from apps.core.models import AuditAction, AuditLog
@@ -292,6 +293,52 @@ class SaleDiscrepancyAdmin(admin.ModelAdmin):
     @admin.display(description="Open", boolean=True)
     def is_open(self, obj):
         return obj.is_open
+
+    def has_add_permission(self, request) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False
+
+
+@admin.register(ComplianceDocument, site=platform_admin_site)
+class ComplianceDocumentAdmin(admin.ModelAdmin):
+    """Tax documents across every business.
+
+    Two things the operator watches here.
+
+    A run of ``FAILED`` submissions means a business is not filing, and the
+    business itself may not know - the sales all went through.
+
+    An **unnumbered** document means a shop that is not registered for VAT was
+    asked for a tax invoice. One is unremarkable. A steady stream of them means
+    a business is probably trading as though it were registered and should be.
+
+    Read-only, like every other window in this console. A compliance document is
+    immutable once issued, and an admin that appeared to edit one would be a lie
+    about what the system does.
+    """
+
+    list_display = (
+        "issued_at",
+        "tenant",
+        "invoice_code_or_unnumbered",
+        "kind",
+        "gross_cents",
+        "adapter",
+        "submission_state",
+    )
+    list_filter = ("submission_state", "kind", "adapter", "tenant")
+    search_fields = ("invoice_code", "buyer_pin", "seller_pin")
+    date_hierarchy = "issued_at"
+    readonly_fields = tuple(field.name for field in ComplianceDocument._meta.fields)
+
+    @admin.display(description="Document", ordering="invoice_number")
+    def invoice_code_or_unnumbered(self, obj):
+        return obj.invoice_code or "(unnumbered)"
 
     def has_add_permission(self, request) -> bool:
         return False

@@ -151,7 +151,13 @@ def documents_for_export(*, tenant, since=None, until=None):
     gapless series and reading it in order is how a filer sees that nothing is
     missing.
     """
-    queryset = ComplianceDocument.objects.filter(tenant=tenant)
+    # Unnumbered documents are excluded. One exists because a customer asked a
+    # shop that is not registered for a tax invoice - a record worth keeping,
+    # but not part of any return, and putting it on a filing would declare
+    # something the business is not registered to declare.
+    queryset = ComplianceDocument.objects.filter(
+        tenant=tenant, invoice_number__isnull=False
+    )
     if since:
         queryset = queryset.filter(issued_at__gte=since)
     if until:

@@ -325,9 +325,15 @@ rather than planned up front.
 - [x] CSV and PDF export from one row builder, so the two cannot disagree
 - [x] Offline sales get their number on arrival, never on the device
 - [x] Tenant isolation on both new tables
-- [x] 102 tests
-- [ ] Compliance settings endpoint (mode, prefix) for the back office
-- [ ] Export download endpoint
+- [x] Settlement verified from the database, not from a passed-in instance *(the mistake sync made; a fourth call site cannot repeat it, and stale totals can no longer be frozen onto a tax document)*
+- [x] Unregistered businesses keep the record but take no number — `invoice_number` null, consistent with the offline case
+- [x] An unrecognised compliance mode leaves a `COMPLIANCE_MODE_UNKNOWN` audit entry per affected document; the fallback itself is unchanged
+- [x] Compliance documents in the platform console, read-only
+- [x] Compliance settings endpoint (mode, PIN, prefix), Owner-only to change, audited with old and new value
+- [x] Invoice prefix frozen once the series has started
+- [x] Export download endpoint, CSV and PDF, Manager and above
+- [x] Document list endpoint, read-only
+- [x] 149 tests
 
 ## Milestone 5 — Reporting and analytics
 

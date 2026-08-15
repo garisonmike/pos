@@ -43,3 +43,8 @@ htmlcov/
 /mobile/android/.gradle/
 /mobile/android/local.properties
 /mobile/.flutter-plugins*
+
+# My own action-item list: credentials to obtain, hardware to test, judgement
+# calls that need a real-world answer. Not project documentation, and some of it
+# names what is not yet hardened - it stays local.
+/input.md

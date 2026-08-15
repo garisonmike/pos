@@ -16,6 +16,7 @@ from apps.platform_admin.views import (
     PlatformTenantViewSet,
     PlatformUsageView,
 )
+from apps.reports.views import PlatformTradingView
 
 # SimpleRouter rather than DefaultRouter: the latter adds an API root view that
 # carries no permission classes of its own. Behind this prefix, where isolation
@@ -31,6 +32,9 @@ urlpatterns = [
     # with isolation lifted so the user lookup succeeds.
     path("auth/refresh/", TokenRefreshView.as_view(), name="platform-token-refresh"),
     path("usage/", PlatformUsageView.as_view(), name="platform-usage"),
+    # Structure and trading are separate views on purpose. The one above counts
+    # staff, branches and tills; this one counts what was sold in a period.
+    path("trading/", PlatformTradingView.as_view(), name="platform-trading"),
     path(
         "tenants/<uuid:tenant_id>/users/",
         PlatformTenantUsersView.as_view(),

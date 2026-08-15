@@ -5,6 +5,69 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-15 — Reporting, and the drawer tie-out
+
+**Worked on:** milestone 5, and `input.md`.
+
+**Started `input.md`**, gitignored. Everything that needs my own account, my own
+credential, my own device, or a real-world judgement call - Daraja production
+approval per client, the trusted-proxy hop count, checking the KRA PIN shape
+against a real one, the offline-invoice position needing an accountant, the
+unscheduled production infrastructure, and the printer and scanner that have
+never been tested against real hardware. Same discipline as this log: things go
+in when they surface, not at the end.
+
+**Finished:** the period layer, the query layer, five reports, CSV and PDF
+export, the platform trading summary, and the drawer tie-out.
+
+**Decisions, and why:**
+
+**No warehouse.** This reads the operational tables. A denormalised copy would
+add a synchronisation problem, and a second place for figures to be wrong, to
+solve a performance problem a duka does not have.
+
+**Nothing in the layer writes**, and a test asserts it - including that
+`updated_at` does not move on a sale after every report has run.
+
+**Cashier performance is framed in the response, not only in a screen.** Every
+rate is returned beside the counts it comes from, somebody who sold nothing does
+not appear at all, and the payload carries a note saying why. The framing is a
+design decision; leaving it to whoever builds the screen would mean it survives
+exactly one rebuild.
+
+**The tie-out shows both halves and merges neither.** `counted` is what somebody
+signed for and never moves; `arrived_after_close` is what turned up later;
+`explained_variance_cents` says what the variance *would* have read as, as an
+explanation of the gap rather than a correction to it. The late arrivals are
+found through `LATE_ATTRIBUTION` rows rather than by comparing timestamps,
+because the discrepancy is the record that something arrived late - written by
+the code that knew at the time. A timestamp comparison would re-derive it and
+disagree the first time a definition moved. That foreign key was added a
+milestone ago for exactly this query, and it did turn out to be a lookup rather
+than an investigation.
+
+**Found while building:**
+
+**A URL collision I caused.** `platform/usage/` already existed from milestone 2
+- a *structural* summary counting staff, branches, tills and catalogue size,
+with a docstring explicitly saying it carries no money because billing is
+settled outside the system. I registered a second view on the same path and the
+same name; the older one won, and two tests failed with a list where a dict was
+expected. The two reports are genuinely different questions, so the new one is
+now `platform/trading/`, registered inside the platform urlconf so the
+permission-walking test covers it like every other route behind that prefix.
+
+**The `?format=` rule earned its comment.** I wrote the note about it last
+commit and then hit the same trap a third time while building the report
+downloads - caught immediately this time, because the rule was written down
+where I was working. Every report content type has its own path.
+
+**Come back to:** the Flutter reports screens, which should be built together
+with the shift open/close screens still outstanding from milestone 3 - a
+manager's "today" view is where both naturally live.
+
+---
+
 ## 2026-08-15 — Hardening the compliance layer, and its back office
 
 **Worked on:** the three hardenings, then the settings and export endpoints

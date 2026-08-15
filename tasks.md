@@ -335,16 +335,28 @@ rather than planned up front.
 - [x] Document list endpoint, read-only
 - [x] 149 tests
 
-## Milestone 5 — Reporting and analytics
+## Milestone 5 — Reporting and analytics · [#5](https://github.com/garisonmike/pos/issues/5)
 
-- [ ] GitHub issue with scope and acceptance criteria
-- [ ] Daily, weekly and monthly sales summaries
-- [ ] Best sellers
-- [ ] Cashier performance
-- [ ] Refund rates
-- [ ] CSV and PDF export
-- [ ] Platform: per-tenant usage summary for invoicing
-- [ ] Flutter: reports screens
+- [x] GitHub issue with scope and acceptance criteria
+- [x] Periods bucketed on `server_received_at`, never the till's clock
+- [x] Day boundaries from `Tenant.timezone`, half-open so periods neither overlap nor gap
+- [x] An unknown timezone falls back rather than raising *(a drifted setting should shift a boundary, which is visible, not break the page, which is not)*
+- [x] Refunds land in the period they were issued in, not the period of the sale they correct
+- [x] Cash and total reported separately throughout
+- [x] Voids excluded from revenue and counted on their own
+- [x] One query layer; API, CSV, PDF and the platform summary all read it
+- [x] Daily, weekly and monthly sales summaries
+- [x] Best sellers by quantity **and** by revenue *(they rank differently; a crate of matchboxes outsells everything and earns nothing)*
+- [x] Cashier performance, with denominators beside every rate and the framing carried in the response
+- [x] Refund rates with reasons attached
+- [x] CSV and PDF export, one route per content type
+- [x] Platform trading summary, platform-admin only, bypass kept to the queries
+- [x] A suspended business still appears in the usage summary
+- [x] Tenant isolation on every reporting endpoint
+- [x] Nothing in the reporting layer writes, asserted
+- [x] **Report-versus-drawer tie-out**: frozen figures and late attributions shown together, clearly separated, never merged into a recomputed total
+- [x] 92 tests
+- [ ] Flutter: reports screens, built together with the outstanding shift close/open screens
 
 ## Milestone 6 — Restaurant module
 

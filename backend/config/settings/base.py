@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "apps.sync",
     "apps.shifts",
     "apps.compliance",
+    "apps.reports",
     "apps.platform_admin",
 ]
 

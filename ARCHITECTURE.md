@@ -23,9 +23,10 @@ It is the decision everything else is arranged around.
 10. [M-Pesa](#m-pesa)
 11. [Shifts and the cash drawer](#shifts-and-the-cash-drawer)
 12. [Compliance](#compliance)
-13. [Auditing](#auditing)
-14. [Technology choices](#technology-choices)
-15. [What is deliberately not here](#what-is-deliberately-not-here)
+13. [Reporting](#reporting)
+14. [Auditing](#auditing)
+15. [Technology choices](#technology-choices)
+16. [What is deliberately not here](#what-is-deliberately-not-here)
 
 ---
 
@@ -1328,6 +1329,111 @@ The PDF is a **separate path**, not `?format=pdf`. DRF reserves `format` for
 content negotiation and answers 404 on an unrecognised one, so a format
 parameter here would look like a missing URL rather than a bad request. The
 receipt endpoints are split for the same reason.
+
+---
+
+## Reporting
+
+**Nothing here computes new truth.** Every figure is read from the ledgers that
+already exist — sales, payments, refunds, shifts — because a report that
+disagrees with the sale it came from is worse than no report. There is no
+warehouse and no star schema: this reads the operational tables. A duka does a
+few hundred sales a day, and a denormalised copy would add a synchronisation
+problem, and a second place for figures to be wrong, to solve a performance
+problem nobody has. If it stops being enough, the answer is materialised views
+over the same tables, not a parallel schema.
+
+One query layer in `apps/reports/queries.py`: pure functions taking
+`(tenant, period)` and returning dataclasses. The API, the CSV, the PDF and the
+platform summary all call it, so the four cannot disagree — the arrangement that
+already keeps the receipt's two renderings honest.
+
+### Four decisions behind every number
+
+| Question | Answer |
+|---|---|
+| Which clock? | **`server_received_at`, always.** A till with a wrong clock must not move revenue between days. `device_created_at` is shown *on a sale*, never used to bucket one. |
+| Which day boundary? | **The business's own**, from `Tenant.timezone`. A Nairobi shop trading at 10pm is already tomorrow in UTC; a report ending at 3am local is one nobody trusts twice. |
+| Where do refunds land? | **The period they were issued in**, not the period of the sale they correct. Revenue for a closed month must not change retroactively — the same principle as a frozen shift close. The refund names its sale, so both stay visible. |
+| Cash or all money? | **Both, separately.** Cash reconciles against a drawer somebody counted; M-Pesa against a statement somebody downloads. One combined number serves neither. |
+
+Voided sales appear nowhere in revenue and are counted on their own — a rising
+void count is a signal, and burying it inside a revenue query is how it goes
+unnoticed. Periods are half-open (`start <= t < end`) so consecutive ones
+neither overlap nor gap.
+
+### Cashier performance is framed, not just computed
+
+This is the report most likely to be misused, so the framing is part of the
+design rather than left to whoever builds a screen.
+
+A cashier on the quiet shift will always look worse per sale. A discount rate
+says nothing without knowing *who authorised* each discount — and the authoriser
+is recorded on the sale, not on the cashier. So:
+
+- Every rate is returned **beside the counts it comes from**, in the API and in
+  the CSV. A reader can see how thin the evidence is.
+- Somebody who worked and sold nothing **does not appear**. An absence is not a
+  zero, and a row of zeroes against a name reads as a judgement the data does
+  not support.
+- The response carries a `note` saying exactly this, so the framing travels with
+  the data rather than living only in a screen somebody might rebuild
+  differently.
+
+The purpose is to find a pattern worth asking about, not to rank people.
+
+### The report-versus-drawer tie-out
+
+A manager compares "today's sales" against "the drawer" and finds they differ.
+**Both numbers are right.** A shift's closing figures are frozen at the moment
+somebody counted and signed for them; a sale that synced afterwards is filed
+against that shift without touching them.
+
+The answer is to **show both, clearly separated** — never to merge them into a
+recomputed total, which would give two different correct answers to "what was
+this shift's variance" depending on when you asked.
+
+`apps/reports/drawer.py` returns, per shift:
+
+- `counted` — float, declared, expected, variance. Exactly as signed for.
+- `arrived_after_close` — the late payments, with the sales they belong to.
+- `explained_variance_cents` — what the variance *would* have read as. An
+  explanation of the gap, **not a correction to it**; the variance itself never
+  moves.
+
+The late arrivals are found through `ShiftDiscrepancy`'s `LATE_ATTRIBUTION`
+rows rather than by comparing timestamps, because the discrepancy is the
+*record* that something arrived late, written by the code that knew at the time.
+A timestamp comparison would re-derive it and quietly disagree the first time a
+definition moved. This is what that foreign key was added for one milestone
+earlier.
+
+M-Pesa never appears in the late-cash figure: it was never in the drawer, so it
+cannot explain a cash gap.
+
+### The platform usage summary
+
+Two views, deliberately separate. `platform/usage/` counts **structure** —
+staff, branches, tills, catalogue size — and carries no money; it predates there
+being any sales to count. `platform/trading/` counts **what was sold** in a
+period, which is what a usage-based invoice keys on.
+
+This is the one place a reporting bug becomes a *billing* bug, so it gets what
+money gets: integer cents, its own tests, and a `bypass_rls()` window kept to
+the queries themselves — no view logic, no serialization, nothing else runs
+with isolation off.
+
+**Suspended businesses are included.** One suspended halfway through a month
+still traded for the part before and still owes for it; dropping it would
+quietly forgive an invoice with nobody able to notice which. Businesses that
+traded nothing are included at zero, because an absence and a zero are different
+facts to an invoicing run.
+
+### Reports are online-only
+
+The till app deliberately does not cache aggregates. A report is regenerable;
+the outbox exists for money that must not be lost. Showing a manager stale
+figures with no indication they were stale is worse than showing nothing.
 
 ---
 

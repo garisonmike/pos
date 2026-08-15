@@ -243,6 +243,15 @@ MPESA_RECONCILE_GRACE_SECONDS = env.int("MPESA_RECONCILE_GRACE_SECONDS", default
 
 # Till PIN lockout. See apps.accounts.lockout for why this is a lockout rather
 # than only a request-rate limit.
+# A weighed or measured line priced below this is flagged for a person. It is a
+# compensating control, not a gate: the real answer is a scale the till reads
+# directly, and until that exists a cashier can always understate a weight.
+# Deliberately a small absolute figure rather than a percentage - the fraud is
+# "type 0.001 instead of 1", which lands near zero whatever the item costs.
+SUSPICIOUS_QUANTITY_FLOOR_CENTS = env.int(
+    "SUSPICIOUS_QUANTITY_FLOOR_CENTS", default=2000
+)
+
 PIN_LOCKOUT_MAX_ATTEMPTS = env.int("PIN_LOCKOUT_MAX_ATTEMPTS", default=5)
 PIN_LOCKOUT_SECONDS = env.int("PIN_LOCKOUT_SECONDS", default=900)
 

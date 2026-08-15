@@ -304,6 +304,17 @@ rather than planned up front.
 - [x] **Flutter: open/close drawer screens** *(built with the reports screens in milestone 5, since a manager's "today" view is where both live)*
 - [ ] Flutter: cash in/out from the till
 
+### Selling by weight
+- [x] Confirmed already supported end to end on the server *(UnitOfMeasure, Decimal quantities throughout, pricing tested against 2.5kg / 0.333kg from milestone 3, receiving in the selling unit, decimal quantity in the sync payload)*
+- [x] Decimal quantity entry on the till: a keypad sheet for `unit != EACH`, thousandths entered as whole digits
+- [x] Common quantities (¼, ½, ¾, 1, 2, 5) as one-tap chips
+- [x] The unit shown on the cart row — "2.5 kg × KES 180.00 / kg" rather than a bare number
+- [x] Measured lines open the keypad; whole-unit items keep their steppers
+- [x] `SUSPICIOUS_QTY` discrepancy on a measured line below KES 20, tunable, never blocking
+- [x] A 200g purchase proved never to trip it *(a shop warned about ordinary sales stops reading warnings)*
+- [x] `rounds_to_nothing` guard *(discovered: an 18-cent sale rounds to zero shillings and hit the payment ledger's positive-amount constraint as an integrity error)*
+- [x] 19 backend tests, 22 on the client
+
 ### Still to do
 - [ ] SMS receipt *(stretch)*
 

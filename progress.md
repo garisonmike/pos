@@ -5,6 +5,66 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-15 — Selling by weight
+
+**Worked on:** the by-weight selling path, after being asked whether it was
+supported at all.
+
+**Stood corrected on the premise.** The backend already handled it, and had
+since milestone 2: `UnitOfMeasure` on `Item` with KG/G/L/ML/M/HOUR, already
+orthogonal to `is_price_variable`, Decimal quantities at three places through
+sale lines, refund lines, stock levels and movements, receiving in the selling
+unit, and a decimal quantity in the sync payload. The pricing arithmetic was
+not assumed either - `test_goods_sold_by_weight` and
+`test_an_awkward_weight_resolves_its_cent_once` have pinned 2.5 kg and 0.333 kg
+since milestone 3, and milestone 5's parity fixture generates fractional
+quantities to keep the Dart pricer in step.
+
+The gap was the till: the cart row stepped by whole units and showed no unit at
+all.
+
+**Finished:** a decimal keypad sheet for measured items, the unit on the cart
+row, and the quantity-fraud flag.
+
+**Decisions, and why:**
+
+**The keypad enters thousandths as whole digits**, the same way the tender pad
+enters cents. Nothing parses a decimal string, because a double would
+eventually price a bag of sugar a cent away from the server - and the server's
+figure is the one on the receipt. A test walks six quantities and asserts the
+sheet's figure equals the pricer's exactly.
+
+**Measured items lose their steppers.** Stepping to 0.35 kg a thousandth at a
+time is not a thing anybody would do, so the row opens the keypad instead.
+Whole-unit items keep the plus and minus, which are faster for what they are
+for.
+
+**An unknown unit degrades to a piece** rather than crashing. A server that
+adds a unit this build has not heard of should fall back to the ordinary
+stepper, not take the cart down.
+
+**The quantity flag is a tripwire, not a gate.** A measured line under KES 20
+raises a discrepancy at settlement; the sale completes, the cashier is asked for
+nothing, and a person sees it afterwards. Only measured items - flagging every
+cheap sweet would bury the signal within a day. And a test pins that an ordinary
+200g purchase never trips it, because a shop warned about normal sales stops
+reading warnings.
+
+I have been plain in `input.md` and in ARCHITECTURE.md that this is compensating
+control. It catches the fraud after the fact and a determined person learns the
+threshold. The real fix is a scale the till reads directly, so the quantity is
+observed rather than asserted - added to the input list as hardware to evaluate,
+along with the question of whether shops already own one.
+
+**Found while building:** a thousandth of a kilo of sugar is eighteen cents, and
+cash rounds to the shilling - so the sale came to **zero**, hit the payment
+ledger's positive-amount constraint, and surfaced as an integrity error a
+cashier could do nothing with. `take_cash` now refuses it with
+`rounds_to_nothing` and names the quantity as the thing to check. It only turned
+up because the fraud test used the most extreme quantity it could.
+
+---
+
 ## 2026-08-15 — The reports and drawer screens
 
 **Worked on:** the till side of milestone 5, built together with the shift

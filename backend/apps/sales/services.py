@@ -17,10 +17,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
+from apps.catalog.models import UnitOfMeasure
 from apps.core.audit import record_audit
 from apps.core.models import AuditAction
 from apps.core.money import round_cash
@@ -279,6 +281,18 @@ def take_cash(
             sale.save(update_fields=["rounding_adjustment_cents", "updated_at"])
             outstanding = rounded
 
+    if outstanding <= 0:
+        # A sale so small that cash rounding takes it to nothing. Real: a
+        # thousandth of a kilo of sugar is eighteen cents, and there is no coin
+        # for that. Refused here with something a cashier can read - without
+        # this it reached the payment ledger's positive-amount constraint and
+        # surfaced as an integrity error, which tells them nothing.
+        raise CheckoutError(
+            "That comes to nothing once rounded to the shilling. Check the "
+            "quantity.",
+            "rounds_to_nothing",
+        )
+
     if tendered_cents < outstanding:
         raise CheckoutError(
             "That is less than the amount due.", "insufficient_tender"
@@ -320,6 +334,7 @@ def _settle_if_paid(sale: Sale, *, user=None) -> None:
         sale.save(update_fields=["receipt_number", "receipt_code", "updated_at"])
 
     _move_stock_for_sale(sale, user=user)
+    _flag_suspicious_quantities(sale)
 
     record_audit(
         action=AuditAction.CREATE,
@@ -332,6 +347,61 @@ def _settle_if_paid(sale: Sale, *, user=None) -> None:
             "state": sale.state,
         },
     )
+
+
+def _flag_suspicious_quantities(sale: Sale) -> None:
+    """Surface a weighed line that came to almost nothing.
+
+    A weighed item's price is not client-supplied - the catalogue rate is - so
+    the discount gate does not apply and there is nothing for it to catch. The
+    quantity *is* client-supplied, and understating it reaches the same place by
+    a different road: ring up 0.001 kg of sugar for eighteen cents and hand over
+    a kilo.
+
+    Only measured items. A single cheap sweet sold ``EACH`` is an ordinary sale
+    and flagging it would bury the signal in noise within a day.
+
+    Raised at settlement rather than when the cart is built, like negative
+    stock, because an abandoned cart is not a sale and a voided one is already
+    recorded as a void.
+
+    **This is a compensating control, not a gate.** It does not block the sale
+    and asks the cashier for nothing; a person sees it afterwards, the same way
+    they see an offline shortfall or a drawer somebody else closed. The real
+    answer is a scale the till reads directly - see input.md - and until that
+    exists a weight can always be understated.
+    """
+    floor = getattr(settings, "SUSPICIOUS_QUANTITY_FLOOR_CENTS", 2000)
+    if floor <= 0:
+        return
+
+    for line in sale.lines.all():
+        if line.unit == UnitOfMeasure.EACH:
+            continue
+        if line.gross_cents >= floor:
+            continue
+
+        SaleDiscrepancy.objects.create(
+            tenant=sale.tenant,
+            sale=sale,
+            kind=SaleDiscrepancy.Kind.SUSPICIOUS_QUANTITY,
+            detail=(
+                f"{line.name} was sold as {line.quantity} {line.unit} for "
+                f"{line.gross_cents} cents. A measured line coming to less than "
+                f"{floor} cents is worth a look - the quantity is typed at the "
+                "till, and understating it is the same as discounting without "
+                "asking."
+            ),
+            context={
+                "item": str(line.item_id),
+                "line": str(line.id),
+                "quantity": str(line.quantity),
+                "unit": line.unit,
+                "unit_price_cents": line.unit_price_cents,
+                "gross_cents": line.gross_cents,
+                "floor_cents": floor,
+            },
+        )
 
 
 def _move_stock_for_sale(sale: Sale, *, user=None) -> None:

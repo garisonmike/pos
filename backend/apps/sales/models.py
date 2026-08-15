@@ -547,6 +547,10 @@ class SaleDiscrepancy(TenantOwnedModel, UUIDModel, TimeStampedModel):
             "OFFLINE_SHORTFALL",
             "Offline till collected less than the sale came to",
         )
+        SUSPICIOUS_QUANTITY = (
+            "SUSPICIOUS_QTY",
+            "A weighed or measured line priced at almost nothing",
+        )
 
     sale = models.ForeignKey(
         Sale, on_delete=models.PROTECT, related_name="discrepancies", null=True, blank=True

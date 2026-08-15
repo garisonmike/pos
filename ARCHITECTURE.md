@@ -23,10 +23,11 @@ It is the decision everything else is arranged around.
 10. [M-Pesa](#m-pesa)
 11. [Shifts and the cash drawer](#shifts-and-the-cash-drawer)
 12. [Compliance](#compliance)
-13. [Reporting](#reporting)
-14. [Auditing](#auditing)
-15. [Technology choices](#technology-choices)
-16. [What is deliberately not here](#what-is-deliberately-not-here)
+13. [Selling by weight](#selling-by-weight)
+14. [Reporting](#reporting)
+15. [Auditing](#auditing)
+16. [Technology choices](#technology-choices)
+17. [What is deliberately not here](#what-is-deliberately-not-here)
 
 ---
 
@@ -1329,6 +1330,61 @@ The PDF is a **separate path**, not `?format=pdf`. DRF reserves `format` for
 content negotiation and answers 404 on an unrecognised one, so a format
 parameter here would look like a missing URL rather than a bad request. The
 receipt endpoints are split for the same reason.
+
+---
+
+## Selling by weight
+
+Loose goods are ordinary here, not an edge case. Sugar and flour come out of an
+open sack, so `UnitOfMeasure` on `Item` carries `EACH, KG, G, L, ML, M, HOUR`
+and every quantity in the system is a `Decimal` with three places — sale lines,
+refund lines, stock levels and stock movements alike.
+
+**Unit is orthogonal to `is_price_variable`**, deliberately. A badly-stored,
+part-spoiled sack is `unit=KG` *and* `is_price_variable=True`: sold by weight,
+at a price the cashier sets. Folding them into one flag would make that
+unexpressible. The only cross-field rule is that `HOUR` belongs to services, not
+products.
+
+Pricing rounds **once, at the line**, in `gross_before_discount()` — 0.333 kg at
+KES 180 resolves to 5,994 cents before any discount or tax touches it. The Dart
+pricer does the same, and the cross-implementation fixture generates quantities
+of 0.001, 0.333, 1.125 and 2.5 to keep the two honest.
+
+Stock is received in the **selling** unit. A 20 kg sack arriving is `delta=20`
+on a `KG` item, so "40 received, 3 sold" reads as "37 left". There is no
+sack-to-kg conversion, and none is needed: the shop counts what it sells in.
+
+### Understating a quantity is the other way to steal
+
+A weighed item's price comes from the catalogue, so the discount gate has
+nothing to check — a client-supplied price is ignored outright. But the
+**quantity** is client-supplied, and understating it reaches the same place:
+ring up 0.01 kg of sugar and hand over a kilo.
+
+A measured line coming to less than `SUSPICIOUS_QUANTITY_FLOOR_CENTS` (KES 20 by
+default) raises a `SUSPICIOUS_QTY` discrepancy. It does **not** block the sale
+and asks the cashier for nothing — a person sees it afterwards, the same way
+they see an offline shortfall or a drawer somebody else closed.
+
+Only measured items. A single cheap sweet sold `EACH` is an ordinary sale, and
+flagging every cheap thing would bury the signal in noise within a day. Raised
+at settlement rather than when the cart is built, because an abandoned cart is
+not a sale.
+
+**This is compensating control, not a gate**, and it is worth being honest about
+the difference. It catches the fraud after the fact, and a determined person
+learns the threshold and stays above it. The real fix is a scale the till reads
+directly, so the quantity is observed rather than asserted — recorded in the
+project's own input list as hardware to evaluate.
+
+### A sale that rounds to nothing
+
+Cash rounds to the shilling, so a thousandth of a kilo of sugar — eighteen
+cents — comes to zero. That reached the payment ledger's positive-amount
+constraint and surfaced as an integrity error telling a cashier nothing.
+`take_cash` now refuses it with `rounds_to_nothing` and a message naming the
+quantity as the thing to check.
 
 ---
 

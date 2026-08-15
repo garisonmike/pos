@@ -20,6 +20,7 @@ import '../../data/cart/cart_controller.dart';
 import '../../data/cart/pricing.dart';
 import '../../data/models.dart';
 import 'connectivity.dart';
+import 'quantity_sheet.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
@@ -145,8 +146,13 @@ class _CartRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${_quantity(line.line.quantityMilli)} × '
-                  '${Money(line.line.unitPriceCents).format()}',
+                  // The unit belongs here. "2.5 × KES 180.00" tells a cashier
+                  // nothing about whether that is kilos or bags, and the two
+                  // are a very different amount of sugar.
+                  '${_quantity(line.line.quantityMilli)}'
+                  '${_unitSuffix(line.line.unit)} × '
+                  '${Money(line.line.unitPriceCents).format()}'
+                  '${_perUnit(line.line.unit)}',
                   style: TextStyle(color: TillTheme.muted, fontSize: 14),
                 ),
                 if (line.totalDiscountCents > 0)
@@ -157,22 +163,42 @@ class _CartRow extends StatelessWidget {
               ],
             ),
           ),
-          _StepButton(
-            icon: Icons.remove,
-            onPressed: () => onQuantity(line.line.quantityMilli - 1000),
-          ),
-          SizedBox(
-            width: 56,
-            child: Text(
-              _quantity(line.line.quantityMilli),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          // Whole-unit steppers only where whole units are what is sold. A
+          // measured item opens the keypad instead: stepping to 0.35 kg a
+          // thousandth at a time is not a thing anybody would do.
+          if (!isCountedEach(line.line.unit))
+            Expanded(
+              flex: 0,
+              child: TextButton(
+                onPressed: () => _typeQuantity(context),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(120, TillTheme.minTapTarget),
+                ),
+                child: Text(
+                  '${_quantity(line.line.quantityMilli)}'
+                  '${_unitSuffix(line.line.unit)}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+              ),
+            )
+          else ...[
+            _StepButton(
+              icon: Icons.remove,
+              onPressed: () => onQuantity(line.line.quantityMilli - 1000),
             ),
-          ),
-          _StepButton(
-            icon: Icons.add,
-            onPressed: () => onQuantity(line.line.quantityMilli + 1000),
-          ),
+            SizedBox(
+              width: 56,
+              child: Text(
+                _quantity(line.line.quantityMilli),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+            ),
+            _StepButton(
+              icon: Icons.add,
+              onPressed: () => onQuantity(line.line.quantityMilli + 1000),
+            ),
+          ],
           SizedBox(
             width: 96,
             child: Text(
@@ -189,6 +215,27 @@ class _CartRow extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _typeQuantity(BuildContext context) async {
+    final chosen = await showQuantitySheet(
+      context,
+      itemName: line.line.name,
+      unit: line.line.unit,
+      unitPriceCents: line.line.unitPriceCents,
+      initialMilli: line.line.quantityMilli,
+    );
+    if (chosen != null) onQuantity(chosen);
+  }
+
+  static String _unitSuffix(String unit) {
+    final label = unitLabel(unit);
+    return label.isEmpty ? '' : ' $label';
+  }
+
+  static String _perUnit(String unit) {
+    final label = unitLabel(unit);
+    return label.isEmpty ? '' : ' / $label';
   }
 
   static String _quantity(int milli) {

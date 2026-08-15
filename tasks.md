@@ -301,7 +301,7 @@ rather than planned up front.
 - [x] A manager may close somebody else's drawer; it is recorded as `FORCED_CLOSE`
 - [x] Shifts are optional — a shop that never opens one goes on selling
 - [x] 53 tests
-- [ ] **Flutter: open/close drawer screens** *(the API is complete and tested; there is no cashier screen for it yet, so a shop would have to drive it through the API)*
+- [x] **Flutter: open/close drawer screens** *(built with the reports screens in milestone 5, since a manager's "today" view is where both live)*
 - [ ] Flutter: cash in/out from the till
 
 ### Still to do
@@ -356,7 +356,13 @@ rather than planned up front.
 - [x] Nothing in the reporting layer writes, asserted
 - [x] **Report-versus-drawer tie-out**: frozen figures and late attributions shown together, clearly separated, never merged into a recomputed total
 - [x] 92 tests
-- [ ] Flutter: reports screens, built together with the outstanding shift close/open screens
+- [x] Flutter: takings, best sellers and cashier tabs, with day/week/month ranges
+- [x] Flutter: drawer/shift summary showing counted and late arrivals as separate blocks
+- [x] Flutter: shift open and close screens *(the outstanding milestone 3 item)*
+- [x] Reports render their own "no connection" state, never a blank screen or a zero
+- [x] Cashier rates rendered with their denominators and the server's note
+- [x] The close screen shows no expected figure until the count is committed
+- [x] 32 client tests for the two surfaces
 
 ## Milestone 6 — Restaurant module
 

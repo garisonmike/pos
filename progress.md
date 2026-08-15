@@ -5,6 +5,51 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-15 — The reports and drawer screens
+
+**Worked on:** the till side of milestone 5, built together with the shift
+open/close screens that were still outstanding from milestone 3 - a manager's
+"today" view is where both live.
+
+**Finished:** a reports screen with takings, best sellers and cashier tabs; the
+drawer summary with the tie-out; shift open and close; and 32 tests.
+
+**Decisions, and why:**
+
+**Reports get their own unavailable state, not a blank screen.** A screen that
+rendered an empty report would show zeroes, and a manager would read those as a
+quiet day rather than as a missing connection. So the repository raises
+`ReportsUnavailable` rather than degrading, and the screen says plainly: no
+connection, *this is not a zero*, and selling carries on. A 403 is deliberately
+not treated as unavailability - the server answered, and dressing that up as a
+network fault would send somebody looking for one that is not there.
+
+**The screens do not undo what the API protects.** Cashier rates are rendered
+with their denominators - "2 of 3 · 3.33%" - and the server's explanatory note
+is carried through rather than dropped as chrome. On the drawer screen, counted
+and arrived-after-close are separate blocks with separate backgrounds, and the
+explanation is prose rather than a figure: "had those landed in time, the
+variance would have read X. The counted figures above are unchanged." An
+explanation beside a variance is fine; folded into it, it would be a third
+number that is neither.
+
+**The blind count has nothing to leak.** The close screen shows no expected
+figure because the API sends none for an open drawer. An interface that merely
+chose not to display a number it had been sent would be one refactor away from
+displaying it. The expectation appears once, on the result, when the count is
+already committed.
+
+**Found while building:** every one of the five `_load()` methods used
+`setState(() => _future = ...)`, and an arrow body returns the Future from the
+closure, which Flutter refuses outright. Nothing rendered at all. Caught by the
+first widget test that ran - the kind of thing `flutter analyze` cannot see,
+because it is a runtime contract rather than a type error.
+
+**Come back to:** cash in/out from the till, which the API supports and no
+screen drives yet. Not urgent - it is the least-used drawer action.
+
+---
+
 ## 2026-08-15 — Reporting, and the drawer tie-out
 
 **Worked on:** milestone 5, and `input.md`.

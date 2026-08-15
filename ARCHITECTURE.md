@@ -1435,6 +1435,38 @@ The till app deliberately does not cache aggregates. A report is regenerable;
 the outbox exists for money that must not be lost. Showing a manager stale
 figures with no indication they were stale is worse than showing nothing.
 
+So the client raises `ReportsUnavailable` rather than degrading to an empty
+report, and every report screen renders that as **its own state** — saying
+plainly that there is no connection, that *this is not a zero*, and that selling
+carries on regardless. A blank screen or a spinner would both read as "a quiet
+day", and a wrong number that looks current is the thing being avoided.
+
+A drawer is a server-side record, so it cannot be opened or closed offline
+either. That screen says so, and says selling is unaffected — otherwise a
+cashier reads it as the till being down.
+
+### The screens do not undo the guarantees
+
+Three things the API protects deliberately, which a screen could quietly lose:
+
+**Cashier rates keep their denominators.** The client renders what the server
+sends — "2 of 3 · 3.33%" — rather than the rate alone, and carries the server's
+explanatory note through to the screen instead of dropping it as chrome. A
+cashier with no sales is absent from the list on both sides; the client does not
+fill the gap back in with zeroes.
+
+**The tie-out stays visually separate.** *Counted* and *arrived after close* are
+distinct blocks with distinct backgrounds, and the explanation is rendered as
+prose — "had those landed in time, the variance would have read X. The counted
+figures above are unchanged" — never as a variance figure. Structurally separate
+in the API, visually separate on the glass.
+
+**The blind count has nothing to leak.** The close screen shows no expected
+figure because the API sends none for an open drawer. The expectation appears
+once, on the result, when the count is already committed. An interface that
+merely *chose* not to display a number it had been sent would be one refactor
+away from displaying it.
+
 ---
 
 ## Auditing

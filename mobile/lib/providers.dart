@@ -10,6 +10,7 @@ import 'data/outbox/database.dart';
 import 'data/outbox/outbox_repository.dart';
 import 'data/outbox/pin_lockout.dart';
 import 'data/printing/escpos.dart';
+import 'data/reports/reports_repository.dart';
 
 /// Where the API lives.
 ///
@@ -71,6 +72,16 @@ final checkoutServiceProvider = Provider<CheckoutService>(
     transport: ApiCheckoutTransport(ref.watch(apiClientProvider)),
     outbox: ref.watch(outboxProvider),
   ),
+);
+
+/// Reports and drawers.
+///
+/// Online-only by design: a report is regenerable, and caching aggregates would
+/// show a manager stale figures with no indication they were stale. The
+/// repository raises ReportsUnavailable rather than degrading to an empty
+/// report, and the screens render that as its own state.
+final reportsRepositoryProvider = Provider<ReportsRepository>(
+  (ref) => ReportsRepository(ApiReportsTransport(ref.watch(apiClientProvider))),
 );
 
 /// Where receipts are printed.

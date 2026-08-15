@@ -326,13 +326,24 @@ class SaleViewSet(viewsets.ReadOnlyModelViewSet):
         body["payment_intent"] = PaymentIntentSerializer(intent).data
         return Response(body, status=status.HTTP_202_ACCEPTED)
 
+    # ---- One route per content type, never a ?format= parameter -----------
+    #
+    # DRF reserves ``format`` for its own content negotiation, and it does not
+    # ignore a value it does not recognise - it answers **404**. So an endpoint
+    # that reads ``?format=pdf`` looks like a missing URL rather than a bad
+    # request, which is a confusing half-hour for whoever hits it.
+    #
+    # This has now cost a 404 twice in this codebase: here, and again on the
+    # compliance export. **Any route that varies by content type gets its own
+    # path.** See also apps/compliance/urls.py.
+
     @extend_schema(
         summary="The receipt for a sale",
         description=(
             "Two renderings from the same source, so they cannot disagree about "
-            "what was sold. `?format=pdf` returns a PDF sized like a till roll; "
-            "the default returns plain text laid out for a 58mm thermal "
-            "printer, which the till sends over Bluetooth as ESC/POS.\n\n"
+            "what was sold. This route returns plain text laid out for a 58mm "
+            "thermal printer, which the till sends over Bluetooth as ESC/POS; "
+            "`/receipt/pdf/` returns a PDF sized like a till roll.\n\n"
             "Reads the sale's own snapshotted lines, so a receipt reprinted next "
             "year shows the price that was charged rather than today's."
         ),
@@ -351,8 +362,9 @@ class SaleViewSet(viewsets.ReadOnlyModelViewSet):
             "till roll rather than A4 - so a shop can print it on either without "
             "the text stranded in the corner of a mostly empty sheet.\n\n"
             "A separate route rather than a `?format=` parameter: DRF reserves "
-            "that name for its own content negotiation, and overloading it makes "
-            "the endpoint 404 for a reason nobody would guess."
+            "that name for its own content negotiation and answers 404 on a "
+            "value it does not recognise, so overloading it makes the endpoint "
+            "look missing for a reason nobody would guess."
         ),
         responses={200: OpenApiResponse(description="application/pdf")},
     )

@@ -232,6 +232,7 @@ rather than planned up front.
 - [x] Split by the **acting user's own role**: manager or owner authorises from their session, a cashier needs a credential in the request
 - [x] Credential checked **before** the role, so the endpoint cannot report who holds manager rights
 - [x] Refused attempts audited against the username string with no user foreign key
+- [x] The refusal audit is pinned on **both** checkout paths *(cash and M-Pesa), so a refactor that wrapped the authority check in a transaction fails a test rather than silently discarding the trace - the way the restaurant void did
 - [x] Cash checkout API end to end, one request rather than create-then-pay
 - [x] `SaleViewSet.void` narrowed to `except IllegalTransition` *(a genuine bug should be a loud 500, not a politely misreported 400)*
 

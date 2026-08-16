@@ -14,6 +14,8 @@ from decimal import Decimal
 import pytest
 from django.db import transaction
 
+from apps.accounts.constants import UserRole
+from apps.core.models import AuditAction, AuditLog
 from apps.core.tenancy import bypass_rls, tenant_context
 from apps.payments.models import (
     CallbackOutcome,
@@ -615,3 +617,119 @@ class TestCallbackIsolation:
 
         paths = [str(pattern.pattern) for pattern in payment_urls.urlpatterns]
         assert paths == ["mpesa/callback/<str:token>/"]
+
+
+@pytest.fixture
+def manager_with_pin(tenant_a):
+    """A manager who can approve a discount at the till."""
+    from apps.accounts.models import User
+
+    with transaction.atomic(), tenant_context(tenant_a.id):
+        user = User(
+            tenant=tenant_a,
+            username="peter",
+            full_name="Peter Omondi",
+            role=UserRole.MANAGER,
+        )
+        user.set_password("peter-pass-8823")
+        user.set_pin("4471")
+        user.save()
+        return user
+
+
+class TestFailedAuthorizationIsAudited:
+    """The same tripwire the cash path has, on the path that pays by phone.
+
+    A discount is a discount however the customer pays, so the gate is the same
+    call - and so is the failure mode it guards against. Authority is resolved
+    **before** the view opens its transaction, and a refusal *returns* rather
+    than raising, so the audit entry survives. Wrapping that check in an atomic
+    block later would discard the entry on the way out, which is exactly what
+    happened to the restaurant module's order void before it was fixed.
+
+    These exist so that refactor fails a test instead of shipping.
+    """
+
+    def _refused_push(self, client, item):
+        return start_sale(
+            client,
+            item,
+            cart_discount_cents=1000,
+            discount_authorization={
+                "username": "peter",
+                "pin": "0000",
+                "reason": "Because",
+            },
+        )
+
+    def test_a_wrong_pin_is_recorded(
+        self, client_cashier_a, item_a, stock_a, sandbox_credential, fake_daraja,
+        manager_with_pin, tenant_a,
+    ):
+        self._refused_push(client_cashier_a, item_a)
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            entry = AuditLog.objects.filter(action=AuditAction.DISCOUNT_REFUSED).first()
+
+        assert entry is not None
+        assert entry.entity_id == "peter"
+        assert entry.reason == "bad_credential"
+
+    def test_the_entry_survives_the_refusal(
+        self, client_cashier_a, item_a, stock_a, sandbox_credential, fake_daraja,
+        manager_with_pin, tenant_a,
+    ):
+        """The point of the whole thing.
+
+        The push is refused and nothing is written - no sale, no intent - but
+        the record that somebody tried must outlive the refusal, or a person
+        working through a manager's four digits leaves no trace at all.
+        """
+        response = self._refused_push(client_cashier_a, item_a)
+
+        assert response.status_code == 403
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            assert Sale.objects.count() == 0
+            assert PaymentIntent.objects.count() == 0
+            assert AuditLog.objects.filter(
+                action=AuditAction.DISCOUNT_REFUSED
+            ).exists()
+
+    def test_the_entry_names_the_cashier_but_not_the_manager(
+        self, client_cashier_a, cashier_a, item_a, stock_a, sandbox_credential,
+        fake_daraja, manager_with_pin, tenant_a,
+    ):
+        """Filed against the username string, like a failed sign-in.
+
+        Nobody proved they were that manager, so attaching them by foreign key
+        would put someone else's guessing into their history.
+        """
+        self._refused_push(client_cashier_a, item_a)
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            entry = AuditLog.objects.filter(action=AuditAction.DISCOUNT_REFUSED).first()
+
+        assert entry.actor_id == cashier_a.id
+        assert entry.after["acting_cashier"] == "mary"
+        assert entry.after["attempted_authorizer"] == "peter"
+
+    def test_the_pin_is_never_in_the_entry(
+        self, client_cashier_a, item_a, stock_a, sandbox_credential, fake_daraja,
+        manager_with_pin, tenant_a,
+    ):
+        start_sale(
+            client_cashier_a,
+            item_a,
+            cart_discount_cents=1000,
+            discount_authorization={
+                "username": "peter",
+                "pin": "9137",
+                "reason": "Because",
+            },
+        )
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            entry = AuditLog.objects.filter(action=AuditAction.DISCOUNT_REFUSED).first()
+
+        assert "9137" not in str(entry.after)
+        assert "9137" not in str(entry.before)

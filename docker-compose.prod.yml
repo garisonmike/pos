@@ -1,0 +1,165 @@
+# Production overlay.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Applied on top of the development compose file, replacing what differs rather
+# than duplicating what does not. See DEPLOYMENT.md for the full procedure.
+#
+# ---------------------------------------------------------------------------
+# ONE SERVICE BINDS A HOST PORT, AND IT IS CADDY.
+# ---------------------------------------------------------------------------
+#
+# Postgres, Redis and gunicorn are reachable on the compose network only. Each
+# of them has its development port mapping explicitly removed below, because
+# `ports` merges across compose files rather than being replaced - leaving one
+# out would silently keep the development mapping and publish a database to the
+# internet.
+#
+# This is not tidiness. The M-Pesa IP allowlist reads the *last* entry of
+# X-Forwarded-For and trusts it, which is only sound if exactly one proxy can
+# reach the application. Publishing gunicorn would let anyone bypass Caddy and
+# write their own header. TRUSTED_PROXY_HOPS=1 is true *because* of this file.
+
+services:
+  db:
+    # Removed, not overridden: no host port at all. The database is reachable
+    # from the api and backup containers and from nothing else.
+    ports: !reset []
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      APP_DB_USER: ${DB_USER}
+      APP_DB_PASSWORD: ${DB_PASSWORD}
+    # Postgres tunes itself for a small machine badly. These suit a 2GB VPS
+    # serving a handful of shops; raise shared_buffers if the host grows.
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=768MB
+      -c work_mem=8MB
+      -c max_connections=50
+
+  cache:
+    restart: unless-stopped
+    # Two changes from development, both deliberate.
+    #
+    # `appendonly yes` because the PIN lockout counter has to survive a restart.
+    # In development, losing it forgives a few attempts and costs nothing; in
+    # production, an attacker who can restart the process can clear their own
+    # lockout.
+    #
+    # `noeviction` because the default allkeys-lru treats a security counter as
+    # a cache entry and will discard it under memory pressure - silently
+    # unlocking a till at exactly the moment the system is busiest.
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    # Root inside the container, unlike development: there is no bind mount
+    # here whose file ownership has to match a host user, and gunicorn drops to
+    # nothing privileged anyway.
+    user: !reset null
+    # Four workers suits two cores. The timeout is generous because a receipt
+    # PDF and an M-Pesa push are both slower than a JSON response, and killing
+    # a worker mid-checkout is worse than waiting.
+    command: >
+      gunicorn config.wsgi:application
+      --bind 0.0.0.0:8000
+      --workers ${GUNICORN_WORKERS:-4}
+      --timeout 60
+      --graceful-timeout 30
+      --access-logfile -
+      --error-logfile -
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS}
+      DJANGO_STATIC_ROOT: /srv/static
+      DJANGO_MEDIA_ROOT: /srv/media
+      REDIS_URL: redis://:${REDIS_PASSWORD}@cache:6379/0
+      # See config/settings/production.py for why this is 1 and what would
+      # change it.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS}
+    volumes:
+      # The bind mount is gone: production runs the code baked into the image,
+      # so a deploy is a rebuild rather than whatever happens to be on disk.
+      - !reset ./backend:/app
+      - static_files:/srv/static
+      - media_files:/srv/media
+    ports: !reset []
+    healthcheck:
+      # Plain HTTP over the internal network, which is why the application does
+      # not redirect to HTTPS itself - see production.py.
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/', timeout=5).status==200 else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ---- The only thing the internet can reach ----------------------------
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - static_files:/srv/static:ro
+      - media_files:/srv/media:ro
+      # Certificates and ACME state. Losing this volume means re-issuing, which
+      # Let's Encrypt rate-limits - so it is in the backup set.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # ---- Nightly dump, and the restore drill ------------------------------
+  backup:
+    build:
+      context: ./docker/backup
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+    volumes:
+      - backups:/backups
+      - media_files:/srv/media:ro
+      - ./scripts:/scripts:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_files:
+  media_files:
+  caddy_data:
+  caddy_config:
+  backups:

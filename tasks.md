@@ -319,6 +319,23 @@ rather than planned up front.
 ### Still to do
 - [ ] SMS receipt *(stretch)*
 
+## Production deployment
+
+- [x] `docker-compose.prod.yml` — gunicorn, Caddy, hardened Redis, volumes, healthchecks
+- [x] **Only Caddy binds a host port**; Postgres, Redis and gunicorn are compose-network-only, each development mapping removed with `!reset` *(compose merges `ports` rather than replacing them, so leaving one out publishes a database)*
+- [x] `config/settings/production.py` — TLS flags, HSTS, manifest static storage, stdout logging
+- [x] Caddy config using its own `trusted_proxies`, not a translated nginx directive
+- [x] `TRUSTED_PROXY_HOPS=1`, made true by topology rather than assumed, with a forged-header check in the docs to prove it against the real deployment
+- [x] Redis `noeviction` *(the default `allkeys-lru` would discard a PIN-lockout counter under memory pressure, silently unlocking a till)*
+- [x] `backup.sh` — nightly dump, verified with `pg_restore --list` before it is kept, 7 daily / 4 weekly
+- [x] `restore.sh` — `--drill` into a scratch database, `--live` gated behind an explicit variable
+- [x] **The drill has actually been run**, against a real dump, with matching row counts
+- [x] `DEPLOYMENT.md` — full procedure, the proxy verification, the drill, and what the backup deliberately does not cover
+- [x] `.env.production.example` — every variable, with what it is for
+- [ ] CI pipeline *(the suite is ~30 minutes, which shapes what it can do per push)*
+- [ ] Off-site backup target *(needs an account — in input.md)*
+- [ ] Uptime and backup-failure alerting *(in input.md)*
+
 ## Milestone 4 — Compliance layer · [#4](https://github.com/garisonmike/pos/issues/4)
 
 - [x] GitHub issue with scope and acceptance criteria

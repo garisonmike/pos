@@ -1,0 +1,74 @@
+# The only service the internet can reach.
+#
+# Caddy terminates TLS, serves static and media straight off the shared
+# volumes, and proxies everything else to gunicorn over the compose network.
+#
+# ---------------------------------------------------------------------------
+# X-Forwarded-For, and why the application trusts exactly one hop
+# ---------------------------------------------------------------------------
+#
+# The M-Pesa IP allowlist reads the *last* entry of X-Forwarded-For: the
+# leftmost entries come from the caller and anybody can write anything there.
+# The last entry is only the real peer if precisely one trusted proxy stands in
+# front of Django - which is what `TRUSTED_PROXY_HOPS=1` asserts, and what this
+# file plus the compose overlay make true.
+#
+# `trusted_proxies` below is Caddy's own handling, not a translated nginx
+# directive. It tells Caddy which upstream addresses may be believed when they
+# claim a client IP. `private_ranges` is right here because the only thing that
+# can reach this container on the docker network *is* private - and nothing
+# else can reach it at all, since Caddy is the sole service binding a host
+# port. A public deployment behind a CDN would list the CDN's ranges instead,
+# and would need TRUSTED_PROXY_HOPS raised to match.
+{
+	email {$ACME_EMAIL}
+
+	servers {
+		trusted_proxies static private_ranges
+		# Caddy appends exactly one entry to X-Forwarded-For for the peer it
+		# actually saw. That single append is the whole basis of the hop count.
+		client_ip_headers X-Forwarded-For
+	}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Hashed filenames from ManifestStaticFilesStorage, so a year is safe: a
+	# changed file gets a new name rather than a stale cache.
+	handle_path /static/* {
+		root * /srv/static
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# Tenant logos. Not immutable - a shop can replace its logo under the same
+	# name - so this is short enough that a change appears the same day.
+	handle_path /media/* {
+		root * /srv/media
+		header Cache-Control "public, max-age=3600"
+		file_server
+	}
+
+	handle {
+		reverse_proxy api:8000 {
+			# Django reads the scheme from this to know the request arrived
+			# over TLS, since the hop to gunicorn is plain HTTP.
+			header_up X-Forwarded-Proto {scheme}
+			header_up Host {host}
+		}
+	}
+
+	# HSTS is set by Django rather than here, so there is one place that
+	# decides it. These are the headers Django does not send for API
+	# responses.
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

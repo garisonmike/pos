@@ -25,6 +25,9 @@ dependencies = [
     # of text and does not need a browser engine's layout - nor the system
     # libraries one would drag into the image.
     "reportlab>=4.2,<5",
+    # The production application server. runserver is single-threaded, reloads
+    # on file changes and says so itself - it is not a deployment target.
+    "gunicorn>=23.0,<24",
     # Daraja calls. Synchronous and short-lived, so a plain client is enough.
     "requests>=2.32,<3",
 ]

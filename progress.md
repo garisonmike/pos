@@ -5,6 +5,73 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-16 — Production deployment, the implementation half
+
+**Worked on:** everything in the deployment plan marked pure implementation.
+The rest is Spiderman's, and is now six concrete items in `input.md` rather
+than one vague entry.
+
+**Finished:** `docker-compose.prod.yml`, `config/settings/production.py`, the
+Caddyfile, `backup.sh` and `restore.sh`, `DEPLOYMENT.md`, and
+`.env.production.example`. Gunicorn added as a dependency.
+
+**Decisions, and why:**
+
+**Only Caddy binds a host port, and the compose file has to say so
+explicitly.** Compose *merges* `ports` across files rather than replacing them,
+so every development mapping is removed with `!reset` - Postgres, Redis and
+gunicorn each individually. Leaving one out would silently publish a database
+to the internet. I checked the merged config rather than trusting the syntax:
+the only `published:` entries are 80, 443 and 443/udp, all under Caddy.
+
+**The proxy hop count is now true by construction, not by assumption.** That
+was the thing deferred back in the M-Pesa milestone, specifically until a real
+proxy existed. `TRUSTED_PROXY_HOPS=1` holds because Caddy is the only service
+reachable from outside and appends exactly one `X-Forwarded-For` entry. But
+reasoning is not verification, so `DEPLOYMENT.md` carries a forged-header curl
+that proves it against the running deployment in about a minute, to be run
+after the first deploy and after anything changes in front.
+
+Caddy's own `trusted_proxies` handles it, not a translated nginx directive -
+`private_ranges` is right because the only thing that can reach the container
+on the docker network is private, and nothing else can reach it at all.
+
+**Redis `noeviction`.** The default `allkeys-lru` treats a PIN-lockout counter
+as a cache entry and would discard it under memory pressure - silently
+unlocking a till at the moment the system is busiest. Persistence is on for the
+same reason: in development, losing the counters costs nothing; in production,
+anybody who can restart the process could clear their own lockout.
+
+**Django manifest static storage rather than WhiteNoise.** Caddy serves the
+files off the volume, so nothing needs to serve them from inside Python. What
+was wanted was hashed filenames so Caddy can cache hard, and Django has that
+built in - one fewer dependency.
+
+**The restore is the deliverable, not the backup.** `backup.sh` verifies each
+dump with `pg_restore --list` before keeping it, so a truncated archive fails
+that night rather than during a restore months later. `restore.sh --drill`
+restores into a scratch database and counts what came back, and understands
+that the restored copy should be slightly *behind* live rather than equal to it
+- what would be wrong is more than live, or zero tenants.
+
+**I ran the drill.** Seeded a second tenant and five sales into the dev
+database, took a real backup (264K, 47 tables), restored it into
+`pos_restore_test`, and compared: tenants 2/2, users 4/4, items 4/4, sales 5/5,
+payments 5/5. Passed. I would not have called this piece done on the script
+alone.
+
+**Found while running it:** the backup container's entrypoint looped forever
+and ignored any command passed to it, so `docker compose run backup
+/scripts/backup.sh` hung for ten minutes rather than taking a backup - which is
+exactly how somebody would first try to run one by hand. It now execs a passed
+command and only falls through to the schedule loop when given none.
+
+**Come back to:** CI, an off-site backup target, and alerting. The last two
+need accounts and are in `input.md`; CI is unscheduled and worth doing before
+the suite grows past thirty minutes.
+
+---
+
 ## 2026-08-16 — The restaurant module
 
 **Worked on:** milestone 6. Tables, orders, modifiers, kitchen tickets, and the

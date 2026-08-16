@@ -32,6 +32,18 @@ logger = logging.getLogger(__name__)
 
 def api_exception_handler(exc, context) -> Response | None:
     """Normalise every API error into the shape documented above."""
+    # A domain refusal raised outside a view method - from a permission check
+    # or a viewset's `initial` - never reaches DRF's own machinery, so it would
+    # surface as a 500 telling a client nothing. Rendered here into the same
+    # shape a view would have returned by hand.
+    detail = getattr(exc, "detail", None)
+    code = getattr(exc, "code", None)
+    if detail is not None and code is not None and not hasattr(exc, "status_code"):
+        return Response(
+            {"detail": str(detail), "code": str(code)},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     if isinstance(exc, IntegrityError):
         # A unique constraint is usually a client resending something, not a
         # bug. 409 lets the till distinguish "already recorded" from "rejected".

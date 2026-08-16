@@ -375,13 +375,29 @@ rather than planned up front.
 - [x] The close screen shows no expected figure until the count is committed
 - [x] 32 client tests for the two surfaces
 
-## Milestone 6 — Restaurant module
+## Milestone 6 — Restaurant module · [#6](https://github.com/garisonmike/pos/issues/6)
 
-- [ ] GitHub issue with scope and acceptance criteria
-- [ ] Tables and table state
-- [ ] Orders held against a table until payment
-- [ ] Item modifiers
-- [ ] Kitchen ticket printing
+- [x] GitHub issue with scope and acceptance criteria
+- [x] Tables, with one live order each enforced by constraint
+- [x] Orders held against a table until payment, and invisible to reporting until then
+- [x] `OPEN → BILLED` without a ticket *(a drink poured at the bar never reaches a kitchen)*
+- [x] Item modifiers, with required and optional groups validated server-side
+- [x] A priced modifier bills as its own catalogue line *(rather than weakening `create_sale`'s guard against client-supplied prices)*
+- [x] Kitchen tickets carrying only what is new since the last one
+- [x] A reprint reprints **that** ticket, marked as a reprint
+- [x] Voiding after the kitchen has been told needs manager authority, reusing the discount mechanism
+- [x] A refused void is filed as `ORDER_VOID_REFUSED`, not as a refused discount
+- [x] Authority resolved outside the void's transaction *(discovered: an inner atomic block rolled the refusal's audit entry back, so a refused void left no trace)*
+- [x] The lines already sent are recorded on the void
+- [x] Moving and merging recorded; a merged order survives as a record
+- [x] Nothing in `apps/sales` changed shape
+- [x] Tenant isolation on all seven tables, including the auto-created M2M join
+- [x] A retail business cannot reach any of it
+- [x] Kitchen ticket ESC/POS renderer — no prices, no tax, no branding
+- [x] Explicit "no connection, cannot send this order" state on the till
+- [x] 71 backend tests, 26 on the client
+- [ ] Flutter: the order-taking screen itself
+- [ ] Split the bill by seat *(deferred; splitting by amount already works)*
 
 ## Milestone 7 — Salon and services module
 

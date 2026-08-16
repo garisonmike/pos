@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "apps.shifts",
     "apps.compliance",
     "apps.reports",
+    "apps.restaurant",
     "apps.platform_admin",
 ]
 

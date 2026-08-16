@@ -89,6 +89,7 @@ class AuditAction(models.TextChoices):
     SHIFT_OPENED = "SHIFT_OPENED", "Shift opened"
     SHIFT_CLOSED = "SHIFT_CLOSED", "Shift closed"
     CASH_MOVEMENT = "CASH_MOVEMENT", "Cash moved in or out of the drawer"
+    ORDER_VOID_REFUSED = "ORDER_VOID_REFUSED", "Order void authorisation refused"
     COMPLIANCE_MODE_CHANGED = "COMPLIANCE_MODE_CHANGED", "Tax regime changed"
     COMPLIANCE_MODE_UNKNOWN = (
         "COMPLIANCE_MODE_UNKNOWN",

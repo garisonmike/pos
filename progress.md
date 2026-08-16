@@ -5,6 +5,69 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-16 — The restaurant module
+
+**Worked on:** milestone 6. Tables, orders, modifiers, kitchen tickets, and the
+void gate.
+
+**Finished:** seven tables, the order lifecycle, the ticket ledger, the billing
+conversion, a kitchen ticket renderer and the offline guard on the till. 71
+backend tests and 26 on the client.
+
+**Decisions, and why:**
+
+**Nothing in `apps/sales` changed.** That was the constraint I set and it held.
+An order is handed to `create_sale` as an ordinary cart, and everything
+downstream - receipt, tax document, shift attribution, reporting - happens
+through the code a duka already uses.
+
+**A priced modifier bills as its own catalogue line.** My first pass folded the
+surcharge into the dish's unit price and passed it to `create_sale` - which
+ignores a client-supplied price for anything not marked variable. That guard is
+what stops a till selling at whatever it likes, so the surcharge would have
+silently vanished. Rather than weaken it, a priced modifier now has to point at
+a catalogue item, enforced by a check constraint, and a steak with extra chilli
+bills as two lines the customer can read. I caught this while writing the
+docstring, before any test ran, which is the useful direction for that to
+happen.
+
+**Voiding after the kitchen has cooked reuses the discount mechanism.**
+`resolve_discount_authorization` was generalised with a `refused_action`
+parameter, defaulting to the discount case so no existing caller changed. A
+refused void is filed under its own action rather than appearing in the history
+as a refused discount.
+
+**Found while building, and worth naming:**
+
+**A refused void left no trace.** `void_order` was `@transaction.atomic`, so
+raising after the authorisation failed rolled back the audit entry the refusal
+had just written - which is precisely backwards, since that entry is the entire
+point of refusing. Authority is now resolved outside the transaction, mirroring
+how the checkout view already did it.
+
+**A domain refusal from `initial()` surfaced as a 500.** `OrderError` is not a
+DRF exception, so the module gate returned an unhandled error rather than the
+project's standard shape. The handler in `apps/core/exceptions.py` now renders
+any exception carrying `detail` and `code` into that shape, which is a general
+fix rather than a restaurant one.
+
+**The RLS coverage test earned its keep again.** Django creates a join table for
+the modifier-group many-to-many, which carries no tenant column and belongs to a
+business only through the group it points at. The test walks ownership
+transitively and failed the build until it had a policy.
+
+**A bar tab could not be paid.** `OPEN → BILLED` was not a legal transition, so
+an order that never went to a kitchen could not close - which is the commonest
+sale in a bar. Caught by six tests at once.
+
+**Come back to:** the order-taking screen itself. The backend, the ticket
+renderer and the offline guard exist; a waiter still cannot take an order
+without driving the API by hand. Same shape as the shift screens after
+milestone 3, and worth being plain about in the changelog when this milestone
+closes.
+
+---
+
 ## 2026-08-15 — Selling by weight
 
 **Worked on:** the by-weight selling path, after being asked whether it was

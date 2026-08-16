@@ -92,12 +92,24 @@ class DiscountAuthorization:
 
 
 def resolve_discount_authorization(
-    *, actor: User, payload: dict | None, request=None
+    *,
+    actor: User,
+    payload: dict | None,
+    request=None,
+    refused_action: str = AuditAction.DISCOUNT_REFUSED,
 ) -> DiscountAuthorization:
-    """Establish authority for a discount, or refuse.
+    """Establish manager authority for a sensitive action, or refuse.
 
-    Called by the checkout endpoint before a sale is created, so a refusal
-    leaves nothing behind - no sale, no discount, no partial write.
+    Named for the first thing that needed it. It is the general mechanism now -
+    voiding an order that has already reached the kitchen goes through exactly
+    this, because the question is identical: is somebody with authority here,
+    and can they prove it right now?
+
+    ``refused_action`` is the audit action a refusal is filed under, so a
+    refused void does not appear in the history as a refused discount. It
+    defaults to the discount case, which is why no existing caller changed.
+
+    Called before anything is written, so a refusal leaves nothing behind.
     """
     payload = payload or {}
     reason = str(payload.get("reason", "")).strip()
@@ -105,7 +117,13 @@ def resolve_discount_authorization(
     if actor.has_role_at_least(UserRole.MANAGER):
         return _authorize_from_session(actor=actor, reason=reason, request=request)
 
-    return _authorize_from_credential(actor=actor, payload=payload, reason=reason, request=request)
+    return _authorize_from_credential(
+        actor=actor,
+        payload=payload,
+        reason=reason,
+        request=request,
+        refused_action=refused_action,
+    )
 
 
 def _authorize_from_session(*, actor: User, reason: str, request) -> DiscountAuthorization:
@@ -130,7 +148,12 @@ def _authorize_from_session(*, actor: User, reason: str, request) -> DiscountAut
 
 
 def _authorize_from_credential(
-    *, actor: User, payload: dict, reason: str, request
+    *,
+    actor: User,
+    payload: dict,
+    reason: str,
+    request,
+    refused_action: str = AuditAction.DISCOUNT_REFUSED,
 ) -> DiscountAuthorization:
     """A cashier delegating to someone who is present and can prove it."""
     username = str(payload.get("username", "")).strip()
@@ -143,6 +166,7 @@ def _authorize_from_credential(
             username=username,
             reason_code="no_authorization",
             request=request,
+            action=refused_action,
         )
         raise DiscountNotAuthorized(
             "A discount needs a manager's approval. Ask a manager to enter "
@@ -164,7 +188,11 @@ def _authorize_from_credential(
 
     if manager is None:
         _record_refusal(
-            actor=actor, username=username, reason_code="unknown_user", request=request
+            actor=actor,
+            username=username,
+            reason_code="unknown_user",
+            request=request,
+            action=refused_action,
         )
         raise DiscountNotAuthorized(_REFUSED)
 
@@ -183,6 +211,7 @@ def _authorize_from_credential(
             username=username,
             reason_code="bad_credential",
             request=request,
+            action=refused_action,
         )
         raise DiscountNotAuthorized(_REFUSED)
 
@@ -192,6 +221,7 @@ def _authorize_from_credential(
             username=username,
             reason_code="insufficient_role",
             request=request,
+            action=refused_action,
         )
         raise DiscountNotAuthorized(_REFUSED)
 
@@ -204,7 +234,14 @@ def _authorize_from_credential(
     )
 
 
-def _record_refusal(*, actor: User, username: str, reason_code: str, request) -> None:
+def _record_refusal(
+    *,
+    actor: User,
+    username: str,
+    reason_code: str,
+    request,
+    action: str = AuditAction.DISCOUNT_REFUSED,
+) -> None:
     """Record a refused authorisation.
 
     Written here rather than falling out of ``check_pin``, which is a pure
@@ -222,7 +259,7 @@ def _record_refusal(*, actor: User, username: str, reason_code: str, request) ->
     worth knowing.
     """
     record_audit(
-        action=AuditAction.DISCOUNT_REFUSED,
+        action=action,
         entity_type="accounts.User",
         entity_id=username,
         actor=actor,

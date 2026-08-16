@@ -24,10 +24,11 @@ It is the decision everything else is arranged around.
 11. [Shifts and the cash drawer](#shifts-and-the-cash-drawer)
 12. [Compliance](#compliance)
 13. [Selling by weight](#selling-by-weight)
-14. [Reporting](#reporting)
-15. [Auditing](#auditing)
-16. [Technology choices](#technology-choices)
-17. [What is deliberately not here](#what-is-deliberately-not-here)
+14. [The restaurant module](#the-restaurant-module)
+15. [Reporting](#reporting)
+16. [Auditing](#auditing)
+17. [Technology choices](#technology-choices)
+18. [What is deliberately not here](#what-is-deliberately-not-here)
 
 ---
 
@@ -1385,6 +1386,108 @@ cents — comes to zero. That reached the payment ledger's positive-amount
 constraint and surfaced as an integrity error telling a cashier nothing.
 `take_cash` now refuses it with `rounds_to_nothing` and a message naming the
 quantity as the thing to check.
+
+---
+
+## The restaurant module
+
+Additive, not a fork. A restaurant sells the same `Item` rows through the same
+checkout as a duka: nothing in `apps/sales` changed shape for this, and a retail
+business touches none of these seven tables.
+
+The one thing that genuinely differs is the **order of events**. A duka takes
+money and hands over goods in one motion; a restaurant sends food out and
+collects payment afterwards. Everything in the module lives in that gap:
+
+```
+Order (OPEN → SENT → BILLED) ──> becomes an ordinary Sale
+```
+
+**An open order is not revenue.** No receipt number, no invoice number, no stock
+movement, and it appears in no report — the reporting layer filters on
+`Sale.state` and never sees an order at all, which is why it needed no change.
+
+### One live order per table
+
+Enforced by a partial unique constraint, the same shape as
+`one_open_shift_per_cashier`. Two live orders on table four would make "what does
+table four owe" unanswerable, and that question is the entire point of the
+record.
+
+`OPEN → BILLED` is legal without passing through `SENT`: a drink poured at the
+bar and paid for on the spot never reaches a kitchen, and requiring a ticket for
+it would make the commonest bar sale impossible.
+
+### Kitchen tickets carry only what is new
+
+A ticket holds the lines added since the last one. A waiter adding two drinks
+mid-meal must not have the kitchen cook the whole table again — that is a real
+and expensive failure, not a tidiness concern. Lines carry the ticket that first
+covered them, so "new" is a fact rather than a guess about timing.
+
+A **reprint reprints that ticket**, exactly as it was, and says `*** REPRINT ***`
+across the top. A reprint that behaved like a fresh send would have the kitchen
+cook a different set of food from the one the waiter asked for.
+
+The ticket is deliberately not a receipt: no prices, no tax, no branding. A
+kitchen needs items, quantities, modifiers and a table number, large enough to
+read across a hot room.
+
+### A priced modifier bills as its own line
+
+`create_sale` prices from the catalogue and ignores a client-supplied price for
+anything not marked variable. That guard is what stops a till selling at
+whatever it likes, and this module does not weaken it to fold a surcharge into a
+dish price.
+
+So a priced modifier **must point at a catalogue item** — enforced by a check
+constraint — and a steak with extra chilli bills as two lines. The customer can
+read what they were charged for, which is better than an invisible surcharge. A
+free modifier ("no onions") produces no line at all: the kitchen was told, the
+till has nothing to charge for.
+
+`OrderLine.unit_price_cents` exists for showing a waiter a running total. The
+two agree on the figure; they differ in who is trusted to compute it, and only
+the server's answer reaches a receipt.
+
+### Voiding after the kitchen has cooked
+
+Before a ticket prints, nothing has been cooked and a void costs the restaurant
+nothing — any waiter may cancel. After one, the ingredients are spent and the
+void makes that disappear, which is the same shape as a discount.
+
+So it goes through **the same mechanism**: a manager or owner authorises from
+their own session, anybody else needs a manager's username and PIN or password
+verified right now, with the same lockout. `resolve_discount_authorization` was
+generalised with a `refused_action` parameter so a refused void is filed under
+`ORDER_VOID_REFUSED` rather than appearing in the history as a refused discount.
+
+Authority is resolved **outside** the void's transaction, deliberately. A
+refusal writes an audit entry, and that entry is the whole point — resolving it
+inside the atomic block would roll the entry back along with the failed void,
+which is precisely backwards.
+
+The lines the kitchen had already made are recorded on the audit entry, because
+"what had they already cooked" is the first question anybody asks afterwards.
+
+### Moving and merging
+
+Both recorded, never silently rewritten. A merged order is left in `MERGED` with
+a pointer to where its lines went, rather than deleted — deleting it would make
+a bill somebody queried simply not exist.
+
+### Known limitations
+
+**Orders are server-side only.** Order state shared across several tablets with
+no connection is a distributed-systems problem this module did not take on. The
+till says so explicitly when it cannot reach the server — naming how many lines
+are still on screen, that nothing reached the kitchen, and that orders are *not*
+saved on the tablet the way sales are. A waiter who assumed otherwise would walk
+away and lose the order.
+
+**Stock moves at settlement, not when food leaves the kitchen.** Depleting
+ingredients as a dish is cooked needs recipe modelling, which is a milestone of
+its own.
 
 ---
 

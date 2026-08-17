@@ -5,71 +5,78 @@ made and why, and anything I need to come back to.
 
 ---
 
-## 2026-08-17 — CI, and measuring before splitting
+## 2026-08-17 — CI, and the half hour that was never real
 
-**Worked on:** a CI pipeline. The question I started with was which slow test
-categories to move to a nightly run, since the suite is around half an hour.
+**Worked on:** a CI pipeline. I set out to decide which slow tests to defer to
+a nightly run, since the suite took around half an hour. It ended somewhere
+else entirely.
 
-**The measurement changed the answer.** Full suite: 1328 tests in 1776s
-(29:36). The distribution is flat — slowest test 12.07s, a one-off first
-database connect, then everything between 3.4s and 5.8s against a 1.34s
-average. The slowest 40 tests total 159s of 1776s, 9% of the run.
+**The suite had never run under its own settings module.** `pyproject.toml`
+names `config.settings.test`, but docker compose exports
+`DJANGO_SETTINGS_MODULE=config.settings.dev` into the container and the
+environment variable beats the ini setting. I found it by probing
+`settings.SETTINGS_MODULE` from inside a test while chasing something else. It
+had been that way since milestone 1.
 
-So there was no slow category to defer. The cost is per-test fixture setup
-(nearly every slow entry is `setup`, not `call`): each test builds a tenant,
-users and a catalogue against a real Postgres under RLS. The two usual levers
-were already pulled — `config/settings/test.py` has used the MD5 hasher and
-LocMemCache since milestone 1. 1.34s is honest integration cost.
+**What that cost.** Under development settings the real PBKDF2 password hasher
+ran instead of the MD5 one the test module sets, and every fixture builds
+users. Same 1328 tests: **29:36 under dev settings, 1:42 under test settings.**
+The half-hour suite that this whole piece of work was designed around did not
+exist.
 
-Any subset would have saved time in proportion to tests dropped, which is only
-a faster push because it tests less.
+Also silently not applied: LocMemCache (the cache was the shared Redis from
+`base.py`), the disabled throttles, `TRUSTED_PROXY_HOPS=0`, and the fixed
+Fernet key.
+
+**What it did not cost.** Only `base.py` defines `DATABASES`, so dev and test
+both connect as the same NOSUPERUSER NOBYPASSRLS `pos_app` role. Row-Level
+Security applied throughout and the tenant-isolation suite was genuinely
+exercised. That is the guarantee I most wanted to be sure of.
+
+**Why it hid for six milestones.** The boot checks (pos.E001-E004) skip
+themselves when `DEBUG` is True. Dev settings set `DEBUG = True`, so they never
+fired. Under the test module, which sets `DEBUG = False`, they fire and refuse
+to boot against the values in `.env.example` — so the suite could not have run
+under its own settings even if the module had been selected. Both halves had to
+be fixed together.
 
 **Decisions, and why:**
 
-**xdist measured, then rejected.** `-n 4 --dist loadfile` gave 1166s (19:26)
-against 1776s serial — 1.5x, not 4x, because four workers on four cores share
-one Postgres and contend rather than scale. It also failed 7 tests in
-`apps/accounts/tests/test_pin_lockout.py` that pass serially. Worth writing
-down that I measured this rather than assuming it would help.
+**`--ds` in `addopts`, not just the ini setting.** A command-line option wins
+over the environment; the ini `DJANGO_SETTINGS_MODULE` does not. One line, and
+it fixes every developer's local run as well as CI.
 
-**Shard across runners instead.** The repository is public, so Actions minutes
-are free and the only constraint is wall-clock feedback. Four shards on four
-separate runners each get their own machine and their own Postgres — the exact
-contention xdist could not escape. Every test runs on every push; nothing is
-deferred to nightly.
+**`config/settings/test.py` carries its own `SECRET_KEY` and
+`PLATFORM_ADMIN_URL`.** The suite should depend on nothing outside the
+repository. It already hardcoded the Fernet key for exactly this reason, so
+this follows a decision the module had already taken.
 
-**Backend jobs go through `docker compose`, not a service container.** Django
-must connect as the NOSUPERUSER NOBYPASSRLS role that
-`docker/postgres/init` creates. Postgres exempts superusers from Row-Level
-Security, so a service container using the default superuser would let every
-tenant-isolation test pass while proving nothing. Compose already builds the
-role correctly and reimplementing it in workflow YAML is a chance to get it
-quietly wrong.
+**Deleted the sharding rather than kept it.** I had built four shards across
+runners, a shard-coverage guard, and a nightly reference run — all sound work
+for a 29-minute suite, all pointless for a 100-second one. Complexity kept for
+a problem that no longer exists is worse than complexity never added. The
+pipeline is now two jobs.
 
-**A guard on the shard list.** Sharding introduces a failure nothing else
-catches: add an app, forget to add it to a shard, and CI is green having never
-run it. That is worse than a red tick because it looks like proof.
-`scripts/check_shards.py` fails the build naming the app, and the shard list
-lives in one file read by both the matrix and the guard so the two cannot
-drift.
-
-**Nightly holds what genuinely is not per-push work:** the suite run serially
-as the reference the shards are measured against, `check --deploy` against
-`config/settings/production.py` (which no test imports — the suite runs under
-`config.settings.test`, so a typo there would otherwise surface during a
-deploy), release builds for Linux and Android (`flutter test` never invokes
-either toolchain), and coverage as a trend rather than a gate.
+**Recorded, since I measured it before the settings fix:** pytest-xdist gave
+19:26 against 29:36 — only 1.5x on four cores sharing one Postgres — and failed
+7 PIN lockout tests. That last part now has a confirmed cause: the cache was
+the shared Redis, `conftest.py` clears it before and after every test, and four
+workers against one Redis meant each was flushing the others' lockout counters
+mid-test. A test-infrastructure artifact, nothing to do with the lockout
+mechanism, and moot now that the cache is per-process local memory as intended.
 
 **Found while building:** `ruff check` was failing on two errors in
-`gen_pricing_fixture.py` — an unsorted import and an unused loop variable, both
-mine, both fixed. And `ruff format --check` would reformat 93 files: the
-codebase has never been through ruff's formatter. I left the formatter out of
-CI rather than smuggle a 93-file reformat into a commit about CI. It is a
-tasks.md item on its own.
+`gen_pricing_fixture.py`, both mine, both fixed. `.env.example` shipped a
+43-character Fernet key with the base64 padding dropped, so a fresh clone
+following the documented setup could not run the M-Pesa tests — fixed, with a
+note about the expected shape. And `ruff format --check` would reformat 93
+files: left out of CI, because that is a decision on its own and not a side
+effect of adding CI. It is a tasks.md item.
 
-**To come back to:** the ~10 minute wall-clock figure is arithmetic from the
-1.34s average plus container startup. It needs confirming against a real
-Actions run.
+**To come back to:** every test result recorded in this log before today was
+produced under development settings. Nothing looks wrong — the same 1328 pass
+either way — but the throttles were on and the cache was shared, so any test
+that turns out to be sensitive to those was passing for a reason nobody chose.
 
 ---
 

@@ -12,8 +12,33 @@ from .base import REST_FRAMEWORK
 
 DEBUG = False
 
+# ---------------------------------------------------------------------------
+# Enough configuration to boot without anybody's .env
+# ---------------------------------------------------------------------------
+#
+# The boot checks (pos.E001-E004) skip themselves when DEBUG is True. This
+# module sets DEBUG False, so they run - and with the values published in
+# .env.example they fail, which is exactly what they are for.
+#
+# That made the suite unrunnable under its own settings module, and the way
+# that went unnoticed for six milestones is worth understanding: docker compose
+# exports DJANGO_SETTINGS_MODULE=config.settings.dev, the environment variable
+# beat the DJANGO_SETTINGS_MODULE in pyproject.toml, and every test ran under
+# development settings instead. DEBUG was True there, so the checks stayed
+# quiet. See the --ds flag in pyproject.toml's addopts, which is what now
+# forces this module regardless of the environment.
+#
+# These two values exist so the suite depends on nothing outside the repository
+# and are meaningless beyond it: no deployment reads this module.
+SECRET_KEY = "test-suite-signing-key-not-used-outside-the-tests-9f3a2c7b1e"
+PLATFORM_ADMIN_URL = "test-console-4d19b/"
+
 # Fast and deterministic; the tests assert on authentication outcomes, not on
 # how long a hash takes to compute.
+#
+# Worth keeping in view: this is not a small saving. With the real hasher in
+# play - which is what happened while dev settings were in effect - the suite
+# took 29 minutes. Under this module it takes two.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 # Local memory rather than Redis, so the suite needs no second service running

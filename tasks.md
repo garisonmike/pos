@@ -337,17 +337,17 @@ rather than planned up front.
 
 ## CI · [#7](https://github.com/garisonmike/pos/issues/7)
 
-- [x] GitHub issue with the measurements the shape was chosen from
-- [x] Suite profiled before deciding anything *(1328 tests, 1776s, flat: the slowest 40 are 9% of the run, so there is no slow category to defer)*
-- [x] `pytest-xdist` measured and rejected *(19:26 against 29:36 — only 1.5x on four cores sharing one Postgres, and it destabilised 7 PIN-lockout tests)*
-- [x] Four backend shards across separate runners, every test on every push, nothing deferred
-- [x] Lint, migration drift, `flutter analyze` and all 224 Dart tests in a parallel job
+- [x] **The suite has never run under `config.settings.test`** — compose exports `DJANGO_SETTINGS_MODULE=config.settings.dev` and the environment variable beat the `pyproject.toml` ini setting, so six milestones of tests ran under development settings
+- [x] Fixed with `--ds=config.settings.test` in `addopts` *(a command-line option wins over the environment; the ini setting alone does not)*
+- [x] `config/settings/test.py` made self-contained — its own `SECRET_KEY` and `PLATFORM_ADMIN_URL` *(the boot checks skip when `DEBUG` is True, which is why dev settings hid them; under the test module they fire and the suite could not otherwise boot from a clean checkout)*
+- [x] **29:36 → 1:42** for the same 1328 tests, all passing *(the real password hasher had been running instead of the test one)*
+- [x] Tenant isolation confirmed unaffected — only `base.py` defines `DATABASES`, so both modules connect as the same NOSUPERUSER NOBYPASSRLS role and RLS was genuinely exercised throughout
+- [x] `.env.example` shipped an invalid Fernet key, 43 characters with the padding dropped *(a fresh clone following the documented setup could not run the M-Pesa tests)*
+- [x] Whole suite on every push — backend and all 224 Dart tests, nothing deferred, nothing sharded
 - [x] Backend jobs run through `docker compose` *(Django must connect as the NOSUPERUSER NOBYPASSRLS role; a superuser bypasses RLS and every isolation test would pass while proving nothing)*
-- [x] `scripts/check_shards.py` — fails the build when an app's tests belong to no shard *(otherwise a new app is simply never run and CI is green having tested none of it)*
-- [x] Shard list in one file, read by both the matrix and the guard *(two copies would drift, and the direction they drift in is silence)*
-- [x] A single `CI` job to require on a pull request, failing explicitly on skipped or cancelled dependencies *(a skipped required check reads as passing)*
-- [x] Nightly: serial reference run, `check --deploy`, Linux and Android release builds, coverage
-- [ ] Wall-clock projection confirmed against a real Actions run
+- [x] `check --deploy` against `config/settings/production.py` on every push *(no test imports that module, so a typo in it would otherwise surface during a deploy)*
+- [x] Nightly: Linux and Android release builds, coverage as a trend
+- [x] Sharding, the shard-coverage guard and the nightly reference run all deleted *(built for a 29-minute suite that no longer exists; kept complexity is worse than none)*
 - [ ] `ruff format` adoption *(93 files would be reformatted; a decision on its own, not a side effect of adding CI)*
 
 ## Milestone 4 — Compliance layer · [#4](https://github.com/garisonmike/pos/issues/4)

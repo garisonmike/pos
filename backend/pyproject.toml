@@ -50,7 +50,14 @@ packages = []
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["test_*.py", "tests.py"]
 testpaths = ["apps"]
-addopts = "--strict-markers -ra"
+# --ds, not just the DJANGO_SETTINGS_MODULE above, and the difference matters.
+# docker compose exports DJANGO_SETTINGS_MODULE=config.settings.dev into the
+# container, and that environment variable beats the ini setting - so for six
+# milestones the whole suite ran under development settings without saying so.
+# It cost 29 minutes a run instead of two (the real password hasher rather than
+# the test one), left the cache pointed at a shared Redis, and left throttles
+# on. --ds is passed as a command-line option, which wins over the environment.
+addopts = "--strict-markers -ra --ds=config.settings.test"
 
 [tool.ruff]
 line-length = 100

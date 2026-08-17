@@ -1,0 +1,171 @@
+# Every push and every pull request runs the whole suite.
+#
+# Not a fast subset with the rest deferred: a green tick here means all 1328
+# backend tests and all 224 Dart tests ran, and it arrives in about the time
+# one shard takes rather than the half hour the suite takes end to end.
+#
+# The suite is sharded across runners rather than parallelised on one. Measured
+# on a four-core box, pytest-xdist with four workers took 19m26s against 29m36s
+# serial - only 1.5x, because the workers contend for a single Postgres - and
+# it destabilised the PIN lockout tests. Separate runners each get their own
+# machine and their own database, so shards genuinely run at once.
+#
+# Backend jobs go through `docker compose` rather than a service container, and
+# that is deliberate. Django must connect as the NOSUPERUSER NOBYPASSRLS role
+# created by docker/postgres/init: Postgres exempts superusers from Row-Level
+# Security, so running the isolation suite as one would let every tenant
+# isolation test pass while proving nothing. Compose already builds that role
+# correctly, and reimplementing it here is a chance to get it quietly wrong.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  # A new push supersedes the one before it on the same branch. Nothing is
+  # learned by finishing a run against code that has already been replaced.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---- Lint, drift, shard coverage, and the whole Flutter suite ---------
+  #
+  # Finishes long before the shards do, and catches the mistakes that would
+  # otherwise waste a full backend run.
+  checks:
+    name: Lint, migrations, Flutter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      # `ruff check` only. Not `ruff format --check`: this codebase has never
+      # been run through ruff's formatter, and turning it on would fail every
+      # build until 93 files were reformatted. That is a decision to take on
+      # its own, in its own commit - not a side effect of adding CI.
+      - name: Lint
+        working-directory: backend
+        run: ruff check .
+
+      # Without this, an app nobody added to a shard is simply never run, and
+      # CI goes green having tested none of it. See scripts/check_shards.py.
+      - name: Shards cover every app
+        run: python3 scripts/check_shards.py
+
+      - name: Environment
+        run: |
+          cp .env.example .env
+          {
+            echo "UID=$(id -u)"
+            echo "GID=$(id -g)"
+          } >> .env
+
+      # Catches a model changed without its migration. The failure it prevents
+      # is a deploy that migrates to the wrong shape.
+      - name: Migration drift
+        run: |
+          docker compose run --rm --no-deps -T \
+            -e DJANGO_SETTINGS_MODULE=config.settings.test \
+            --entrypoint python api manage.py makemigrations --check --dry-run
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.7"
+          channel: stable
+          cache: true
+
+      - name: Flutter dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: mobile
+        run: flutter analyze
+
+      # All 224 of them, in about 35 seconds.
+      - name: Flutter tests
+        working-directory: mobile
+        run: flutter test
+
+  # ---- Read the shard definition ----------------------------------------
+  #
+  # The matrix comes from .github/shards.json so that the list CI runs and the
+  # list scripts/check_shards.py verifies are the same list. Two copies would
+  # eventually disagree, and the direction they disagree in is silence.
+  shards:
+    name: Load shards
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read
+        run: echo "matrix=$(jq -c . .github/shards.json)" >> "$GITHUB_OUTPUT"
+
+  # ---- The backend suite, four ways at once -----------------------------
+  backend:
+    name: Backend (${{ matrix.name }})
+    needs: shards
+    runs-on: ubuntu-latest
+    strategy:
+      # One shard failing must not cancel the others: the point is to see every
+      # failure in one run rather than rediscover them a push at a time.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.shards.outputs.matrix) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Environment
+        run: |
+          cp .env.example .env
+          {
+            echo "UID=$(id -u)"
+            echo "GID=$(id -g)"
+          } >> .env
+
+      - name: Build the API image
+        run: docker compose build api
+
+      - name: Start Postgres and Redis
+        run: docker compose up -d db cache
+
+      # The entrypoint waits for Postgres, migrates and seeds, then hands over
+      # to pytest, which builds its own test database as the application role.
+      - name: Test
+        run: docker compose run --rm -T api pytest ${{ matrix.paths }} -q
+
+      - name: Service logs on failure
+        if: failure()
+        run: docker compose logs --tail=100 db cache
+
+  # ---- One tick to require on a pull request ----------------------------
+  #
+  # A branch protection rule cannot name a matrix job whose leg names come from
+  # a file. This job depends on all of them and fails if any did, so there is a
+  # single stable check to require.
+  #
+  # `if: always()` with an explicit result test, because a skipped or cancelled
+  # dependency otherwise skips this too - and a skipped required check reads as
+  # passing.
+  ci:
+    name: CI
+    if: always()
+    needs: [checks, backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify
+        run: |
+          echo "checks: ${{ needs.checks.result }}"
+          echo "backend: ${{ needs.backend.result }}"
+          [ "${{ needs.checks.result }}" = "success" ] \
+            && [ "${{ needs.backend.result }}" = "success" ]

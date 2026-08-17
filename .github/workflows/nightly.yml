@@ -1,0 +1,174 @@
+# What does not belong on a push.
+#
+# CI already runs every test on every push, so this is not "the slow half".
+# It holds the four things that are either meaningless per-commit or that check
+# the CI arrangement itself rather than the code:
+#
+#   * the suite run serially on one runner, as the reference the shards are
+#     measured against
+#   * the production settings module, checked with Django's own deploy checks
+#   * release builds for Linux and Android, which nothing else compiles
+#   * coverage, which is a trend worth reading weekly and noise per commit
+#
+# A failure here is not a broken build. It means something drifted that the
+# per-push run is not shaped to notice.
+
+name: Nightly
+
+on:
+  schedule:
+    # 02:15 UTC, which is 05:15 in Nairobi - after the overnight and before
+    # anybody opens a till.
+    - cron: "15 2 * * *"
+  # Runnable by hand, because a nightly nobody can trigger is a nightly nobody
+  # debugs.
+  workflow_dispatch:
+
+jobs:
+  # ---- The reference run ------------------------------------------------
+  #
+  # The sharded run assumes the shards are independent. They should be - each
+  # gets its own database - but "should be" is what this checks. If this passes
+  # while a shard fails, or the reverse, the split is hiding something.
+  full-suite:
+    name: Full suite, serial
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Environment
+        run: |
+          cp .env.example .env
+          {
+            echo "UID=$(id -u)"
+            echo "GID=$(id -g)"
+          } >> .env
+
+      - name: Start Postgres and Redis
+        run: docker compose up -d db cache
+
+      # Around half an hour. Durations are printed so the profile stays visible
+      # over time - the day one test starts costing ten seconds is the day to
+      # look at it, not six months later when the suite has quietly doubled.
+      - name: Test
+        run: docker compose run --rm -T api pytest -q --durations=25
+
+  # ---- Production settings actually load --------------------------------
+  #
+  # config/settings/production.py is imported by nothing in the test suite: the
+  # tests run under config.settings.test. Without this, a typo in it is found
+  # during a deploy.
+  #
+  # The values here are placeholders chosen to satisfy the boot checks
+  # (pos.E001-E004). They prove the module imports and its checks run, not that
+  # any real deployment is configured correctly - DEPLOYMENT.md covers that.
+  deploy-checks:
+    name: Production settings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Environment
+        run: |
+          cp .env.example .env
+          {
+            echo "UID=$(id -u)"
+            echo "GID=$(id -g)"
+          } >> .env
+
+      - name: Start Postgres
+        run: docker compose up -d db
+
+      # security.W008 is expected and deliberate: Caddy redirects HTTP to HTTPS
+      # before a request reaches Django, and enabling SECURE_SSL_REDIRECT here
+      # would break the container healthcheck, which speaks plain HTTP over the
+      # compose network. See config/settings/production.py.
+      - name: Django deploy checks
+        run: |
+          docker compose run --rm -T \
+            -e DJANGO_SETTINGS_MODULE=config.settings.production \
+            -e DJANGO_ALLOWED_HOSTS=pos.example.com \
+            -e DJANGO_SECRET_KEY=nightly-placeholder-not-a-real-key-0000000000 \
+            -e TRUSTED_PROXY_HOPS=1 \
+            -e PLATFORM_ADMIN_URL=ops-nightly/ \
+            api python manage.py check --deploy
+
+  # ---- The app compiles, not just tests ---------------------------------
+  #
+  # `flutter test` runs against the Dart VM and never invokes the Android or
+  # Linux toolchains. A Gradle or CMake break is invisible until somebody tries
+  # to build a release - which, on this project, is the day it goes to a shop.
+  builds:
+    name: Release build (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [apk, linux]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        if: matrix.target == 'apk'
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Linux desktop toolchain
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.35.7"
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      # Unsigned. This asks whether it compiles, not whether it is shippable -
+      # signing keys are Spiderman's to hold and are not in this repository.
+      - name: Build
+        working-directory: mobile
+        run: flutter build ${{ matrix.target }} --release
+
+  # ---- Coverage ---------------------------------------------------------
+  #
+  # A number to read as a trend, deliberately not a gate. A coverage threshold
+  # on a suite like this one mostly teaches people to write tests that execute
+  # lines without asserting anything.
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Environment
+        run: |
+          cp .env.example .env
+          {
+            echo "UID=$(id -u)"
+            echo "GID=$(id -g)"
+          } >> .env
+
+      - name: Start Postgres and Redis
+        run: docker compose up -d db cache
+
+      - name: Test with coverage
+        run: |
+          docker compose run --rm -T api \
+            pytest -q --cov=apps --cov-report=term --cov-report=html
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-html
+          path: backend/htmlcov/
+          retention-days: 14

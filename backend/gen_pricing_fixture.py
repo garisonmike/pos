@@ -13,7 +13,7 @@ import json
 import random
 from decimal import Decimal
 
-from apps.sales.pricing import price_cart, LineInput
+from apps.sales.pricing import LineInput, price_cart
 
 random.seed(20260814)
 
@@ -21,7 +21,7 @@ RATES = [0, 800, 1600, 1600, 2500]
 QUANTITIES = ["1", "2", "0.5", "2.5", "0.333", "1.125", "7", "0.001"]
 
 cases = []
-for case_index in range(120):
+for _case_index in range(120):
     line_count = random.randint(1, 5)
     lines = []
     for line_index in range(line_count):

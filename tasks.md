@@ -332,9 +332,23 @@ rather than planned up front.
 - [x] **The drill has actually been run**, against a real dump, with matching row counts
 - [x] `DEPLOYMENT.md` — full procedure, the proxy verification, the drill, and what the backup deliberately does not cover
 - [x] `.env.production.example` — every variable, with what it is for
-- [ ] CI pipeline *(the suite is ~30 minutes, which shapes what it can do per push)*
 - [ ] Off-site backup target *(needs an account — in input.md)*
 - [ ] Uptime and backup-failure alerting *(in input.md)*
+
+## CI · [#7](https://github.com/garisonmike/pos/issues/7)
+
+- [x] GitHub issue with the measurements the shape was chosen from
+- [x] Suite profiled before deciding anything *(1328 tests, 1776s, flat: the slowest 40 are 9% of the run, so there is no slow category to defer)*
+- [x] `pytest-xdist` measured and rejected *(19:26 against 29:36 — only 1.5x on four cores sharing one Postgres, and it destabilised 7 PIN-lockout tests)*
+- [x] Four backend shards across separate runners, every test on every push, nothing deferred
+- [x] Lint, migration drift, `flutter analyze` and all 224 Dart tests in a parallel job
+- [x] Backend jobs run through `docker compose` *(Django must connect as the NOSUPERUSER NOBYPASSRLS role; a superuser bypasses RLS and every isolation test would pass while proving nothing)*
+- [x] `scripts/check_shards.py` — fails the build when an app's tests belong to no shard *(otherwise a new app is simply never run and CI is green having tested none of it)*
+- [x] Shard list in one file, read by both the matrix and the guard *(two copies would drift, and the direction they drift in is silence)*
+- [x] A single `CI` job to require on a pull request, failing explicitly on skipped or cancelled dependencies *(a skipped required check reads as passing)*
+- [x] Nightly: serial reference run, `check --deploy`, Linux and Android release builds, coverage
+- [ ] Wall-clock projection confirmed against a real Actions run
+- [ ] `ruff format` adoption *(93 files would be reformatted; a decision on its own, not a side effect of adding CI)*
 
 ## Milestone 4 — Compliance layer · [#4](https://github.com/garisonmike/pos/issues/4)
 
@@ -437,7 +451,7 @@ rather than planned up front.
 
 - [ ] Flutter application scaffold *(nothing built yet; milestone 1 is backend only)*
 - [ ] Rate limiting on sign-in endpoints, especially PIN sign-in *(discovered while building PIN auth: a 4-digit PIN with a valid device token is brute-forceable without throttling)*
-- [ ] CI pipeline running the test suite on every push
+- [x] CI pipeline running the test suite on every push *(see the CI section above)*
 - [ ] Production deployment: Redis for the tenant status cache, static and media serving, TLS
 - [ ] Backup and restore procedure, including a documented per-tenant export
 - [ ] Structured request logging with the tenant attached

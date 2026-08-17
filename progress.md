@@ -5,6 +5,74 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-17 — CI, and measuring before splitting
+
+**Worked on:** a CI pipeline. The question I started with was which slow test
+categories to move to a nightly run, since the suite is around half an hour.
+
+**The measurement changed the answer.** Full suite: 1328 tests in 1776s
+(29:36). The distribution is flat — slowest test 12.07s, a one-off first
+database connect, then everything between 3.4s and 5.8s against a 1.34s
+average. The slowest 40 tests total 159s of 1776s, 9% of the run.
+
+So there was no slow category to defer. The cost is per-test fixture setup
+(nearly every slow entry is `setup`, not `call`): each test builds a tenant,
+users and a catalogue against a real Postgres under RLS. The two usual levers
+were already pulled — `config/settings/test.py` has used the MD5 hasher and
+LocMemCache since milestone 1. 1.34s is honest integration cost.
+
+Any subset would have saved time in proportion to tests dropped, which is only
+a faster push because it tests less.
+
+**Decisions, and why:**
+
+**xdist measured, then rejected.** `-n 4 --dist loadfile` gave 1166s (19:26)
+against 1776s serial — 1.5x, not 4x, because four workers on four cores share
+one Postgres and contend rather than scale. It also failed 7 tests in
+`apps/accounts/tests/test_pin_lockout.py` that pass serially. Worth writing
+down that I measured this rather than assuming it would help.
+
+**Shard across runners instead.** The repository is public, so Actions minutes
+are free and the only constraint is wall-clock feedback. Four shards on four
+separate runners each get their own machine and their own Postgres — the exact
+contention xdist could not escape. Every test runs on every push; nothing is
+deferred to nightly.
+
+**Backend jobs go through `docker compose`, not a service container.** Django
+must connect as the NOSUPERUSER NOBYPASSRLS role that
+`docker/postgres/init` creates. Postgres exempts superusers from Row-Level
+Security, so a service container using the default superuser would let every
+tenant-isolation test pass while proving nothing. Compose already builds the
+role correctly and reimplementing it in workflow YAML is a chance to get it
+quietly wrong.
+
+**A guard on the shard list.** Sharding introduces a failure nothing else
+catches: add an app, forget to add it to a shard, and CI is green having never
+run it. That is worse than a red tick because it looks like proof.
+`scripts/check_shards.py` fails the build naming the app, and the shard list
+lives in one file read by both the matrix and the guard so the two cannot
+drift.
+
+**Nightly holds what genuinely is not per-push work:** the suite run serially
+as the reference the shards are measured against, `check --deploy` against
+`config/settings/production.py` (which no test imports — the suite runs under
+`config.settings.test`, so a typo there would otherwise surface during a
+deploy), release builds for Linux and Android (`flutter test` never invokes
+either toolchain), and coverage as a trend rather than a gate.
+
+**Found while building:** `ruff check` was failing on two errors in
+`gen_pricing_fixture.py` — an unsorted import and an unused loop variable, both
+mine, both fixed. And `ruff format --check` would reformat 93 files: the
+codebase has never been through ruff's formatter. I left the formatter out of
+CI rather than smuggle a 93-file reformat into a commit about CI. It is a
+tasks.md item on its own.
+
+**To come back to:** the ~10 minute wall-clock figure is arithmetic from the
+1.34s average plus container startup. It needs confirming against a real
+Actions run.
+
+---
+
 ## 2026-08-16 — Production deployment, the implementation half
 
 **Worked on:** everything in the deployment plan marked pure implementation.

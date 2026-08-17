@@ -450,7 +450,12 @@ rather than planned up front.
 ## Cross-cutting, not yet scheduled
 
 - [ ] Flutter application scaffold *(nothing built yet; milestone 1 is backend only)*
-- [ ] Rate limiting on sign-in endpoints, especially PIN sign-in *(discovered while building PIN auth: a 4-digit PIN with a valid device token is brute-forceable without throttling)*
+- [x] Rate limiting on sign-in endpoints, especially PIN sign-in *(discovered while building PIN auth: a 4-digit PIN with a valid device token is brute-forceable without throttling)*
+  - [x] **The limit did not work.** DRF resolves the client address through its own `NUM_PROXIES`, not this project's `TRUSTED_PROXY_HOPS`; unset, it used the whole `X-Forwarded-For` header as the throttle key, so changing one header per request bought a fresh allowance every time
+  - [x] Measured before the fix: twelve attempts against a five-per-minute limit gave seven 429s from a fixed address and **zero** when the header varied
+  - [x] `ClientAddressScopedThrottle` keys on `apps.core.net.client_ip`, so the throttle and the M-Pesa allowlist cannot disagree about who is calling *(rejected setting `NUM_PROXIES`: a second proxy-depth setting is how this bug happens twice)*
+  - [x] PIN sign-in keyed per till, not per shop *(every till is behind one NAT address; an address-only limit lets one device deny sign-in to the whole building mid-trade)*
+  - [x] 13 tests, each proved against a named mutation — 6 fail on reverting `get_ident`, 12 on removing the throttle, and the recorded set includes one mutation that killed nothing first time and had to be replaced
 - [x] CI pipeline running the test suite on every push *(see the CI section above)*
 - [ ] Production deployment: Redis for the tenant status cache, static and media serving, TLS
 - [ ] Backup and restore procedure, including a documented per-tenant export

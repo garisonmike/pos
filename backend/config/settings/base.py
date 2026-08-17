@@ -259,8 +259,12 @@ PIN_LOCKOUT_SECONDS = env.int("PIN_LOCKOUT_SECONDS", default=900)
 # Blunt outer limits on the sign-in routes, independent of the lockout above.
 # The lockout stops one device being ground down; these stop a caller working
 # through many devices or business slugs from one address.
+# Not DRF's ScopedRateThrottle directly: its get_ident reads X-Forwarded-For
+# through NUM_PROXIES, which this project does not set, and with it unset the
+# whole header becomes the throttle key - so varying the header defeated the
+# limit completely. See apps/core/throttling.py.
 REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = (
-    "rest_framework.throttling.ScopedRateThrottle",
+    "apps.core.throttling.ClientAddressScopedThrottle",
 )
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "pin-login": env("THROTTLE_PIN_LOGIN", default="20/min"),

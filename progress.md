@@ -5,6 +5,63 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-17 — The sign-in rate limit did not work
+
+**Worked on:** verifying sign-in throttling, after noticing while fixing the
+settings module that nothing in the suite tested it.
+
+**It was not working at all.** Twelve sign-in attempts against a
+five-per-minute limit: seven 429s from a fixed address, and **zero** when
+`X-Forwarded-For` varied by one octet per request.
+
+DRF resolves the client address in `BaseThrottle.get_ident` through its own
+`NUM_PROXIES` setting, which this project never set. With it unset DRF takes
+the branch returning the *entire* header as the throttle identity, so every
+distinct header value was its own bucket.
+
+This is the same mistake `apps/core/net.py` exists to prevent, arriving by a
+different route. That module was applied to the M-Pesa allowlist and the audit
+trail; DRF's throttle resolved the address independently and was never brought
+into line. Brute force is still bounded by the PIN lockout, so this was not an
+open door to a till — but the outer bound tasks.md named as the control against
+exactly this was decorative.
+
+**Decisions, and why:**
+
+**Keyed on `client_ip`, not on `NUM_PROXIES`.** Setting DRF's own value would
+also have closed it, and creates a second proxy-depth setting that can drift
+out of step with `TRUSTED_PROXY_HOPS`. Two answers to "how many proxies are in
+front of us" is how this class of bug happens twice.
+
+**PIN sign-in is counted per till, not per shop.** Keying on address alone is
+correct for brute force and wrong for a POS: every till in a duka sits behind
+one NAT address, so one misbehaving device would exhaust the allowance for the
+whole building, and refusing sign-in during trade is its own kind of outage. A
+device token is already required for PIN sign-in, so keying on it costs
+nothing.
+
+**Every test written against a named mutation**, same standard as the proxy-hop
+work: reverting `get_ident` fails 6, removing `throttle_scope` fails 12,
+collapsing the two scopes fails 6, dropping the device from the key fails 1.
+
+**Worth recording: one mutation killed nothing.** I claimed returning `None`
+for an unresolved address would fail open, and wrote a test for it. It passed
+under the mutation — `ScopedRateThrottle` formats its cache key
+unconditionally, so `None` becomes the string `"None"` and is still counted.
+The comment asserting otherwise was wrong and is fixed; the test is now written
+against a unique-value-per-request mutation, which does kill it. A mutation
+that kills nothing is the only way to find out a test proves nothing.
+
+**Found while building:** two tests passed for the wrong reason at first. Test
+settings default `TRUSTED_PROXY_HOPS` to 0, so `X-Forwarded-For` was ignored
+and every request arrived from 127.0.0.1 sharing one bucket — the evasion tests
+went green without the header ever being read. And setting rates through
+`settings.REST_FRAMEWORK` plus `api_settings.reload()` does not survive
+teardown ordering, which produced a test that passed alone and failed in the
+file. Both fixed; the rates are patched on the throttle class directly now.
+
+---
+
 ## 2026-08-17 — CI, and the half hour that was never real
 
 **Worked on:** a CI pipeline. I set out to decide which slow tests to defer to

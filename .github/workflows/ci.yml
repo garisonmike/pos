@@ -113,11 +113,17 @@ jobs:
             echo "GID=$(id -g)"
           } >> .env
 
+      # Postgres is up for the drift check below. Without it makemigrations
+      # cannot read migration history and degrades to a warning, which is a
+      # check that reports success without having done its job.
+      - name: Start Postgres
+        run: docker compose up -d db
+
       # Catches a model changed without its migration. The failure it prevents
       # is a deploy that migrates to the wrong shape.
       - name: Migration drift
         run: |
-          docker compose run --rm --no-deps -T \
+          docker compose run --rm -T \
             -e DJANGO_SETTINGS_MODULE=config.settings.test \
             --entrypoint python api manage.py makemigrations --check --dry-run
 
@@ -130,6 +136,15 @@ jobs:
       - name: Flutter dependencies
         working-directory: mobile
         run: flutter pub get
+
+      # drift generates database.g.dart, and *.g.dart is gitignored - so a
+      # clean checkout has the drift table definitions but none of the code
+      # they generate, and analyze fails on a hundred undefined names. It works
+      # on a laptop only because the file is already sitting there from the
+      # last build. This is the step that makes a fresh clone behave like one.
+      - name: Generate drift code
+        working-directory: mobile
+        run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Analyze
         working-directory: mobile

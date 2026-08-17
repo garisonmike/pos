@@ -256,6 +256,20 @@ SUSPICIOUS_QUANTITY_FLOOR_CENTS = env.int(
 PIN_LOCKOUT_MAX_ATTEMPTS = env.int("PIN_LOCKOUT_MAX_ATTEMPTS", default=5)
 PIN_LOCKOUT_SECONDS = env.int("PIN_LOCKOUT_SECONDS", default=900)
 
+# Password sign-in gets a growing delay rather than a lockout. A hard lock on
+# an owner's account would be a denial-of-service primitive with no way back:
+# a provisioned owner has no PIN, PIN sign-in needs a registered device, and
+# the platform console has no reset. See apps/accounts/backoff.py.
+#
+# Three free attempts, then doubling from two seconds, capped at five minutes -
+# twelve attempts an hour against one account at the cap, and never a wait long
+# enough to strand a shop. The cap is not decoration: uncapped doubling reaches
+# days within twenty attempts, which is a permanent lock under another name.
+LOGIN_BACKOFF_FREE_ATTEMPTS = env.int("LOGIN_BACKOFF_FREE_ATTEMPTS", default=3)
+LOGIN_BACKOFF_BASE_SECONDS = env.int("LOGIN_BACKOFF_BASE_SECONDS", default=2)
+LOGIN_BACKOFF_MAX_SECONDS = env.int("LOGIN_BACKOFF_MAX_SECONDS", default=300)
+LOGIN_BACKOFF_DECAY_SECONDS = env.int("LOGIN_BACKOFF_DECAY_SECONDS", default=900)
+
 # Blunt outer limits on the sign-in routes, independent of the lockout above.
 # The lockout stops one device being ground down; these stop a caller working
 # through many devices or business slugs from one address.

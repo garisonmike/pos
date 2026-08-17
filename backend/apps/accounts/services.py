@@ -47,6 +47,50 @@ class PinAuthResult:
     device: Device
 
 
+#: One message for a wrong username and a wrong password alike, so the endpoint
+#: cannot be used to work out who works at a business.
+PASSWORD_REFUSED_MESSAGE = "Those sign-in details were not recognised."
+
+
+class PasswordAuthError(Exception):
+    """A password sign-in that did not succeed."""
+
+    def __init__(self, detail: str = PASSWORD_REFUSED_MESSAGE, code: str = "login_refused"):
+        super().__init__(detail)
+        self.detail = detail
+        self.code = code
+
+
+def authenticate_password(*, tenant, username: str, password: str) -> User:
+    """Verify a password against a user of this business.
+
+    Split out of ``TenantLoginSerializer`` for the reason the PIN path is split
+    out of ``PinLoginSerializer``: the view has to tell a delayed attempt from
+    a wrong password, and count the failure in between, and a serializer that
+    can only pass or raise leaves nowhere to do that.
+
+    The tenant is bound before anything is read, because the user table is
+    isolated and returns nothing otherwise.
+    """
+    from django.contrib.auth import authenticate as django_authenticate
+
+    with tenant_context(tenant.id):
+        user = django_authenticate(username=username, password=password)
+
+        # django_authenticate goes through the configured backend, which
+        # resolves platform administrators only. Tenant users are checked
+        # directly against the isolated table.
+        if user is None:
+            candidate = User.objects.filter(tenant=tenant, username=username).first()
+            if candidate and candidate.check_password(password):
+                user = candidate
+
+        if user is None or not user.is_active or user.tenant_id != tenant.id:
+            raise PasswordAuthError()
+
+    return user
+
+
 def authenticate_pin(*, tenant, device_token: str, username: str, pin: str) -> PinAuthResult:
     """Verify a till PIN against a registered device.
 

@@ -11,13 +11,11 @@ only whether it exists in a business whose slug they already knew.
 
 from __future__ import annotations
 
-from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from apps.accounts.constants import UserRole
 from apps.accounts.models import Device, User
-from apps.core.tenancy import tenant_context
 from apps.tenants.models import Tenant
 
 
@@ -136,6 +134,14 @@ class TenantLoginSerializer(serializers.Serializer):
     _REFUSED = "Those sign-in details were not recognised."
 
     def validate(self, attrs: dict) -> dict:
+        """Shape and business status only - the credential is checked in the view.
+
+        This used to authenticate here. It no longer does, for the same reason
+        ``PinLoginSerializer`` never did: the view has to distinguish a sign-in
+        inside a backoff window from a wrong password, count the failure, and
+        audit it, and a serializer that can only pass or raise leaves nowhere
+        to put any of that. See ``apps.accounts.backoff``.
+        """
         tenant = Tenant.objects.filter(slug=attrs["tenant_slug"]).first()
         if tenant is None:
             raise serializers.ValidationError({"detail": self._REFUSED})
@@ -149,27 +155,6 @@ class TenantLoginSerializer(serializers.Serializer):
                 }
             )
 
-        # The user table is tenant-isolated, so nothing can be read from it
-        # until the business is bound.
-        with tenant_context(tenant.id):
-            user = authenticate(
-                request=self.context.get("request"),
-                username=attrs["username"],
-                password=attrs["password"],
-            )
-            # authenticate() goes through Django's backend, which resolves
-            # platform administrators only. Tenant users are checked directly.
-            if user is None:
-                candidate = User.objects.filter(
-                    tenant=tenant, username=attrs["username"]
-                ).first()
-                if candidate and candidate.check_password(attrs["password"]):
-                    user = candidate
-
-            if user is None or not user.is_active or user.tenant_id != tenant.id:
-                raise serializers.ValidationError({"detail": self._REFUSED})
-
-        attrs["user"] = user
         attrs["tenant"] = tenant
         return attrs
 

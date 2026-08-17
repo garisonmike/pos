@@ -456,6 +456,16 @@ rather than planned up front.
   - [x] `ClientAddressScopedThrottle` keys on `apps.core.net.client_ip`, so the throttle and the M-Pesa allowlist cannot disagree about who is calling *(rejected setting `NUM_PROXIES`: a second proxy-depth setting is how this bug happens twice)*
   - [x] PIN sign-in keyed per till, not per shop *(every till is behind one NAT address; an address-only limit lets one device deny sign-in to the whole building mid-trade)*
   - [x] 13 tests, each proved against a named mutation — 6 fail on reverting `get_ident`, 12 on removing the throttle, and the recorded set includes one mutation that killed nothing first time and had to be replaced
+
+- [x] **Password sign-in backoff** — the throttle was the only thing standing between brute force and Owner/Manager accounts, and it counts per address, not per account
+  - [x] Stranding checked before choosing the shape: a provisioned owner has no PIN, `check_pin` refuses an empty hash, PIN sign-in needs a registered device, and the platform console has no reset or unlock — so a hard lock would be unrecoverable without database access
+  - [x] **A delay, never a lock.** Three free attempts, doubling from 2s, capped at 300s, cleared on success, decaying after 15 minutes
+  - [x] Keyed on tenant + username, mirroring `apps/accounts/lockout.py` rather than a new mechanism
+  - [x] Refuses early with a retry hint; never sleeps the request *(sleeping holds a gunicorn worker and becomes the outage it prevents)*
+  - [x] Every failure audited, delayed or not *(the counter expires in 15 minutes; a slow campaign would otherwise leave no trace)*
+  - [x] Credential check moved out of the serializer into the view, mirroring `PinLoginSerializer`
+  - [x] **Caught while building:** the move made a wrong password distinguishable from an unknown business slug by response shape — an enumeration oracle, now pinned by a mutation
+  - [x] 21 tests, all six named mutations killed
 - [x] CI pipeline running the test suite on every push *(see the CI section above)*
 - [ ] Production deployment: Redis for the tenant status cache, static and media serving, TLS
 - [ ] Backup and restore procedure, including a documented per-tenant export

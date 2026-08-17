@@ -5,6 +5,77 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-08-17 — Password sign-in gets a backoff, and the stranding check that shaped it
+
+**Worked on:** closing the asymmetry left after the throttle fix. PIN sign-in
+had two controls — a per-device+user lockout and a per-till rate limit.
+Password sign-in had only a per-address rate limit, which bounds one source
+rather than one account, so an attacker spread across a few addresses had
+unlimited attempts at an owner. The weaker-protected credential was the more
+privileged one.
+
+**The stranding check, first, because it decided the design.** If a hard lock
+were used, what are the ways back in for a locked-out owner?
+
+- `provision_tenant` creates the owner with `set_password` and **no PIN**
+- `check_pin` returns False on an empty `pin_hash`, so PIN sign-in cannot work
+  for them even if a device existed
+- PIN sign-in additionally requires a registered, active device
+- the platform console exposes **no** password reset, unlock, or user endpoint
+- no Django admin registration for `User` or `Tenant`
+
+So a hard lock on an owner at a shop with no enrolled device is unrecoverable
+without database access. Anyone who knew the username could do it, mid-trade.
+That settles it: **a delay, never a lock.**
+
+**The curve:** three free attempts (typing a password wrong is normal), then
+doubling from 2s — 2, 4, 8, 16, 32, 64, 128 — capped at 300s, counters clearing
+on success and decaying after 15 minutes of quiet. At the cap that is twelve
+attempts an hour against one account, useless for guessing anything with more
+entropy than a PIN, while the worst an owner ever waits is five minutes.
+
+**Decisions, and why:**
+
+**Refuse early, never sleep.** A delay implemented by sleeping the request
+holds a gunicorn worker for its duration and turns the defence into the outage
+it exists to prevent. The wait is enforced by refusing with a retry hint.
+
+**The credential check moved out of the serializer**, mirroring what
+`PinLoginSerializer` already did: the view has to tell a delayed attempt from a
+wrong password and count the failure in between, and a serializer that can only
+pass or raise leaves nowhere to do it.
+
+**Audit every failure, not just delayed ones**, because the counter expires in
+fifteen minutes and a slow campaign — a few attempts an hour, never enough to
+earn a delay — would otherwise leave no trace at all. No user FK, for the
+reason `PinLoginView._audit_failure` sets out at length.
+
+**Found while building, and it nearly shipped.** Moving the credential check
+into the view changed the refusal's shape: a serializer normalises errors into
+lists, a view raising by hand does not, so `detail` came back as a plain string
+where an unknown business slug returned `[ErrorDetail(...)]`. That difference
+is an enumeration oracle — it tells a caller which business slugs are real
+without guessing a single password. Caught by an existing test asserting the
+two are identical, which is exactly what that test was for. The list around the
+message is load-bearing, and there is now a mutation proving it.
+
+I also left the earned delay **out** of the 400 body for the same reason: a
+retry hint that appears only for accounts that exist distinguishes them just as
+well. The wait is announced on the next attempt, by the 429, which cannot avoid
+being distinguishable.
+
+**Mutations, all six killed:** removing the counter fails 6, keying on address
+fails 4, uncapping the delay fails 1, letting a delayed request consume an
+attempt fails 1, auditing only delayed attempts fails 3, dropping the list
+wrapper fails 2.
+
+**One test class earns its place oddly:** `TestTheStrandingAssumptionsStillHold`
+tests nothing about backoff. It pins each link of the chain above, so that the
+day somebody gives owners a default PIN or adds a reset endpoint, it fails and
+forces the delay-versus-lock decision to be made again rather than inherited.
+
+---
+
 ## 2026-08-17 — The sign-in rate limit did not work
 
 **Worked on:** verifying sign-in throttling, after noticing while fixing the

@@ -12,6 +12,7 @@ from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,7 +20,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from apps.accounts import lockout, services
+from apps.accounts import backoff, lockout, services
 from apps.accounts.models import Device, User, hash_device_token
 from apps.accounts.serializers import (
     ChangePasswordSerializer,
@@ -78,8 +79,56 @@ class TenantLoginView(APIView):
         serializer = TenantLoginSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
-        user = serializer.validated_data["user"]
         tenant = serializer.validated_data["tenant"]
+        username = serializer.validated_data["username"]
+
+        # Checked before the password is evaluated, so an attempt inside a
+        # waiting period is refused without the credential being looked at -
+        # otherwise the response time tells an attacker which state they are in.
+        state = backoff.check(tenant.id, username)
+        if state.is_delayed:
+            self._audit_failure(request, tenant, username, reason="backoff")
+            return Response(
+                {
+                    "detail": (
+                        "Too many recent sign-in attempts for this account. "
+                        f"Try again in {state.retry_after_seconds} second(s)."
+                    ),
+                    "code": "login_backoff",
+                    "retry_after_seconds": state.retry_after_seconds,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        try:
+            user = services.authenticate_password(
+                tenant=tenant, username=username, password=serializer.validated_data["password"]
+            )
+        except services.PasswordAuthError as exc:
+            failed = backoff.record_failure(tenant.id, username)
+            self._audit_failure(
+                request, tenant, username, reason="bad_password", failures=failed.failures
+            )
+            # Raised, not returned, so DRF renders this exactly as the
+            # serializer renders an unknown business slug. Returning a Response
+            # here made `detail` a plain string where the serializer produces a
+            # list, and that difference is an oracle: it tells a caller which
+            # business slugs are real without them ever guessing a password.
+            #
+            # The earned delay is deliberately *not* reported here for the same
+            # reason - a body that grows a retry hint only for accounts that
+            # exist distinguishes them just as well. The wait is announced on
+            # the next attempt, by the 429 above, which cannot avoid being
+            # distinguishable and is the only response that is.
+            #
+            # The list around the message is load-bearing, not styling. A
+            # serializer normalises its errors into lists, a view raising by
+            # hand does not, and the two render differently once the exception
+            # handler stringifies them - which is enough to tell the cases
+            # apart. Byte-identical is the requirement here.
+            raise ValidationError({"detail": [exc.detail]}) from exc
+
+        backoff.clear(tenant.id, username)
 
         with tenant_context(tenant.id):
             user.last_login = timezone.now()
@@ -96,6 +145,36 @@ class TenantLoginView(APIView):
             body = {**tokens, "user": UserSerializer(user).data}
 
         return Response(body, status=status.HTTP_200_OK)
+
+    @staticmethod
+    def _audit_failure(
+        request, tenant, username: str, *, reason: str, failures: int = 0
+    ) -> None:
+        """Record every refused password attempt, delayed or not.
+
+        Deliberately unconditional. The counter that decides whether to refuse
+        the next attempt expires in fifteen minutes, and a slow campaign against
+        an owner's account - a few attempts an hour, never enough to earn a
+        delay - would leave nothing behind at all if only delayed attempts were
+        written down. The pattern is the thing worth keeping, and it is only
+        visible in a record that outlives the counter.
+
+        No user is attached, for the reason set out at length in
+        ``PinLoginView._audit_failure``: a failed sign-in proves somebody typed
+        this name, not that they are that person, and filing a run of failures
+        against a real owner puts an attacker's activity in the victim's
+        history.
+        """
+        with tenant_context(tenant.id):
+            record_audit(
+                action=AuditAction.LOGIN_FAILED,
+                entity_type="accounts.User",
+                entity_id=username,
+                request=request,
+                tenant_id=tenant.id,
+                reason=reason,
+                after={"method": "password", "failures": failures},
+            )
 
 
 @extend_schema(tags=["auth"])

@@ -57,7 +57,11 @@ TENANT_STATUS_CACHE_SECONDS = 0
 
 # Throttles off by default: they count requests per address, and a test file
 # making dozens of sign-in calls would trip them for reasons unrelated to what
-# it is asserting. The tests that care about throttling turn them back on.
+# it is asserting.
+#
+# Nothing turns them back on. There is no test anywhere in the suite that
+# exercises throttling, so the sign-in rate limits are shipped unverified -
+# tracked in tasks.md.
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {"pin-login": None, "login": None}
 
 # Tests drive requests directly, with no proxy in front.

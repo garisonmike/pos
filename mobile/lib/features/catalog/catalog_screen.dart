@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../data/models.dart';
+import '../../data/cart/cart_controller.dart';
 import '../../providers.dart';
+import '../sell/cart_screen.dart';
 import 'item_sheet.dart';
 
 /// Browsing what the shop sells.
@@ -30,7 +32,9 @@ class CatalogScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              till?.tenantName?.isNotEmpty == true ? till!.tenantName! : 'Catalogue',
+              till?.tenantName?.isNotEmpty == true
+                  ? till!.tenantName!
+                  : 'Catalogue',
               overflow: TextOverflow.ellipsis,
             ),
             if (till?.session != null)
@@ -51,6 +55,7 @@ class CatalogScreen extends ConsumerWidget {
             icon: const Icon(Icons.qr_code_scanner),
             onPressed: () => _promptForBarcode(context, ref),
           ),
+          const _CartButton(),
           IconButton(
             tooltip: 'Sign out',
             iconSize: 28,
@@ -73,14 +78,16 @@ class CatalogScreen extends ConsumerWidget {
               data: (rows) => rows.isEmpty
                   ? const _EmptyState()
                   : RefreshIndicator(
-                      onRefresh: () async => ref.invalidate(visibleItemsProvider),
+                      onRefresh: () async =>
+                          ref.invalidate(visibleItemsProvider),
                       child: ListView.builder(
                         // Physics forced so pull-to-refresh works even when the
                         // list is short enough not to scroll on its own.
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.only(bottom: 24),
                         itemCount: rows.length,
-                        itemBuilder: (context, index) => _ItemRow(item: rows[index]),
+                        itemBuilder: (context, index) =>
+                            _ItemRow(item: rows[index]),
                       ),
                     ),
             ),
@@ -130,7 +137,9 @@ class CatalogScreen extends ConsumerWidget {
 
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final item = await ref.read(catalogRepositoryProvider).lookupBarcode(code.trim());
+      final item = await ref
+          .read(catalogRepositoryProvider)
+          .lookupBarcode(code.trim());
       if (!context.mounted) return;
 
       if (item == null) {
@@ -188,7 +197,8 @@ class _SearchBarState extends ConsumerState<_SearchBar> {
                   },
                 ),
         ),
-        onChanged: (value) => ref.read(searchQueryProvider.notifier).state = value,
+        onChanged: (value) =>
+            ref.read(searchQueryProvider.notifier).state = value,
       ),
     );
   }
@@ -219,14 +229,17 @@ class _CategoryStrip extends ConsumerWidget {
                   _CategoryChip(
                     label: 'All',
                     selected: selected == null,
-                    onTap: () => ref.read(selectedCategoryProvider.notifier).state = null,
+                    onTap: () =>
+                        ref.read(selectedCategoryProvider.notifier).state =
+                            null,
                   ),
                   for (final category in rows)
                     _CategoryChip(
                       label: '${category.name} (${category.itemCount})',
                       selected: selected == category.id,
-                      onTap: () => ref.read(selectedCategoryProvider.notifier).state =
-                          category.id,
+                      onTap: () =>
+                          ref.read(selectedCategoryProvider.notifier).state =
+                              category.id,
                     ),
                 ],
               ),
@@ -316,7 +329,10 @@ class _ItemRow extends StatelessWidget {
                       children: [
                         Text(
                           item.sku,
-                          style: TextStyle(fontSize: 14, color: TillTheme.muted),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: TillTheme.muted,
+                          ),
                         ),
                         if (item.isService) ...[
                           const SizedBox(width: 8),
@@ -406,7 +422,11 @@ class _Tag extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: tone),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: tone,
+        ),
       ),
     );
   }
@@ -432,9 +452,7 @@ class _EmptyState extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              searching
-                  ? 'Nothing matches that'
-                  : 'No items here yet',
+              searching ? 'Nothing matches that' : 'No items here yet',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -497,6 +515,64 @@ class _ErrorState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The way into the cart, and until now there was not one.
+///
+/// [CartScreen] was written, tested and unreachable: nothing in the app
+/// navigated to it. A cashier could look items up and had no way to sell one.
+///
+/// It lives in the app bar rather than on a floating button because a floating
+/// button sits over the bottom of the list, which on a short phone is exactly
+/// where the last item in a search result lands - so the thing being reached
+/// for is the thing being covered.
+class _CartButton extends ConsumerWidget {
+  const _CartButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cart = ref.watch(cartControllerProvider);
+    final count = cart.lines.length;
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        IconButton(
+          tooltip: count == 0 ? 'Cart is empty' : 'Cart',
+          iconSize: 28,
+          icon: const Icon(Icons.shopping_cart_outlined),
+          onPressed: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => const CartScreen())),
+        ),
+        // Only when there is something to count. A badge reading zero is noise
+        // a cashier learns to stop seeing, which costs it the one moment it
+        // matters - noticing a line left over from the last customer.
+        if (count > 0)
+          Positioned(
+            top: 6,
+            right: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              constraints: const BoxConstraints(minWidth: 20),
+              decoration: BoxDecoration(
+                color: TillTheme.warning,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

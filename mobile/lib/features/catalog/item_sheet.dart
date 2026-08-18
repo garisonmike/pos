@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme.dart';
+import '../../data/cart/cart_controller.dart';
+import '../../data/cart/pricing.dart';
 import '../../data/models.dart';
+import '../sell/cart_screen.dart';
+import '../sell/quantity_sheet.dart';
 
 /// Everything known about one item, on a sheet rather than a page.
 ///
@@ -145,12 +150,7 @@ class _ItemSheet extends StatelessWidget {
               ],
 
               const SizedBox(height: 24),
-              // Selling arrives in milestone 3. Saying so is better than an
-              // absent button, which reads as something being broken.
-              OutlinedButton(
-                onPressed: null,
-                child: const Text('Selling comes next'),
-              ),
+              _AddToCartButton(item: item),
             ],
           ),
         ),
@@ -202,5 +202,138 @@ class _Row extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// The button that finally connects the catalogue to the till.
+///
+/// Everything behind it - the cart, the tender screen, the receipt - was built
+/// and tested in milestone 3, and none of it was reachable: this sheet still
+/// carried a disabled "Selling comes next" placeholder from milestone 2, and
+/// nothing anywhere else in the app navigated to [CartScreen]. The engine and
+/// the ignition were finished separately and never wired together, which no
+/// widget test could notice because each half passed on its own.
+class _AddToCartButton extends ConsumerWidget {
+  const _AddToCartButton({required this.item});
+
+  final Item item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // An unavailable item is refused here rather than at the till, so a
+    // cashier finds out while looking at the item and not with a customer
+    // waiting and a cart already half built.
+    if (!item.isAvailable) {
+      return const OutlinedButton(
+        onPressed: null,
+        child: Text('Not available'),
+      );
+    }
+
+    return FilledButton.icon(
+      onPressed: () => _add(context, ref),
+      icon: const Icon(Icons.add_shopping_cart),
+      label: const Text('Add to cart'),
+    );
+  }
+
+  Future<void> _add(BuildContext context, WidgetRef ref) async {
+    var unitPriceCents = item.price.cents;
+    var quantityMilli = 1000;
+
+    // A variable-price item has no price until somebody types one - an open
+    // service, or produce priced at the counter. Asking first, because adding
+    // it at zero and correcting later is how a sale goes out at zero.
+    if (item.isPriceVariable) {
+      final typed = await _askPrice(context);
+      if (typed == null) return;
+      unitPriceCents = typed;
+    }
+
+    // Anything not sold by the piece needs a real quantity: 0.75 kg of sugar
+    // cannot be expressed by tapping "add" once. The sheet returns thousandths
+    // so the fraction stays exact.
+    if (item.unit != 'EACH') {
+      if (!context.mounted) return;
+      final measured = await showQuantitySheet(
+        context,
+        itemName: item.name,
+        unit: item.unit,
+        unitPriceCents: unitPriceCents,
+      );
+      if (measured == null) return;
+      quantityMilli = measured;
+    }
+
+    ref
+        .read(cartControllerProvider.notifier)
+        .add(
+          LineInput(
+            itemId: item.id,
+            name: item.name,
+            sku: item.sku,
+            unit: item.unit,
+            unitPriceCents: unitPriceCents,
+            quantityMilli: quantityMilli,
+          ),
+          // A price typed at the counter is never merged with another line, even
+          // for the same item: two different prices for one thing are two
+          // decisions somebody made, and folding them together silently discards
+          // one of them.
+          mergeable: !item.isPriceVariable,
+        );
+
+    if (!context.mounted) return;
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${item.name} added'),
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'View cart',
+          onPressed: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => const CartScreen())),
+        ),
+      ),
+    );
+  }
+
+  /// Ask for the price of a variable-price item, in shillings.
+  Future<int?> _askPrice(BuildContext context) async {
+    final controller = TextEditingController();
+    final shillings = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Price for ${item.name}'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            prefixText: 'KES ',
+            hintText: '0.00',
+          ),
+          onSubmitted: (value) => Navigator.pop(context, value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (shillings == null) return null;
+    final parsed = double.tryParse(shillings.trim());
+    if (parsed == null || parsed <= 0) return null;
+    // Rounded, not truncated, and only at this boundary: everything downstream
+    // is integer cents.
+    return (parsed * 100).round();
   }
 }

@@ -30,9 +30,10 @@ Milestones 1 and 2 are complete: tenant isolation, authentication, the platform
 console, the catalogue, stock, CSV import, and an Android till that signs in and
 browses.
 
-Milestone 3 is complete. A shop can ring up a sale, take cash or M-Pesa, hand
-over a receipt, keep trading with no connection, and reconcile its drawer at the
-end of the day:
+Milestones 3 to 6 are complete. A shop can ring up a sale, take cash or M-Pesa,
+hand over a receipt, keep trading with no connection, reconcile its drawer at
+the end of the day, issue a proper invoice, read its own takings, and run table
+service:
 
 - **Selling.** Cart arithmetic in integer cents, a sale state machine where a
   paid sale cannot be voided, and cash checkout with a manager-authorised
@@ -45,8 +46,55 @@ end of the day:
   replays safely — the same sale arriving twice is recognised, never duplicated.
 - **Shifts.** Open a drawer with a counted float, record cash in and out, and
   close it with a blind count that the system checks against what it expected.
-  *Server-side only so far* - the API is complete and tested, but the till has
-  no screen for it yet.
+
+Milestone 4 covers what a business has to produce for somebody else — a
+customer wanting a proper invoice, or the tax authority:
+
+- **Invoicing.** Sequential, gapless invoice numbers per business, allocated in
+  the same transaction as the sale so two tills at once cannot take the same
+  one. Issued documents are immutable: a figure someone was accountable for
+  never changes afterwards.
+- **Tax regimes.** A business is registered, unregistered, or exempt, and an
+  unregistered one still gets a document — it just does not consume an invoice
+  number.
+- **The adapter boundary.** Fiscalisation sits behind one interface with a
+  manual export behind it, so connecting a real KRA device later is writing one
+  adapter rather than reworking how sales are recorded. An unrecognised mode
+  falls back to doing nothing and leaves a visible flag rather than failing
+  quietly.
+
+Milestone 5 is about a shop owner knowing what happened without counting
+anything by hand:
+
+- **Takings.** Sales, tax and payment mix for a day, a week or a month, in the
+  business's own timezone rather than the server's.
+- **Best sellers.** What actually moves, by quantity and by revenue.
+- **Cashier performance.** Sales handled, average sale, discounts given — framed
+  as what to ask about, not as a verdict.
+- **The drawer tie-out.** A shift summary that reconciles the report against
+  the counted cash, keeping what was counted, what arrived after close, and the
+  explained variance visibly separate — so a difference points at its own
+  reason instead of becoming one number nobody can take apart.
+- *Reports are online-only.* The till says so plainly when there is no
+  connection rather than showing a stale or empty figure.
+
+Milestone 6 adds restaurant service on top of the same sale engine:
+
+- **Tables and orders.** An order stays open across several rounds, is sent to
+  the kitchen, and becomes a bill at the end — a bar tab can be paid without
+  ever passing through the kitchen.
+- **Modifiers.** No onions, extra cheese, priced or free, snapshotted onto the
+  line so a later menu change never rewrites an order somebody already ate.
+- **Kitchen tickets.** Printed for the kitchen, not the customer: table name
+  large, no prices, no branding, and reprints marked as reprints.
+- **Voids.** Cancelling an order that already reached the kitchen needs manager
+  authority, records which lines had been sent, and leaves a trail whether it
+  is allowed or refused.
+- *Server-side only so far* - orders, tickets and voids are complete and tested
+  through the API, but there is no order-taking screen on the till yet, and
+  order-taking needs a connection. The same is true of opening and closing a
+  shift, and of cash in and out of the drawer: the API is there, the screen is
+  not.
 
 See [tasks.md](tasks.md) for what is done and what is next, and
 [progress.md](progress.md) for a dated log of decisions.

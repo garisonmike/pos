@@ -65,7 +65,7 @@ def api_exception_handler(exc, context) -> Response | None:
     data = response.data
 
     if isinstance(data, dict) and "detail" in data and len(data) == 1:
-        response.data = {"detail": str(data["detail"]), "code": code}
+        response.data = {"detail": _readable(data["detail"]), "code": code}
     elif isinstance(data, dict):
         response.data = {
             "detail": "The information sent was not valid.",
@@ -79,6 +79,33 @@ def api_exception_handler(exc, context) -> Response | None:
         }
 
     return response
+
+
+def _readable(detail) -> str:
+    """The message a person should see, not Python's idea of one.
+
+    A serializer normalises its errors into *lists*, so ``detail`` here is
+    usually ``[ErrorDetail('Those sign-in details were not recognised.')]``
+    rather than the string it looks like. Calling ``str()`` on that renders the
+    list repr, and a cashier on the shop floor was shown, verbatim::
+
+        [ErrorDetail(string='Those sign-in details were not recognised.',
+         code='invalid')]
+
+    Found by signing in wrongly on a real handset. Every refusal in the API
+    that comes from a serializer looked like this, which is every sign-in
+    failure, so it was not a corner case - it was the most-seen error in the
+    product.
+
+    Unwrapping rather than joining: these lists carry one message in practice,
+    and a caller who sends several bad fields is handled by the ``fields``
+    branch above instead.
+    """
+    if isinstance(detail, (list, tuple)):
+        if not detail:
+            return "The request could not be processed."
+        return str(detail[0])
+    return str(detail)
 
 
 def _code_for(exc, status_code: int) -> str:

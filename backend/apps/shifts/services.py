@@ -21,7 +21,7 @@ from django.utils import timezone
 from apps.accounts.constants import UserRole
 from apps.core.audit import record_audit
 from apps.core.models import AuditAction
-from apps.sales.models import Payment, PaymentMethod, RefundMethod
+from apps.sales.models import Payment, PaymentMethod, Refund, RefundMethod
 from apps.shifts.models import (
     CashMovement,
     CashMovementKind,
@@ -93,14 +93,15 @@ def drawer_position(shift: Shift) -> DrawerPosition:
 
     # Refunds given back in cash come out of the same drawer. An M-Pesa refund
     # is settled outside it and is excluded for the same reason its payment is.
-    refunds = 0
-    for payment in shift.payments.filter(method=PaymentMethod.CASH).select_related("sale"):
-        refunds += (
-            payment.sale.refunds.filter(method=RefundMethod.CASH).aggregate(
-                total=Sum("amount_cents")
-            )["total"]
-            or 0
-        )
+    # Refunds carry their own shift attribution: the shift handing over the
+    # cash may differ from the one that took the original payment. Aggregating
+    # refunds independently also prevents split-tender payment rows from
+    # multiplying a sale's refunds.
+    refunds = (
+        Refund.objects.filter(shift=shift, method=RefundMethod.CASH)
+        .aggregate(total=Sum("amount_cents"))["total"]
+        or 0
+    )
 
     movements = shift.movements.all()
     paid_in = sum(m.amount_cents for m in movements if m.kind == CashMovementKind.PAID_IN)

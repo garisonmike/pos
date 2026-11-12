@@ -52,7 +52,7 @@ Caddy and write their own header.
 
 ## Before you start
 
-These need your account or your money, and are tracked in `input.md`:
+Arrange these deployment-specific items before starting:
 
 - a server (2GB RAM is enough for several shops)
 - a domain, with an A record pointing at it
@@ -66,7 +66,7 @@ These need your account or your money, and are tracked in `input.md`:
 ### 1. Get the code onto the server
 
 ```bash
-git clone git@github.com:garisonmike/pos.git
+git clone https://github.com/garisonmike/pos.git
 cd pos
 ```
 
@@ -176,7 +176,11 @@ Until it passes, treat the M-Pesa IP allowlist as not working.
 
 The `backup` service runs nightly at `BACKUP_HOUR` (default 02:00 container
 time) and writes to the `backups` volume: a `pg_dump -Fc` of the database and a
-tarball of the media directory, keeping 7 daily and 4 weekly copies.
+tarball of the media directory, keeping 7 daily and 4 weekly copies. Media
+backup is required by default: if the configured media mount is absent, the
+backup fails instead of publishing a database-only copy. Set
+`MEDIA_BACKUP_REQUIRED=false` only for an installation that intentionally
+stores no uploaded media; such backups print an explicit warning.
 
 The dump is verified as it is taken — an empty file, or one `pg_restore
 --list` cannot parse, is deleted and reported as a failure rather than kept.
@@ -196,8 +200,8 @@ docker compose --env-file .env.production \
 - **The `caddy_data` volume** — TLS certificates and ACME state. Losing it
   means re-issuing, which Let's Encrypt rate-limits.
 - **Off-site copies.** The nightly dump lives on the same disk as the database
-  it came from. A server whose backups live only on itself has no backups. See
-  `input.md`.
+  it came from. A server whose backups live only on itself has no backups.
+  Off-site backup configuration remains an open production task in `tasks.md`.
 
 ---
 
@@ -206,8 +210,12 @@ docker compose --env-file .env.production \
 **A backup nobody has restored is a hope with a filename.**
 
 Run this after the first deployment, and once a quarter afterwards. It restores
-the most recent dump into a scratch database and counts what came back. It
-never touches the live database.
+the most recent dump into a scratch database, checks that core tables are
+queryable, reports their restored row counts as a limited sanity check, and
+extracts the matching media archive into a temporary directory to verify that
+every archived entry can be restored. It never touches the live database or
+media volume. Counts are not compared with live: later edits or deletions can
+make a valid older snapshot smaller, and row counts do not prove completeness.
 
 ```bash
 docker compose --env-file .env.production \
@@ -222,14 +230,6 @@ Dump:   /backups/daily/pos-YYYYMMDD-HHMMSS.dump
 Taken:  ...
 Size:   ...
 
---- Live now (pos) ---
-  tenants_tenant           3
-  accounts_user            11
-  catalog_item             240
-  sales_sale               1876
-  sales_payment            1902
-  compliance_document      412
-
 --- Restored from dump (pos_restore_test) ---
   tenants_tenant           3
   accounts_user            11
@@ -238,16 +238,22 @@ Size:   ...
   sales_payment            1900
   compliance_document      412
 
-Sales:   live 1876, restored 1874
-Tenants: live 3, restored 3
-
-DRILL PASSED. The dump restores and contains the expected tables.
+Rows accounts_user: restored 11 (sanity check only).
+Rows catalog_item: restored 240 (sanity check only).
+Rows sales_sale: restored 1874 (sanity check only).
+Rows sales_payment: restored 1900 (sanity check only).
+Rows compliance_document: restored 412 (sanity check only).
+Media:   archive read and restored (NN entries).
+DRILL PASSED. The dump restores and the matching media archive was read.
+Row counts are limited sanity checks; they do not prove snapshot completeness.
 ```
 
-**What "matching" means here.** The restored copy is expected to be slightly
-*behind* live — the dump was taken hours ago and the shop kept trading. What
-would be wrong is the restored copy having *more* than live, having zero
-tenants, or a table failing to come back at all. The script fails on those.
+**What "matching" means here.** The database dump and media archive share the
+same timestamp and retention directory. The drill verifies that the dump can
+be restored, core tables can be queried, and the archive can be extracted. It
+does not establish that every expected database row or media file is present;
+use an independent backup manifest or recovery review when completeness needs
+to be proven.
 
 ### Restoring for real
 
@@ -309,7 +315,7 @@ docker compose --env-file .env.production \
 ```
 
 A failed backup prints `!!! BACKUP FAILED !!!` to stderr. Nothing watches for
-that yet — alerting is an open item in `input.md`, and until it exists the
+that yet — alerting is an open item in `tasks.md`, and until it exists the
 backup log is something a person has to read.
 
 ---

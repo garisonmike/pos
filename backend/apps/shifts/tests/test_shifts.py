@@ -8,11 +8,16 @@ than argued with, and closing figures that never move afterwards.
 
 from __future__ import annotations
 
+import threading
+import time
+
 import pytest
+from django.db import connections, transaction
 
 from apps.core.models import AuditAction, AuditLog
 from apps.core.tenancy import tenant_context
-from apps.sales.models import Payment, PaymentMethod
+from apps.sales.models import Payment, PaymentMethod, RefundMethod
+from apps.sales.services import CheckoutError, refund_sale
 from apps.shifts.models import (
     CashMovement,
     CashMovementKind,
@@ -52,6 +57,77 @@ def sell(client, item, *, tendered=18000) -> dict:
         },
         format="json",
     ).json()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_refund_waiting_on_shift_close_is_rejected_after_close(
+    client_cashier_a, cashier_a, item_a, stock_a, tenant_a
+):
+    """A close that owns the shift lock must win over a waiting cash refund."""
+    opened = open_drawer(client_cashier_a, float_cents=0)
+    settled = sell(client_cashier_a, item_a)
+    with transaction.atomic(), tenant_context(tenant_a.id):
+        sale = Payment.objects.get(sale_id=settled["id"]).sale
+        shift = Shift.objects.get(pk=opened["id"])
+
+    started = threading.Event()
+    outcome = {}
+
+    def issue_refund():
+        started.set()
+        try:
+            with transaction.atomic(), tenant_context(tenant_a.id):
+                outcome["pid"] = connections["default"].connection.info.backend_pid
+                outcome["pid_ready"] = True
+                refund_sale(
+                    sale=sale,
+                    user=cashier_a,
+                    amount_cents=5000,
+                    reason="Concurrent return",
+                )
+                outcome["result"] = "accepted"
+        except CheckoutError as exc:
+            outcome["result"] = exc.code
+        except Exception as exc:  # pragma: no cover - surfaced in assertion below
+            outcome["result"] = f"{type(exc).__name__}: {exc}"
+        finally:
+            connections.close_all()
+
+    thread = threading.Thread(target=issue_refund)
+    with transaction.atomic(), tenant_context(tenant_a.id):
+        Shift.objects.select_for_update().get(pk=shift.pk)
+        thread.start()
+        assert started.wait(timeout=10)
+        deadline = time.monotonic() + 10
+        while "pid" not in outcome and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert "pid" in outcome, f"refund worker failed before connecting: {outcome}"
+
+        # Wait until PostgreSQL confirms the refund transaction is queued
+        # on the row lock; this makes the race deterministic, not a sleep.
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            with connections["default"].cursor() as cursor:
+                cursor.execute(
+                    "SELECT 1 FROM pg_stat_activity "
+                    "WHERE pid = %s AND wait_event_type = 'Lock'",
+                    [outcome["pid"]],
+                )
+                if cursor.fetchone():
+                    break
+            time.sleep(0.01)
+        else:
+            pytest.fail("refund did not wait for the shift row lock")
+
+        close_shift(
+            shift=shift,
+            declared_closing_cents=18000,
+            closed_by=cashier_a,
+        )
+
+    thread.join(timeout=10)
+    assert not thread.is_alive(), "refund thread did not finish"
+    assert outcome.get("result") == "closed_refund_shift"
 
 
 @pytest.mark.django_db
@@ -215,6 +291,71 @@ class TestWhatTheDrawerShouldHold:
 
         assert position.cash_sales_cents == 18000
         assert position.expected_cents == 118000
+
+    def test_cash_refund_is_counted_once_and_in_the_shift_that_pays_it(
+        self, client_cashier_a, cashier_a, item_a, stock_a, tenant_a
+    ):
+        first = open_drawer(client_cashier_a, float_cents=0)
+        settled = sell(client_cashier_a, item_a)
+        with tenant_context(tenant_a.id):
+            sale = Payment.objects.get(sale_id=settled["id"]).sale
+            first_shift = Shift.objects.get(pk=first["id"])
+            # A second cash row simulates a split tender on the same sale.
+            Payment.objects.create(
+                tenant=tenant_a,
+                sale=sale,
+                method=PaymentMethod.CASH,
+                amount_cents=1000,
+                user=cashier_a,
+                shift=first_shift,
+            )
+
+        client_cashier_a.post(
+            close_url(first), {"declared_closing_cents": 19000}, format="json"
+        )
+        second = open_drawer(client_cashier_a, float_cents=0)
+
+        with tenant_context(tenant_a.id):
+            second_shift = Shift.objects.get(pk=second["id"])
+            refund_sale(
+                sale=sale,
+                user=cashier_a,
+                amount_cents=5000,
+                reason="Returned in the afternoon",
+                method=RefundMethod.CASH,
+            )
+            first_position = drawer_position(Shift.objects.get(pk=first["id"]))
+            second_position = drawer_position(second_shift)
+
+        assert first_position.cash_refunds_cents == 0
+        assert first_position.expected_cents == 19000
+        assert second_position.cash_refunds_cents == 5000
+        assert second_position.expected_cents == -5000
+
+    def test_refund_rechecks_shift_state_after_close(
+        self, client_cashier_a, cashier_a, item_a, stock_a, tenant_a
+    ):
+        opened = open_drawer(client_cashier_a, float_cents=0)
+        settled = sell(client_cashier_a, item_a)
+        with tenant_context(tenant_a.id):
+            sale = Payment.objects.get(sale_id=settled["id"]).sale
+            stale_shift = Shift.objects.get(pk=opened["id"])
+
+        response = client_cashier_a.post(
+            close_url(opened), {"declared_closing_cents": 18000}, format="json"
+        )
+        assert response.status_code == 200
+
+        with tenant_context(tenant_a.id), pytest.raises(CheckoutError) as exc:
+            refund_sale(
+                sale=sale,
+                user=cashier_a,
+                amount_cents=5000,
+                reason="Returned after close",
+                shift=stale_shift,
+            )
+
+        assert exc.value.code == "closed_refund_shift"
 
     def test_cash_paid_in_raises_the_expectation(self, client_cashier_a, store_a):
         opened = open_drawer(client_cashier_a)

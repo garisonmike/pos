@@ -147,6 +147,7 @@ services:
       PGDATABASE: ${POSTGRES_DB}
       BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
       BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+      MEDIA_BACKUP_REQUIRED: ${MEDIA_BACKUP_REQUIRED:-true}
     volumes:
       - backups:/backups
       - media_files:/srv/media:ro

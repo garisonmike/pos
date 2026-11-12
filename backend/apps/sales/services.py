@@ -368,7 +368,7 @@ def _flag_suspicious_quantities(sale: Sale) -> None:
     **This is a compensating control, not a gate.** It does not block the sale
     and asks the cashier for nothing; a person sees it afterwards, the same way
     they see an offline shortfall or a drawer somebody else closed. The real
-    answer is a scale the till reads directly - see input.md - and until that
+    answer is a scale the till reads directly - see the selling-by-weight tasks - and until that
     exists a weight can always be understated.
     """
     floor = getattr(settings, "SUSPICIOUS_QUANTITY_FLOOR_CENTS", 2000)
@@ -500,6 +500,7 @@ def refund_sale(
     method: str = RefundMethod.CASH,
     lines: list[dict] | None = None,
     amount_cents: int | None = None,
+    shift=None,
 ) -> Refund:
     """Give money back, as a new document.
 
@@ -511,6 +512,50 @@ def refund_sale(
     goodwill-style refund that is not tied to particular goods.
     """
     sale = Sale.objects.select_for_update().get(pk=sale.pk)
+
+    # Cash leaves the drawer in which the refund is handed to the customer,
+    # which may be a different shift from the one that took the sale. Attribute
+    # it to the user's currently open drawer. Legacy businesses that do not
+    # use shifts continue to record an unassigned refund.
+    if method == RefundMethod.CASH:
+        from apps.shifts.models import Shift, ShiftState
+        from apps.shifts.services import open_shift_for
+
+        shift = shift or open_shift_for(user)
+        sale_uses_shifts = sale.payments.filter(shift__isnull=False).exists()
+        if sale_uses_shifts and shift is None:
+            raise CheckoutError(
+                "Open a drawer before issuing a cash refund so it is recorded "
+                "against the drawer that pays it.",
+                "shift_required",
+            )
+        if shift is not None:
+            # Closing and refunding serialize on the same shift row. If close
+            # wins, this re-read sees CLOSED and refuses the refund; if the
+            # refund wins, close waits until its ledger row is committed and
+            # includes it in the frozen drawer total.
+            try:
+                shift = Shift.objects.select_for_update().get(pk=shift.pk)
+            except Shift.DoesNotExist as exc:
+                raise CheckoutError(
+                    "The refund drawer no longer exists.", "wrong_refund_shift"
+                ) from exc
+
+        if shift is not None and (
+            shift.tenant_id != sale.tenant_id or shift.store_id != sale.store_id
+        ):
+            raise CheckoutError(
+                "The refund drawer must belong to the same business and store as the sale.",
+                "wrong_refund_shift",
+            )
+        if shift is not None and shift.state != ShiftState.OPEN:
+            raise CheckoutError(
+                "Cash refunds must be issued from an open drawer.",
+                "closed_refund_shift",
+            )
+    else:
+        # An M-Pesa refund does not touch a cash drawer.
+        shift = None
 
     if not reason.strip():
         raise CheckoutError("A refund needs a reason.", "reason_required")
@@ -575,6 +620,7 @@ def refund_sale(
     refund = Refund.objects.create(
         tenant=sale.tenant,
         sale=sale,
+        shift=shift,
         method=method,
         amount_cents=refund_amount,
         reason=reason,

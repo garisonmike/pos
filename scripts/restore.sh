@@ -21,6 +21,12 @@ set -eu
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
 SCRATCH_DB="${SCRATCH_DB:-pos_restore_test}"
+MEDIA_BACKUP_REQUIRED="${MEDIA_BACKUP_REQUIRED:-true}"
+
+if [ "${MEDIA_BACKUP_REQUIRED}" != "true" ] && [ "${MEDIA_BACKUP_REQUIRED}" != "false" ]; then
+    echo "MEDIA_BACKUP_REQUIRED must be true or false (got ${MEDIA_BACKUP_REQUIRED})." >&2
+    exit 2
+fi
 
 mode="${1:-}"
 dump="${2:-}"
@@ -64,47 +70,76 @@ if [ "${mode}" = "--drill" ]; then
     echo "Restoring into scratch database ${SCRATCH_DB}. The live database is not touched."
     echo
 
-    # Counted before the restore, so the comparison is against what is actually
-    # running rather than against a number somebody remembered.
-    report "${PGDATABASE}" "Live now"
-    echo
-
     dropdb --if-exists "${SCRATCH_DB}"
     createdb "${SCRATCH_DB}"
 
     # --no-owner and --no-privileges: the scratch database has no application
     # role, and a drill should not need one created to answer the question it
-    # is asking.
-    if ! pg_restore --dbname="${SCRATCH_DB}" --no-owner --no-privileges "${dump}" 2>&1 | grep -v "^$" | head -20; then
-        echo "pg_restore reported problems - read the output above." >&2
+    # is asking. Capture output to a file so the restore's exit status is not
+    # lost behind grep/head in a pipeline (POSIX sh reports the last command's
+    # status, which could make a failed restore look successful).
+    restore_log="${TMPDIR:-/tmp}/pos-restore-${SCRATCH_DB}-$$.log"
+    if ! pg_restore --dbname="${SCRATCH_DB}" --no-owner --no-privileges "${dump}" >"${restore_log}" 2>&1; then
+        sed -n '1,40p' "${restore_log}" >&2
+        rm -f "${restore_log}"
+        echo "DRILL FAILED: pg_restore could not restore the dump." >&2
+        exit 1
     fi
+    sed -n '1,20p' "${restore_log}"
+    rm -f "${restore_log}"
 
     echo
     report "${SCRATCH_DB}" "Restored from dump"
     echo
 
-    live_sales=$(count_in "${PGDATABASE}" sales_sale)
-    restored_sales=$(count_in "${SCRATCH_DB}" sales_sale)
-    live_tenants=$(count_in "${PGDATABASE}" tenants_tenant)
-    restored_tenants=$(count_in "${SCRATCH_DB}" tenants_tenant)
+    # The current database is not a valid completeness baseline: records may
+    # have been edited or deleted since this older snapshot. Check that core
+    # tables are queryable and report their restored counts as a limited
+    # sanity check only. A successful restore plus these checks is not proof
+    # that every expected row or media file is present.
+    for table in accounts_user catalog_item sales_sale sales_payment compliance_document; do
+        restored_count=$(count_in "${SCRATCH_DB}" "${table}")
+        case "${restored_count}" in
+            *[!0-9]*|"")
+                echo "DRILL FAILED: could not query restored row count for ${table} (got ${restored_count})." >&2
+                exit 1
+                ;;
+        esac
+        echo "Rows ${table}: restored ${restored_count} (sanity check only)."
+    done
 
-    echo "Sales:   live ${live_sales}, restored ${restored_sales}"
-    echo "Tenants: live ${live_tenants}, restored ${restored_tenants}"
-    echo
-
-    # The restored copy is expected to be *behind* live, not equal to it: the
-    # dump was taken hours ago and trading continued. What would be wrong is
-    # the restore having more than live, or having nothing at all.
-    if [ "${restored_tenants}" = "0" ] || [ "${restored_tenants}" = "n/a" ]; then
-        echo "DRILL FAILED: the restored database has no tenants." >&2
+    stamp=${dump##*/pos-}
+    stamp=${stamp%.dump}
+    dump_dir=${dump%/*}
+    [ "${dump_dir}" = "${dump}" ] && dump_dir=.
+    media_archive="${dump_dir}/media-${stamp}.tar.gz"
+    if [ -f "${media_archive}" ]; then
+        media_drill_dir=$(mktemp -d "${TMPDIR:-/tmp}/pos-media-drill.XXXXXX")
+        if ! tar -tzf "${media_archive}" >/dev/null 2>&1 || \
+            ! tar -xzf "${media_archive}" -C "${media_drill_dir}"; then
+            rm -rf "${media_drill_dir}"
+            echo "DRILL FAILED: media archive could not be read and extracted." >&2
+            exit 1
+        fi
+        archive_entries=$(tar -tzf "${media_archive}" | wc -l | tr -d ' ')
+        restored_entries=$(find "${media_drill_dir}" -mindepth 1 | wc -l | tr -d ' ')
+        expected_entries=$((archive_entries - 1)) # tar's root entry is '.'
+        if [ "${restored_entries}" != "${expected_entries}" ]; then
+            rm -rf "${media_drill_dir}"
+            echo "DRILL FAILED: media archive contains ${expected_entries} entries but ${restored_entries} were restored." >&2
+            exit 1
+        fi
+        rm -rf "${media_drill_dir}"
+        echo "Media:   archive read and restored (${restored_entries} entries)."
+    elif [ "${MEDIA_BACKUP_REQUIRED}" = "true" ]; then
+        echo "DRILL FAILED: required media archive ${media_archive} is missing." >&2
         exit 1
-    fi
-    if [ "${restored_sales}" = "n/a" ]; then
-        echo "DRILL FAILED: the sales table did not come back." >&2
-        exit 1
+    else
+        echo "WARNING: no media archive accompanies this database dump; media backup is configured as optional." >&2
     fi
 
-    echo "DRILL PASSED. The dump restores and contains the expected tables."
+    echo "DRILL PASSED. The dump restores and the matching media archive was read."
+    echo "Row counts are limited sanity checks; they do not prove snapshot completeness."
     echo "Scratch database ${SCRATCH_DB} left in place for inspection; it is"
     echo "dropped and recreated on the next drill."
     exit 0

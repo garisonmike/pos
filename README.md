@@ -9,31 +9,38 @@ It is built for the hardware and the connectivity that small retailers really
 have: an Android phone or tablet as the till, mobile data that drops out, and
 M-Pesa alongside cash.
 
-**Supported business types**
+**Business types**
 
-| Type | What it adds |
+| Type | Current status |
 |---|---|
-| Retail shop | Barcode or search checkout with stock tracking. The default. |
-| Restaurant or bar | Orders held against a table, item modifiers, kitchen tickets. |
-| Salon or services | Services with a duration and assigned staff, booked in advance. |
-| Pharmacy | Retail plus batch numbers, expiry dates and expiry alerts. |
+| Retail shop | Available: barcode or search checkout with stock tracking. |
+| Restaurant or bar | Orders, modifiers and kitchen tickets are available through the API; the till order-taking screen is not built. |
+| Salon or services | Planned: appointments, service duration and staff scheduling are not implemented. |
+| Pharmacy | Planned: batch tracking and expiry controls are not implemented. |
 
-These are not four products. They are one product with different optional
-modules switched on, sharing the same tenant, item and sale models. See
-[ARCHITECTURE.md](ARCHITECTURE.md) for how that is kept true.
+The tenant and catalogue foundations are shared. A business-type template does
+not mean every workflow for that trade is ready. See [tasks.md](tasks.md) for
+the implementation status and [ARCHITECTURE.md](ARCHITECTURE.md) for the
+module boundaries.
 
 ---
 
 ## Current state
 
-Milestones 1 and 2 are complete: tenant isolation, authentication, the platform
-console, the catalogue, stock, CSV import, and an Android till that signs in and
-browses.
+The available retail workflow includes tenant isolation, authentication, the
+platform console, catalogue and stock management, CSV import, an Android till,
+cash checkout, offline cash sales and sync, receipts, shifts, and reporting.
 
-Milestones 3 to 6 are complete. A shop can ring up a sale, take cash or M-Pesa,
-hand over a receipt, keep trading with no connection, reconcile its drawer at
-the end of the day, issue a proper invoice, read its own takings, and run table
-service:
+The core sale and reporting work is in place. A shop can ring up a sale, take
+cash or M-Pesa, hand over a receipt, keep recording cash sales with no
+connection, reconcile its drawer, issue an invoice document, and read its own
+takings. Restaurant orders can be managed through the API; the till order-taking
+screen remains unfinished:
+
+> **Production status:** This project is not yet ready for live shops. Offline
+> till-data protection and lost-device recovery, encrypted off-site backups,
+> and failure/uptime monitoring remain open. The invoice export is manual and
+> is not a certified eTIMS integration.
 
 - **Selling.** Cart arithmetic in integer cents, a sale state machine where a
   paid sale cannot be voided, and cash checkout with a manager-authorised
@@ -58,10 +65,10 @@ customer wanting a proper invoice, or the tax authority:
   unregistered one still gets a document — it just does not consume an invoice
   number.
 - **The adapter boundary.** Fiscalisation sits behind one interface with a
-  manual export behind it, so connecting a real KRA device later is writing one
-  adapter rather than reworking how sales are recorded. An unrecognised mode
-  falls back to doing nothing and leaves a visible flag rather than failing
-  quietly.
+  manual export behind it. There is no live OSCU/VSCU integration or KRA
+  certification in this repository; the manual export is not a claim of
+  eTIMS certification. An unrecognised mode leaves a visible flag rather than
+  failing quietly.
 
 Milestone 5 is about a shop owner knowing what happened without counting
 anything by hand:
@@ -91,13 +98,12 @@ Milestone 6 adds restaurant service on top of the same sale engine:
   authority, records which lines had been sent, and leaves a trail whether it
   is allowed or refused.
 - *Server-side only so far* - orders, tickets and voids are complete and tested
-  through the API, but there is no order-taking screen on the till yet, and
-  order-taking needs a connection. The same is true of opening and closing a
-  shift, and of cash in and out of the drawer: the API is there, the screen is
-  not.
+  through the API, but there is no order-taking screen on the till yet.
+  Restaurant order-taking needs a connection.
 
-See [tasks.md](tasks.md) for what is done and what is next, and
-[progress.md](progress.md) for a dated log of decisions.
+Salon scheduling and pharmacy batch/expiry workflows are planned, not available.
+See [tasks.md](tasks.md) for implementation status and [progress.md](progress.md)
+for a dated log of decisions.
 
 ---
 
@@ -108,7 +114,7 @@ Postgres, no virtualenv. Postgres runs in a container, and the API runs in a
 container alongside it.
 
 ```bash
-git clone git@github.com:garisonmike/pos.git
+git clone https://github.com/garisonmike/pos.git
 cd pos
 cp .env.example .env
 docker compose up
@@ -223,7 +229,9 @@ Valid rows still import — a file is rarely wrong all the way through.
 ## Running the app
 
 The Flutter till lives in [mobile/](mobile/). It signs in, browses the
-catalogue, and carries the offline outbox; the selling screens are next.
+catalogue, rings up cash sales, prints receipts, syncs offline sales, and
+includes shift and reporting screens. Restaurant orders can be managed through
+the API, but the till does not yet have an order-taking screen.
 
 ```bash
 cd mobile
@@ -413,3 +421,9 @@ psql -h localhost -p 5433 -U pos_admin -d pos
   Start with "Tenant isolation" if you only read one thing.
 - [tasks.md](tasks.md) — what is built and what is next.
 - [progress.md](progress.md) — dated decisions, newest first.
+
+## License
+
+This project is available under the MIT License. Keep the copyright and
+permission notice with copies or substantial portions of the software; see
+[LICENSE](LICENSE).

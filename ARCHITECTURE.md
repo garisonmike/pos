@@ -514,8 +514,8 @@ in plaintext exactly once at registration.
 
 **PIN sign-in is bounded in total, not just in rate.** A rate limit caps how
 *fast* attempts arrive; it does not cap how *many*. Against a four-digit space,
-a patient attacker holding a stolen till simply works within the limit. So there
-is a lockout as well: five consecutive failures and that till is refused for
+a persistent attacker can work within a rate limit over time. So there is a
+lockout as well: five consecutive failures and that till is refused for
 fifteen minutes, however slowly the attempts came in, and the correct PIN does
 not help while it lasts.
 
@@ -621,7 +621,7 @@ Five drift/SQLite tables, in `mobile/lib/data/outbox/database.dart`:
 | `pin_attempts` | The offline lockout counter, and the refusals waiting to be sent home. See below. |
 | `sync_cursor` | The `server_time` the last catalogue download returned, stored as the exact string the server sent. |
 | `catalog_cache` | The price list, flattened for pricing a cart with nothing to ask. |
-| `staff_cache` | Staff, with `pin_version` and — for managers only — `pin_hash`. |
+| `staff_cache` | Staff and the versioned credential material required for offline approval. |
 
 ### Catalogue pull
 
@@ -840,21 +840,18 @@ stock movement. With VAT-inclusive pricing that is most sales.
 `initiate_stk` had been adding the adjustment back by hand at its own call site,
 which is what a missing concept looks like from the inside.
 
-### Open: a stolen till is a stolen manager PIN
+### Open: offline approval credential protection
 
-`GET /sync/catalog/` sends `pin_hash` down so an offline check has something to
-verify against. It is sent **only for users who can actually authorise** — a
-cashier's hash is never downloaded, because no offline check would consult it.
+Offline discount approval currently depends on credential material cached on
+the till. The till database is not encrypted, and lost-device recovery that
+preserves unsynced sales is not implemented. Treat this as an unresolved
+security limitation; do not deploy with sensitive shop data until it is
+addressed.
 
-The cost is real and worth stating plainly: a PIN is four to six digits, so a
-hash of one is brute-forceable by anyone holding the tablet, and that same PIN
-works online. Approving anything offline against a short secret has this shape
-inherently — a local check needs a local verifier.
-
-The stronger fix, deferred: a **separate offline approval code**, versioned the
-same way, revocable on its own and useless for signing in. Then a stolen till
-gives up only the thing that can be rotated without touching anyone's sign-in.
-Not built yet; recorded here so it is not discovered later as a surprise.
+The planned direction is a separate offline approval credential that can be
+revoked independently of sign-in, together with protected local storage and a
+recovery process for unsynced sales. See the implementation checklist for the
+remaining work.
 
 ### What the till claimed it came to
 

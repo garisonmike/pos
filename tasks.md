@@ -280,8 +280,8 @@ rather than planned up front.
 - [x] A refusal is distinguished from a failure to reach the server: one is kept for a person, the other is retried
 
 ### Account management
-- [ ] **Separate offline approval code, replacing the cached PIN hash** *(from the offline-sync finding: `GET /sync/catalog/` sends a manager's `pin_hash` to the till so an offline check has something to verify against. A PIN is four to six digits, so that hash is brute-forceable by anyone holding the tablet — and the same PIN signs in. A stolen till is a stolen manager PIN.)*
-  - [ ] `offline_approval_hash` and `offline_approval_version` on `User`, replacing `pin_hash` in the catalogue download
+- [ ] **Protect offline approval credentials and local till data** *(offline approval currently leaves credential material on an unencrypted device; lost-device recovery must preserve unsynced sales)*
+  - [ ] Add a separate, revocable offline approval credential, replacing the cached sign-in verifier
   - [ ] Set and rotate it independently of the sign-in PIN, so revoking it does not lock anyone out of the till
   - [ ] Rotate on staff departure without touching their password or PIN
   - [ ] Till screen for entering it, distinct from PIN entry so the two are never confused
@@ -329,11 +329,12 @@ rather than planned up front.
 - [x] Redis `noeviction` *(the default `allkeys-lru` would discard a PIN-lockout counter under memory pressure, silently unlocking a till)*
 - [x] `backup.sh` — nightly dump, verified with `pg_restore --list` before it is kept, 7 daily / 4 weekly
 - [x] `restore.sh` — `--drill` into a scratch database, `--live` gated behind an explicit variable
+- [x] Restore drill preserves `pg_restore`'s exit status; failed DB/media archives cannot be published as completed backups
 - [x] **The drill has actually been run**, against a real dump, with matching row counts
 - [x] `DEPLOYMENT.md` — full procedure, the proxy verification, the drill, and what the backup deliberately does not cover
 - [x] `.env.production.example` — every variable, with what it is for
-- [ ] Off-site backup target *(needs an account — in input.md)*
-- [ ] Uptime and backup-failure alerting *(in input.md)*
+- [ ] Off-site backup target *(requires a deployment storage account and credentials)*
+- [ ] Uptime and backup-failure alerting *(requires an operational monitoring destination)*
 
 ## CI · [#7](https://github.com/garisonmike/pos/issues/7)
 
@@ -406,6 +407,7 @@ rather than planned up front.
 - [x] Cashier rates rendered with their denominators and the server's note
 - [x] The close screen shows no expected figure until the count is committed
 - [x] 32 client tests for the two surfaces
+- [x] Drawer reconciliation counts cash refunds once per sale, including split-tender sales
 
 ## Milestone 6 — Restaurant module · [#6](https://github.com/garisonmike/pos/issues/6)
 
@@ -449,7 +451,7 @@ rather than planned up front.
 
 ## Cross-cutting, not yet scheduled
 
-- [ ] Flutter application scaffold *(nothing built yet; milestone 1 is backend only)*
+- [x] Flutter till: sign-in, catalogue, cash checkout, offline outbox, receipts, shift screens, and reports
 - [x] Rate limiting on sign-in endpoints, especially PIN sign-in *(discovered while building PIN auth: a 4-digit PIN with a valid device token is brute-forceable without throttling)*
   - [x] **The limit did not work.** DRF resolves the client address through its own `NUM_PROXIES`, not this project's `TRUSTED_PROXY_HOPS`; unset, it used the whole `X-Forwarded-For` header as the throttle key, so changing one header per request bought a fresh allowance every time
   - [x] Measured before the fix: twelve attempts against a five-per-minute limit gave seven 429s from a fixed address and **zero** when the header varied
@@ -467,6 +469,9 @@ rather than planned up front.
   - [x] **Caught while building:** the move made a wrong password distinguishable from an unknown business slug by response shape — an enumeration oracle, now pinned by a mutation
   - [x] 21 tests, all six named mutations killed
 - [x] CI pipeline running the test suite on every push *(see the CI section above)*
-- [ ] Production deployment: Redis for the tenant status cache, static and media serving, TLS
-- [ ] Backup and restore procedure, including a documented per-tenant export
+- [x] Production deployment: Redis, static/media serving, TLS, and a restore drill
+- [ ] Encrypted off-site backups and failure alerts
+- [ ] Full per-tenant data export and documented customer exit process
+- [ ] Protect the offline till database and define lost-device recovery without deleting unsynced sales
+- [ ] Operational uptime alerts, support contact, and outage communications process
 - [ ] Structured request logging with the tenant attached

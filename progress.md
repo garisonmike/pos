@@ -5,6 +5,26 @@ made and why, and anything I need to come back to.
 
 ---
 
+## 2026-11-12 — Drawer refund reconciliation and app documentation
+
+- Fixed `drawer_position` counting each cash refund once per sale rather than
+  once per cash payment row. The distinct sale-id subquery also avoids a query
+  per payment and prevents join multiplication.
+- Hardened backup verification: partial DB dumps use a `.partial` path,
+  database and media archives are validated before the database dump is
+  published, and the restore drill now checks `pg_restore`'s actual status
+  instead of the final output filter's status.
+- Corrected the root README to show which business workflows are actually
+  available, clarify that eTIMS is not certified/integrated, and distinguish
+  the existing shift screens from the missing restaurant order screen.
+- Replaced the generated Flutter README, and reconciled stale roadmap entries
+  with the implemented app and remaining operational work.
+- Kept offline credential protection, encrypted local storage, and lost-device
+  recovery listed as unresolved security work; these require implementation,
+  not a documentation-only change.
+- Recorded the implementation and documentation changes in `CHANGELOG.md` and
+  `tasks.md`.
+
 ## 2026-08-17 — Password sign-in gets a backoff, and the stranding check that shaped it
 
 **Worked on:** closing the asymmetry left after the throttle fix. PIN sign-in
@@ -211,8 +231,7 @@ that turns out to be sensitive to those was passing for a reason nobody chose.
 ## 2026-08-16 — Production deployment, the implementation half
 
 **Worked on:** everything in the deployment plan marked pure implementation.
-The rest is Spiderman's, and is now six concrete items in `input.md` rather
-than one vague entry.
+The remaining items require deployment accounts, hardware, or operator choices.
 
 **Finished:** `docker-compose.prod.yml`, `config/settings/production.py`, the
 Caddyfile, `backup.sh` and `restore.sh`, `DEPLOYMENT.md`, and
@@ -270,8 +289,8 @@ exactly how somebody would first try to run one by hand. It now execs a passed
 command and only falls through to the schedule loop when given none.
 
 **Come back to:** CI, an off-site backup target, and alerting. The last two
-need accounts and are in `input.md`; CI is unscheduled and worth doing before
-the suite grows past thirty minutes.
+need deployment-specific accounts; CI is unscheduled and worth doing before the
+suite grows past thirty minutes.
 
 ---
 
@@ -383,7 +402,7 @@ cheap sweet would bury the signal within a day. And a test pins that an ordinary
 200g purchase never trips it, because a shop warned about normal sales stops
 reading warnings.
 
-I have been plain in `input.md` and in ARCHITECTURE.md that this is compensating
+I have been plain in ARCHITECTURE.md that this is a compensating
 control. It catches the fraud after the fact and a determined person learns the
 threshold. The real fix is a scale the till reads directly, so the quantity is
 observed rather than asserted - added to the input list as hardware to evaluate,
@@ -445,15 +464,12 @@ screen drives yet. Not urgent - it is the least-used drawer action.
 
 ## 2026-08-15 — Reporting, and the drawer tie-out
 
-**Worked on:** milestone 5, and `input.md`.
+**Worked on:** milestone 5 and deployment planning.
 
-**Started `input.md`**, gitignored. Everything that needs my own account, my own
-credential, my own device, or a real-world judgement call - Daraja production
-approval per client, the trusted-proxy hop count, checking the KRA PIN shape
-against a real one, the offline-invoice position needing an accountant, the
-unscheduled production infrastructure, and the printer and scanner that have
-never been tested against real hardware. Same discipline as this log: things go
-in when they surface, not at the end.
+**Recorded deployment dependencies:** production Daraja approval, the trusted
+proxy hop count, KRA invoice review, infrastructure choices, and testing with
+real printers and scanners all require deployment-specific credentials or
+hardware and cannot be proven by repository tests alone.
 
 **Finished:** the period layer, the query layer, five reports, CSV and PDF
 export, the platform trading summary, and the drawer tie-out.
@@ -680,10 +696,8 @@ no cashier screen for opening or closing a drawer - a shop would have to drive
 it through the API, which is not a shop feature. Recorded in the CHANGELOG's
 known limitations and in tasks.md rather than left to be discovered.
 
-**Come back to:** those screens, and the offline approval code tracked under
-account management. The latter is the one real security gap this milestone
-leaves open, and it wants its own credential surface rather than being bolted
-onto sync.
+**Come back to:** those screens, and the independent offline approval
+credential tracked under account management.
 
 ---
 
@@ -841,18 +855,10 @@ Rounding is now part of `LedgerPosition`, settlement is decided against
 `collectable_cents = total + rounding - written_off`, and the local patch is
 gone. Four regression tests in the cash-checkout suite.
 
-**2. A stolen till is a stolen manager PIN.** `GET /sync/catalog/` sends `pin_hash` down so an offline check has something to
-verify against — managers only, never cashiers. But a PIN is four to six
-digits, so a hash of one is brute-forceable by anyone holding the tablet, and
-that same PIN works online. A stolen till is, in practice, a stolen manager
-PIN. This is inherent to approving anything offline against a short secret.
-
-The fix I want, and did not build here: a **separate offline approval code**,
-versioned the same way, revocable on its own and useless for signing in. Then a
-stolen till gives up only the thing that can be rotated without touching
-anyone's sign-in. It needs its own credential-management surface — setting it,
-rotating it, a screen for it — which is account management rather than sync, so
-I have recorded it in ARCHITECTURE.md as open rather than widening this piece.
+**2. Offline credential protection remains open.** Offline approval relies on
+credential material cached on the till, whose local database is not encrypted.
+The planned work is a separate revocable approval credential, protected local
+storage, and lost-device recovery that preserves unsynced sales.
 
 **Come back to:** ESC/POS printing, wiring the drift queue to a real cart and
 checkout screen, the two-devices-sell-the-last-unit test, and shift open/close.

@@ -436,6 +436,17 @@ class Refund(TenantOwnedModel, UUIDModel, TimeStampedModel):
     """
 
     sale = models.ForeignKey(Sale, on_delete=models.PROTECT, related_name="refunds")
+    shift = models.ForeignKey(
+        "shifts.Shift",
+        on_delete=models.PROTECT,
+        related_name="refunds",
+        null=True,
+        blank=True,
+        help_text=(
+            "The drawer that issued a cash refund. Null for refunds outside a "
+            "shift-managed cash drawer, including M-Pesa refunds."
+        ),
+    )
     method = models.CharField(max_length=16, choices=RefundMethod.choices)
     amount_cents = models.BigIntegerField()
 

@@ -5,6 +5,32 @@ milestone.
 
 ---
 
+## [Unreleased] — 2026-11-12
+
+### Fixed
+
+- Shift drawer reconciliation now counts cash refunds once per sale, even when
+  a split tender created multiple cash payment rows for that sale. Cash refunds
+  now belong to the open shift that paid them, including when it differs from
+  the original sale's shift; unambiguous historical refunds are backfilled.
+- Backup and restore scripts no longer hide failed work: the restore drill
+  checks `pg_restore`'s real exit status, database dumps are published only
+  after verification, required media mounts must exist, and the drill extracts
+  the matching media archive. Core restored row counts are reported as limited
+  sanity checks and are not compared with mutable live data.
+
+### Documentation
+
+- Corrected the root README to describe the checkout, offline sync, shift, and
+  reporting screens already in the Flutter till; it now marks restaurant
+  till-ordering, salon, and pharmacy work as incomplete, and clarifies that the
+  manual invoice export is not eTIMS certification.
+- Replaced the generated Flutter starter README with project-specific setup,
+  API address, and current feature notes.
+- Updated the roadmap to distinguish completed deployment safeguards from the
+  remaining off-site backup, alerting, local-data protection, and tenant export
+  work.
+
 ## [0.3.0] — 2026-08-14 — Milestone 3: selling, payments, receipts, offline and the drawer
 
 A shop can now trade. Ring up a sale, take cash or M-Pesa, hand over a receipt,
@@ -87,11 +113,10 @@ keep selling when the network drops, and count the drawer at the end of the day.
 
 ### Known limitations
 
-- **A stolen till is a stolen manager PIN.** The catalogue download sends a
-  manager's PIN hash so an offline discount check has something to verify
-  against. Four to six digits is brute-forceable by anyone holding the tablet,
-  and the same PIN signs in. Tracked under account management: a separate
-  offline approval code, revocable on its own.
+- Offline discount approval depends on credential material cached on the till.
+  The local database is not encrypted, and lost-device recovery is not
+  implemented. Treat this as a deployment blocker until local data protection,
+  independent revocation, and recovery are addressed.
 - The `pin_version` fingerprint catches staleness and revocation. It does not
   prove the device performed the check — anyone who can edit the till's database
   can read the version it holds.

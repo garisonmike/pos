@@ -57,8 +57,8 @@ jobs:
         working-directory: mobile
         run: flutter pub get
 
-      # Unsigned. This asks whether it compiles, not whether it is shippable -
-      # signing keys are Spiderman's to hold and are not in this repository.
+      # Unsigned. This asks whether it compiles, not whether it is shippable;
+      # release signing keys are maintained outside this repository.
       - name: Build
         working-directory: mobile
         run: flutter build ${{ matrix.target }} --release

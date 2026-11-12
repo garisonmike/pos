@@ -1,7 +1,9 @@
 # Environment
 .env
+.env.*
 *.env
 !.env.example
+!.env.production.example
 
 # Python
 __pycache__/
@@ -44,7 +46,8 @@ htmlcov/
 /mobile/android/local.properties
 /mobile/.flutter-plugins*
 
-# My own action-item list: credentials to obtain, hardware to test, judgement
-# calls that need a real-world answer. Not project documentation, and some of it
-# names what is not yet hardened - it stays local.
+# Local-only review and deployment notes. They may contain private operational
+# details and are not part of the public project documentation.
 /input.md
+/POS_RESEARCH.md
+/REVIEW.md

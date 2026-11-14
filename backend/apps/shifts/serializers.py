@@ -77,6 +77,7 @@ class CloseShiftSerializer(serializers.Serializer):
 class CashMovementSerializer(serializers.Serializer):
     """Money in or out of the drawer for something that is not a sale."""
 
+    client_uuid = serializers.UUIDField(required=False)
     kind = serializers.ChoiceField(choices=CashMovementKind.choices)
     amount_cents = serializers.IntegerField(min_value=1)
     reason = serializers.CharField(
@@ -90,7 +91,15 @@ class CashMovementReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CashMovement
-        fields = ("id", "kind", "amount_cents", "reason", "recorded_by", "created_at")
+        fields = (
+            "id",
+            "client_uuid",
+            "kind",
+            "amount_cents",
+            "reason",
+            "recorded_by",
+            "created_at",
+        )
         read_only_fields = fields
 
 

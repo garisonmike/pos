@@ -162,7 +162,7 @@ class TableSerializer(serializers.ModelSerializer):
         live = [order for order in obj.orders.all() if order.is_live]
         return live[0] if live else None
 
-    def get_open_order_id(self, obj: Table):
+    def get_open_order_id(self, obj: Table) -> str | None:
         order = self._live(obj)
         return str(order.id) if order else None
 

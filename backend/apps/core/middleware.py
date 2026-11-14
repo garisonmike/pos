@@ -31,6 +31,7 @@ next request to reuse the same pooled connection.
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 
 from django.conf import settings
@@ -44,6 +45,14 @@ logger = logging.getLogger(__name__)
 
 #: Cache key prefix for the per-tenant status lookup.
 _STATUS_CACHE_PREFIX = "tenant-status:"
+_MPESA_CALLBACK_PATH = "/api/v1/payments/mpesa/callback/"
+
+
+def _safe_request_path(path: str) -> str:
+    """Remove route credentials before writing a request path to logs."""
+    if path.startswith(_MPESA_CALLBACK_PATH):
+        return f"{_MPESA_CALLBACK_PATH}[redacted]/"
+    return path
 
 
 class TenantBindingMiddleware:
@@ -60,6 +69,10 @@ class TenantBindingMiddleware:
                 return self.get_response(request)
 
         tenant_id = self._tenant_id_from_token(request)
+        # Request logging runs outside this middleware and reads this only
+        # after the response has returned. Never derive it from a request
+        # header or a path parameter.
+        request.tenant_id_for_log = str(tenant_id) if tenant_id is not None else None
 
         if tenant_id is not None:
             refusal = self._refuse_if_inactive(tenant_id)
@@ -169,3 +182,37 @@ def clear_tenant_status_cache(tenant_id) -> None:
     window they configured for everyone else's benefit.
     """
     cache.delete(f"{_STATUS_CACHE_PREFIX}{tenant_id}")
+
+
+class RequestLogMiddleware:
+    """Emit one structured, credential-free event for every completed request."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request_id = str(uuid.uuid4())
+        started = time.perf_counter()
+        response = None
+        try:
+            response = self.get_response(request)
+            return response
+        finally:
+            status_code = getattr(response, "status_code", 500)
+            if response is not None:
+                response["X-Request-ID"] = request_id
+            logger.log(
+                logging.ERROR if status_code >= 500 else logging.INFO,
+                "http_request_completed",
+                extra={
+                    "request_event": True,
+                    "request_id": request_id,
+                    "method": request.method,
+                    # Query parameters and the M-Pesa callback path credential
+                    # are removed so a bearer-like URL token cannot enter logs.
+                    "path": _safe_request_path(request.path_info),
+                    "status_code": status_code,
+                    "tenant_id": getattr(request, "tenant_id_for_log", None),
+                    "duration_ms": round((time.perf_counter() - started) * 1000, 2),
+                },
+            )

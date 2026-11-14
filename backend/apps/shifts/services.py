@@ -300,6 +300,7 @@ def close_shift(
 def record_cash_movement(
     *,
     shift: Shift,
+    client_uuid=None,
     kind: str,
     amount_cents: int,
     reason: str,
@@ -307,6 +308,25 @@ def record_cash_movement(
     request=None,
 ) -> CashMovement:
     """Money crossing the drawer for something that is not a sale."""
+    if client_uuid is not None:
+        existing = CashMovement.objects.filter(
+            tenant=shift.tenant,
+            client_uuid=client_uuid,
+        ).first()
+        if existing is not None:
+            same_request = (
+                existing.shift_id == shift.id
+                and existing.kind == kind
+                and existing.amount_cents == amount_cents
+                and existing.reason == reason
+            )
+            if not same_request:
+                raise ShiftError(
+                    "That cash movement identifier was already used for different details.",
+                    "idempotency_conflict",
+                )
+            return existing
+
     if shift.state != ShiftState.OPEN:
         raise ShiftError(
             "That drawer is closed. Cash cannot be moved through it.",
@@ -322,6 +342,7 @@ def record_cash_movement(
     movement = CashMovement.objects.create(
         tenant=shift.tenant,
         shift=shift,
+        client_uuid=client_uuid,
         kind=kind,
         amount_cents=amount_cents,
         reason=reason,

@@ -33,6 +33,7 @@ class TestFieldNamesTreatedAsSensitive:
             "current_password",
             "pin",
             "pin_hash",
+            "offline_approval_hash",
             "token",
             "device_token",
             "access_token",

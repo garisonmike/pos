@@ -20,6 +20,7 @@ from apps.sales.models import Sale, SaleDiscrepancy
 from apps.sync.tests.test_sale_sync import SYNC, batch, offline_sale
 
 CATALOG = "/api/v1/sync/catalog/"
+STAFF = "/api/v1/sync/staff/"
 
 
 @pytest.fixture
@@ -193,42 +194,62 @@ class TestTheCatalogueDownloadStaysInsideOneBusiness:
 
 @pytest.mark.django_db
 class TestWhatTheCatalogueSendsDown:
-    def test_a_managers_pin_hash_is_sent_so_an_offline_check_can_run(
+    def test_dedicated_staff_refresh_is_authenticated_and_never_sends_pin_hash(
+        self, client_cashier_a, anon_client, manager_a
+    ):
+        with tenant_context(manager_a.tenant_id):
+            manager_a.set_pin("7788")
+            manager_a.rotate_offline_approval_code()
+            manager_a.save()
+
+        response = client_cashier_a.get(STAFF)
+        assert response.status_code == 200
+        rows = {row["username"]: row for row in response.json()["staff"]}
+        assert rows["mngr"]["offline_approval_hash"]
+        assert "pin_hash" not in rows["mngr"]
+        assert anon_client.get(STAFF).status_code == 401
+
+    def test_an_enrolled_managers_offline_verifier_is_sent_but_not_pin_hash(
         self, client_cashier_a, manager_a
     ):
         with tenant_context(manager_a.tenant_id):
             manager_a.set_pin("7788")
+            manager_a.rotate_offline_approval_code()
             manager_a.save()
 
         rows = {row["username"]: row for row in client_cashier_a.get(CATALOG).json()["staff"]}
 
-        assert rows["mngr"]["pin_hash"]
-        assert rows["mngr"]["pin_version"] == 1
+        assert rows["mngr"]["offline_approval_hash"]
+        assert rows["mngr"]["offline_approval_version"] == 1
+        assert "pin_hash" not in rows["mngr"]
 
-    def test_a_cashiers_pin_hash_is_never_sent(self, client_cashier_a, cashier_a):
-        """No offline check would ever consult it, so downloading it would
-        widen what a stolen tablet gives up for nothing in return."""
+    def test_a_cashiers_pin_or_approval_verifier_is_never_sent(
+        self, client_cashier_a, cashier_a
+    ):
+        """Cashiers cannot authorize discounts, so neither verifier is sent."""
         rows = {row["username"]: row for row in client_cashier_a.get(CATALOG).json()["staff"]}
 
-        assert rows["mary"]["pin_hash"] == ""
-        # The version still travels, because it costs nothing and keeps the
-        # shape of every row the same.
-        assert "pin_version" in rows["mary"]
+        assert rows["mary"]["offline_approval_hash"] == ""
+        assert "pin_hash" not in rows["mary"]
+        assert "offline_approval_version" in rows["mary"]
 
-    def test_the_pin_version_moves_when_the_pin_does(
+    def test_offline_approval_version_moves_when_its_code_rotates(
         self, client_cashier_a, manager_a
     ):
         with tenant_context(manager_a.tenant_id):
-            manager_a.set_pin("7788")
+            manager_a.rotate_offline_approval_code()
             manager_a.save()
         before = {r["username"]: r for r in client_cashier_a.get(CATALOG).json()["staff"]}
 
         with tenant_context(manager_a.tenant_id):
-            manager_a.set_pin("1122")
+            manager_a.rotate_offline_approval_code()
             manager_a.save()
         after = {r["username"]: r for r in client_cashier_a.get(CATALOG).json()["staff"]}
 
-        assert after["mngr"]["pin_version"] == before["mngr"]["pin_version"] + 1
+        assert (
+            after["mngr"]["offline_approval_version"]
+            == before["mngr"]["offline_approval_version"] + 1
+        )
 
     def test_an_items_tax_travels_flattened_for_offline_pricing(
         self, client_cashier_a, item_a, tax_rate_a

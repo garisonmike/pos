@@ -24,6 +24,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     role_label = serializers.CharField(read_only=True)
     has_pin = serializers.SerializerMethodField()
+    has_offline_approval = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -38,6 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
             "store",
             "is_active",
             "has_pin",
+            "has_offline_approval",
             "last_login",
             "created_at",
         )
@@ -46,6 +48,10 @@ class UserSerializer(serializers.ModelSerializer):
     def get_has_pin(self, obj: User) -> bool:
         """Whether fast till sign-in is set up, without revealing the PIN itself."""
         return bool(obj.pin_hash)
+
+    def get_has_offline_approval(self, obj: User) -> bool:
+        """Whether a separate offline discount code has been provisioned."""
+        return bool(obj.offline_approval_hash)
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

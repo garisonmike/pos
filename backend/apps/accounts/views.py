@@ -8,6 +8,7 @@ that forgets to declare permissions is closed rather than open.
 
 from __future__ import annotations
 
+from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
@@ -21,6 +22,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.accounts import backoff, lockout, services
+from apps.accounts.constants import UserRole, role_rank
 from apps.accounts.models import Device, User, hash_device_token
 from apps.accounts.serializers import (
     ChangePasswordSerializer,
@@ -592,8 +594,10 @@ class UserViewSet(viewsets.ModelViewSet):
         request=UserSerializer,
         responses={200: UserSerializer},
     )
+    @transaction.atomic
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
+        previous_role = instance.role
         before = {
             "role": instance.role,
             "full_name": instance.full_name,
@@ -601,6 +605,20 @@ class UserViewSet(viewsets.ModelViewSet):
         }
         response = super().partial_update(request, *args, **kwargs)
         instance.refresh_from_db()
+        if (
+            role_rank(previous_role) >= role_rank(UserRole.MANAGER)
+            and not instance.has_role_at_least(UserRole.MANAGER)
+            and instance.offline_approval_hash
+        ):
+            instance.clear_offline_approval_code()
+            instance.save(
+                update_fields=[
+                    "offline_approval_hash",
+                    "offline_approval_version",
+                    "updated_at",
+                ]
+            )
+        response.data["has_offline_approval"] = bool(instance.offline_approval_hash)
 
         record_audit(
             action=AuditAction.UPDATE,
@@ -641,7 +659,17 @@ class UserViewSet(viewsets.ModelViewSet):
 
         user.is_active = False
         user.clear_pin()
-        user.save(update_fields=["is_active", "pin_hash", "updated_at"])
+        user.clear_offline_approval_code()
+        user.save(
+            update_fields=[
+                "is_active",
+                "pin_hash",
+                "pin_version",
+                "offline_approval_hash",
+                "offline_approval_version",
+                "updated_at",
+            ]
+        )
 
         record_audit(
             action=AuditAction.DEACTIVATE,
@@ -688,7 +716,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
         user.set_pin(serializer.validated_data["pin"])
-        user.save(update_fields=["pin_hash", "updated_at"])
+        user.save(update_fields=["pin_hash", "pin_version", "updated_at"])
 
         record_audit(
             action=AuditAction.UPDATE,
@@ -696,6 +724,84 @@ class UserViewSet(viewsets.ModelViewSet):
             actor=request.user,
             request=request,
             after={"pin": "set" if user.pin_hash else "cleared"},
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        summary="Rotate an offline discount approval code",
+        description=(
+            "Creates a new independent code for offline discount approvals. "
+            "The raw code is returned once and is never used for signing in. "
+            "Changing this code does not change the user's till PIN."
+        ),
+        request=None,
+        responses={
+            200: OpenApiResponse(
+                description="One-time code and version for secure handoff."
+            ),
+            400: OpenApiResponse(description="Target is not an active manager."),
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="rotate-offline-approval")
+    def rotate_offline_approval(self, request, pk=None):
+        user = self.get_object()
+        if not user.is_active or not user.has_role_at_least(UserRole.MANAGER):
+            return Response(
+                {
+                    "detail": "Offline approval codes are available to active managers and owners.",
+                    "code": "offline_approval_not_allowed",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        code = user.rotate_offline_approval_code()
+        user.save(
+            update_fields=[
+                "offline_approval_hash",
+                "offline_approval_version",
+                "updated_at",
+            ]
+        )
+        record_audit(
+            action=AuditAction.UPDATE,
+            entity=user,
+            actor=request.user,
+            request=request,
+            after={
+                "offline_approval": "rotated",
+                "version": user.offline_approval_version,
+            },
+        )
+        return Response(
+            {"code": code, "version": user.offline_approval_version},
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Revoke an offline discount approval code",
+        request=None,
+        responses={204: OpenApiResponse(description="Revoked")},
+    )
+    @action(detail=True, methods=["post"], url_path="revoke-offline-approval")
+    def revoke_offline_approval(self, request, pk=None):
+        user = self.get_object()
+        user.clear_offline_approval_code()
+        user.save(
+            update_fields=[
+                "offline_approval_hash",
+                "offline_approval_version",
+                "updated_at",
+            ]
+        )
+        record_audit(
+            action=AuditAction.UPDATE,
+            entity=user,
+            actor=request.user,
+            request=request,
+            after={
+                "offline_approval": "revoked",
+                "version": user.offline_approval_version,
+            },
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 

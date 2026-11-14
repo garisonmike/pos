@@ -9,6 +9,8 @@ to whoever is free.
 
 from __future__ import annotations
 
+import hashlib
+
 import pytest
 from django.db import transaction
 
@@ -177,6 +179,103 @@ class TestOwnerCapabilities:
             cashier_a.refresh_from_db()
         assert cashier_a.is_active is False
         assert cashier_a.pin_hash == ""
+
+    def test_setting_a_pin_persists_its_revocation_version(
+        self, client_owner_a, manager_a, tenant_a
+    ):
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            manager_a.refresh_from_db()
+        old_version = manager_a.pin_version
+
+        response = client_owner_a.post(
+            f"/api/v1/auth/users/{manager_a.id}/set-pin/",
+            {"pin": "4471"},
+            format="json",
+        )
+
+        assert response.status_code == 204
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            manager_a.refresh_from_db()
+        assert manager_a.pin_version == old_version + 1
+
+    def test_deactivation_revokes_offline_code_and_sign_in_pin(
+        self, client_owner_a, manager_a, tenant_a
+    ):
+        with tenant_context(tenant_a.id):
+            manager_a.set_pin("4471")
+            manager_a.rotate_offline_approval_code()
+            manager_a.save()
+        old_pin_version = manager_a.pin_version
+        old_approval_version = manager_a.offline_approval_version
+
+        response = client_owner_a.post(
+            f"/api/v1/auth/users/{manager_a.id}/deactivate/"
+        )
+
+        assert response.status_code == 200
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            manager_a.refresh_from_db()
+        assert manager_a.pin_hash == ""
+        assert manager_a.pin_version == old_pin_version + 1
+        assert manager_a.offline_approval_hash == ""
+        assert manager_a.offline_approval_version == old_approval_version + 1
+
+    def test_owner_rotates_and_revokes_offline_approval_without_changing_pin(
+        self, client_owner_a, manager_a, tenant_a
+    ):
+        with tenant_context(tenant_a.id):
+            manager_a.set_pin("4471")
+            manager_a.save()
+        original_pin_hash = manager_a.pin_hash
+
+        rotated = client_owner_a.post(
+            f"/api/v1/auth/users/{manager_a.id}/rotate-offline-approval/"
+        )
+        assert rotated.status_code == 200
+        code = rotated.json()["code"]
+        assert len(code) >= 32
+
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            manager_a.refresh_from_db()
+        assert manager_a.offline_approval_hash == hashlib.sha256(
+            code.encode("ascii")
+        ).hexdigest()
+        assert manager_a.offline_approval_version == 1
+        assert manager_a.pin_hash == original_pin_hash
+        assert manager_a.check_pin("4471")
+
+        revoked = client_owner_a.post(
+            f"/api/v1/auth/users/{manager_a.id}/revoke-offline-approval/"
+        )
+        assert revoked.status_code == 204
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            manager_a.refresh_from_db()
+        assert manager_a.offline_approval_hash == ""
+        assert manager_a.offline_approval_version == 2
+        assert manager_a.pin_hash == original_pin_hash
+
+    def test_role_downgrade_revokes_offline_approval_only(
+        self, client_owner_a, manager_a, tenant_a
+    ):
+        with tenant_context(tenant_a.id):
+            manager_a.set_pin("4471")
+            manager_a.rotate_offline_approval_code()
+            manager_a.save()
+        old_version = manager_a.offline_approval_version
+        old_pin_hash = manager_a.pin_hash
+
+        response = client_owner_a.patch(
+            f"/api/v1/auth/users/{manager_a.id}/",
+            {"role": UserRole.CASHIER},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        with transaction.atomic(), tenant_context(tenant_a.id):
+            manager_a.refresh_from_db()
+        assert manager_a.offline_approval_hash == ""
+        assert manager_a.offline_approval_version == old_version + 1
+        assert manager_a.pin_hash == old_pin_hash
 
 
 class TestDestructiveActionsAreAudited:

@@ -202,6 +202,11 @@ class CashMovement(TenantOwnedModel, UUIDModel, TimeStampedModel):
     """
 
     shift = models.ForeignKey(Shift, on_delete=models.PROTECT, related_name="movements")
+    client_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text="Till-generated idempotency key for retry-safe cash movement recording.",
+    )
     kind = models.CharField(max_length=10, choices=CashMovementKind.choices)
     amount_cents = models.BigIntegerField(
         help_text="Always positive. The kind decides the direction."
@@ -222,6 +227,11 @@ class CashMovement(TenantOwnedModel, UUIDModel, TimeStampedModel):
             models.CheckConstraint(
                 condition=models.Q(amount_cents__gt=0),
                 name="cash_movement_is_positive",
+            ),
+            models.UniqueConstraint(
+                fields=["tenant", "client_uuid"],
+                condition=models.Q(client_uuid__isnull=False),
+                name="cash_movement_tenant_client_uuid_unique",
             ),
         ]
         indexes = [models.Index(fields=["tenant", "shift"])]

@@ -18,7 +18,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db import transaction
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -221,7 +221,17 @@ class OrderViewSet(_RestaurantView):
             OrderLineSerializer(line).data, status=status.HTTP_201_CREATED
         )
 
-    @extend_schema(summary="Strike a line off", request=VoidSerializer)
+    @extend_schema(
+        summary="Strike a line off",
+        request=VoidSerializer,
+        parameters=[
+            OpenApiParameter(
+                name="line_id",
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+            )
+        ],
+    )
     @action(detail=True, methods=["post"], url_path=r"lines/(?P<line_id>[^/.]+)/void")
     def void_line(self, request, pk=None, line_id=None):
         order = self.get_object()

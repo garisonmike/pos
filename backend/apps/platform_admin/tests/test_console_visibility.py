@@ -14,6 +14,7 @@ from __future__ import annotations
 import pytest
 from django.contrib import admin
 
+from apps.accounts.models import User
 from apps.payments.models import MpesaCallback, MpesaCredential
 from apps.platform_admin.sites import platform_admin_site
 from apps.sales.models import SaleDiscrepancy
@@ -82,6 +83,13 @@ class TestCredentialsAreNotOnDisplay:
         assert "shortcode" in model_admin.fields
         assert "environment" in model_admin.fields
         assert "last_error" in model_admin.fields
+
+
+class TestStaffAccessChangesUseTheTenantApi:
+    def test_platform_admin_cannot_edit_staff_role_or_active_state(self):
+        model_admin = platform_admin_site._registry[User]
+
+        assert {"role", "is_active"}.issubset(set(model_admin.readonly_fields))
 
 
 class TestFilteringToWhatNeedsAttention:

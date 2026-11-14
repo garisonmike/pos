@@ -295,6 +295,19 @@ def test_application_role_cannot_bypass_row_level_security():
     )
 
 
+def test_runtime_database_role_cannot_create_databases():
+    """CREATEDB belongs to the isolated test role, never the runtime role."""
+    from django.conf import settings as django_settings
+
+    runtime_role = django_settings.RUNTIME_DB_USER
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT rolcreatedb FROM pg_roles WHERE rolname = %s", [runtime_role])
+        row = cursor.fetchone()
+
+    assert row is not None, f"Runtime database role {runtime_role!r} does not exist."
+    assert not row[0], f"Runtime database role {runtime_role!r} has CREATEDB."
+
+
 def test_no_model_stores_money_in_a_float():
     """Money must never be a float, anywhere.
 

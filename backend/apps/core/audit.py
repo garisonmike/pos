@@ -43,6 +43,7 @@ REDACTED_SUBSTRINGS = frozenset(
         "private_key",
         "credential",
         "pin_hash",
+        "offline_approval_hash",
         "pin",
         "signature",
         "authorization",

@@ -1,8 +1,8 @@
 # Every push and every pull request runs everything.
 #
 # There is no fast lane and no deferred set, because there is nothing to defer:
-# the backend suite is 1328 tests in about 100 seconds and the Dart suite is
-# 224 in about 35.
+# the backend suite is 1,390 tests in about two minutes and the Dart suite is
+# 241 in about 35 seconds.
 #
 # It is worth recording why that needed saying. This pipeline was first built
 # around a 29-minute suite, sharded four ways to make the wait bearable. The 29
@@ -17,10 +17,9 @@
 #
 # Backend jobs go through `docker compose` rather than an Actions service
 # container, and that part is deliberate. Django must connect as the
-# NOSUPERUSER NOBYPASSRLS role created by docker/postgres/init: Postgres
-# exempts superusers from Row-Level Security, so a service container on the
-# default superuser would let every tenant-isolation test pass while proving
-# nothing.
+# NOSUPERUSER NOBYPASSRLS test role created by docker/postgres/init. It has
+# CREATEDB only so pytest can create its isolated database; the suite separately
+# verifies the runtime role has no database-creation privilege.
 
 name: CI
 
@@ -123,13 +122,18 @@ jobs:
       # is a deploy that migrates to the wrong shape.
       - name: Migration drift
         run: |
+          set -a
+          . .env
+          set +a
           docker compose run --rm -T \
             -e DJANGO_SETTINGS_MODULE=config.settings.test \
+            -e TEST_DB_USER \
+            -e TEST_DB_PASSWORD \
             --entrypoint python api manage.py makemigrations --check --dry-run
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.35.7"
+          flutter-version: "3.50.0"
           channel: stable
           cache: true
 
@@ -150,7 +154,7 @@ jobs:
         working-directory: mobile
         run: flutter analyze
 
-      # All 224 of them, in about 35 seconds.
+      # All 241 of them, in about 35 seconds.
       - name: Flutter tests
         working-directory: mobile
         run: flutter test

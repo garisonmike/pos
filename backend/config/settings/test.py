@@ -1,16 +1,20 @@
 """
 Test settings.
 
-The important property here is what is *not* changed: the database role stays
-the same non-superuser, NOBYPASSRLS role used in development and production.
-Running the isolation suite as a role that can bypass isolation would make the
-tests pass without proving anything.
+The suite uses its own NOSUPERUSER/NOBYPASSRLS role, with CREATEDB only so
+Django can create its isolated test database. Runtime-role privilege checks
+still inspect the separate production role directly.
 """
 
 from .base import *  # noqa: F403
-from .base import REST_FRAMEWORK
+from .base import DATABASES, REST_FRAMEWORK, env
 
 DEBUG = False
+
+# Isolated test database creation uses a dedicated account. The runtime
+# account remains NOCREATEDB and RLS-constrained like production.
+DATABASES["default"]["USER"] = env("TEST_DB_USER", default="pos_test")
+DATABASES["default"]["PASSWORD"] = env("TEST_DB_PASSWORD", default="pos_test")
 
 # ---------------------------------------------------------------------------
 # Enough configuration to boot without anybody's .env

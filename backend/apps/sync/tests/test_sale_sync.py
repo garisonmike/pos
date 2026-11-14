@@ -45,8 +45,8 @@ def batch(device, sales, refusals=None) -> dict:
 
 
 @pytest.fixture
-def manager_with_pin(tenant_a) -> User:
-    """A manager whose PIN a till could have cached."""
+def manager_with_approval_code(tenant_a) -> User:
+    """A manager with a separately enrolled offline approval code."""
     with bypass_rls():
         user = User(
             tenant=tenant_a,
@@ -56,6 +56,7 @@ def manager_with_pin(tenant_a) -> User:
         )
         user.set_password("staff-pass-4471")
         user.set_pin("4455")
+        user.rotate_offline_approval_code()
         user.save()
         return user
 
@@ -338,12 +339,12 @@ class TestTheDeviceMustBelongToThisBusiness:
 
 
 @pytest.mark.django_db
-class TestTheOfflinePinVersionFingerprint:
+class TestTheOfflineApprovalVersion:
     """What the version comparison catches, and what it does not.
 
-    It catches a till approving against a PIN that has since been changed or
-    revoked. It does not prove the device performed the check - see
-    ``check_pin_version`` for why that is not achievable on a rooted tablet.
+    It catches a till approving against an offline code that has since been
+    rotated or revoked. It does not prove the device performed the check - see
+    ``check_offline_approval_version`` for why that is not achievable on a rooted tablet.
     """
 
     def _discounted(self, item, manager, version, **kw):
@@ -354,21 +355,27 @@ class TestTheOfflinePinVersionFingerprint:
             discount_authorization={
                 "username": manager.username,
                 "reason": "Damaged packaging",
-                "pin_version": version,
+                "approval_version": version,
                 "authorized_at": timezone.now().isoformat(),
             },
             **kw,
         )
 
     def test_a_current_version_is_accepted_and_recorded_as_offline(
-        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_pin
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_approval_code
     ):
         device, _token = device_a
         response = client_cashier_a.post(
             SYNC,
             batch(
                 device,
-                [self._discounted(item_a, manager_with_pin, manager_with_pin.pin_version)],
+                [
+                    self._discounted(
+                        item_a,
+                        manager_with_approval_code,
+                        manager_with_approval_code.offline_approval_version,
+                    )
+                ],
             ),
             format="json",
         )
@@ -382,23 +389,26 @@ class TestTheOfflinePinVersionFingerprint:
 
         assert sale.discount_authorized_via == AuthorizationMethod.OFFLINE
         assert sale.discount_authorization_is_stale is False
-        assert sale.discount_authorized_pin_version == manager_with_pin.pin_version
-        assert sale.discount_authorized_by_id == manager_with_pin.id
+        assert (
+            sale.discount_authorized_approval_version
+            == manager_with_approval_code.offline_approval_version
+        )
+        assert sale.discount_authorized_by_id == manager_with_approval_code.id
 
-    def test_a_pin_changed_while_the_till_was_offline_is_caught(
-        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_pin
+    def test_an_offline_code_rotated_while_the_till_was_offline_is_caught(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_approval_code
     ):
-        cached_version = manager_with_pin.pin_version
+        cached_version = manager_with_approval_code.offline_approval_version
 
         with tenant_context(cashier_a.tenant_id):
-            manager = User.objects.get(pk=manager_with_pin.pk)
-            manager.set_pin("9988")
+            manager = User.objects.get(pk=manager_with_approval_code.pk)
+            manager.rotate_offline_approval_code()
             manager.save()
 
         device, _token = device_a
         response = client_cashier_a.post(
             SYNC,
-            batch(device, [self._discounted(item_a, manager_with_pin, cached_version)]),
+            batch(device, [self._discounted(item_a, manager_with_approval_code, cached_version)]),
             format="json",
         )
 
@@ -413,42 +423,48 @@ class TestTheOfflinePinVersionFingerprint:
             )
 
         assert sale.discount_authorization_is_stale is True
-        assert discrepancy.context["problem"] == "stale_pin_version"
-        assert discrepancy.context["claimed_pin_version"] == cached_version
-        assert discrepancy.context["current_pin_version"] == cached_version + 1
+        assert discrepancy.context["problem"] == "stale_approval_version"
+        assert discrepancy.context["claimed_approval_version"] == cached_version
+        assert discrepancy.context["current_approval_version"] == cached_version + 1
 
-    def test_a_pin_revoked_while_the_till_was_offline_is_caught(
-        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_pin
+    def test_an_offline_code_revoked_while_the_till_was_offline_is_caught(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_approval_code
     ):
         """Someone let go while the till was offline must not still approve."""
-        cached_version = manager_with_pin.pin_version
+        cached_version = manager_with_approval_code.offline_approval_version
 
         with tenant_context(cashier_a.tenant_id):
-            manager = User.objects.get(pk=manager_with_pin.pk)
-            manager.clear_pin()
+            manager = User.objects.get(pk=manager_with_approval_code.pk)
+            manager.clear_offline_approval_code()
             manager.save()
 
         device, _token = device_a
         response = client_cashier_a.post(
             SYNC,
-            batch(device, [self._discounted(item_a, manager_with_pin, cached_version)]),
+            batch(device, [self._discounted(item_a, manager_with_approval_code, cached_version)]),
             format="json",
         )
 
         assert "stale_authorization" in response.json()["results"][0]["flags"]
 
     def test_a_deactivated_manager_is_caught(
-        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_pin
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_approval_code
     ):
         with tenant_context(cashier_a.tenant_id):
-            User.objects.filter(pk=manager_with_pin.pk).update(is_active=False)
+            User.objects.filter(pk=manager_with_approval_code.pk).update(is_active=False)
 
         device, _token = device_a
         client_cashier_a.post(
             SYNC,
             batch(
                 device,
-                [self._discounted(item_a, manager_with_pin, manager_with_pin.pin_version)],
+                [
+                    self._discounted(
+                        item_a,
+                        manager_with_approval_code,
+                        manager_with_approval_code.offline_approval_version,
+                    )
+                ],
             ),
             format="json",
         )
@@ -466,7 +482,14 @@ class TestTheOfflinePinVersionFingerprint:
         device, _token = device_a
         client_cashier_a.post(
             SYNC,
-            batch(device, [self._discounted(item_a, cashier_a, cashier_a.pin_version)]),
+            batch(
+                device,
+                [
+                    self._discounted(
+                        item_a, cashier_a, cashier_a.offline_approval_version
+                    )
+                ],
+            ),
             format="json",
         )
 
@@ -487,7 +510,7 @@ class TestTheOfflinePinVersionFingerprint:
             discount_authorization={
                 "username": "nobody",
                 "reason": "Damaged packaging",
-                "pin_version": 3,
+                "approval_version": 3,
                 "authorized_at": timezone.now().isoformat(),
             },
         )
@@ -505,21 +528,51 @@ class TestTheOfflinePinVersionFingerprint:
         assert sale.discount_authorized_by_id is None
         assert sale.discount_authorized_label == "nobody"
 
+    def test_legacy_queued_pin_authorization_is_preserved_and_flagged(
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_approval_code
+    ):
+        """An app upgrade must not strand a discounted sale already in its outbox."""
+        device, _token = device_a
+        payload = offline_sale(
+            item_a,
+            tendered=16200,
+            cart_discount_bps=1000,
+            discount_authorization={
+                "username": manager_with_approval_code.username,
+                "reason": "Damaged packaging",
+                "pin_version": manager_with_approval_code.pin_version,
+                "authorized_at": timezone.now().isoformat(),
+            },
+        )
+
+        response = client_cashier_a.post(
+            SYNC, batch(device, [payload]), format="json"
+        )
+        result = response.json()["results"][0]
+        assert result["status"] == "accepted"
+        assert "stale_authorization" in result["flags"]
+
+        with tenant_context(cashier_a.tenant_id):
+            sale = Sale.objects.get(pk=result["sale_id"])
+        assert sale.discount_authorized_pin_version == manager_with_approval_code.pin_version
+        assert sale.discount_authorized_approval_version is None
+        assert sale.discount_authorization_is_stale is True
+
     def test_a_stale_authorisation_does_not_reject_the_sale(
-        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_pin
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_approval_code
     ):
         """The goods already left the shop. Refusing the record deletes the
         evidence, not the problem."""
-        cached_version = manager_with_pin.pin_version
+        cached_version = manager_with_approval_code.offline_approval_version
         with tenant_context(cashier_a.tenant_id):
-            manager = User.objects.get(pk=manager_with_pin.pk)
-            manager.set_pin("9988")
+            manager = User.objects.get(pk=manager_with_approval_code.pk)
+            manager.rotate_offline_approval_code()
             manager.save()
 
         device, _token = device_a
         response = client_cashier_a.post(
             SYNC,
-            batch(device, [self._discounted(item_a, manager_with_pin, cached_version)]),
+            batch(device, [self._discounted(item_a, manager_with_approval_code, cached_version)]),
             format="json",
         )
 
@@ -530,18 +583,18 @@ class TestTheOfflinePinVersionFingerprint:
         assert sale.discount_cents > 0
 
     def test_a_stale_authorisation_is_written_to_the_audit_trail(
-        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_pin
+        self, client_cashier_a, cashier_a, device_a, item_a, stock_a, manager_with_approval_code
     ):
-        cached_version = manager_with_pin.pin_version
+        cached_version = manager_with_approval_code.offline_approval_version
         with tenant_context(cashier_a.tenant_id):
-            manager = User.objects.get(pk=manager_with_pin.pk)
-            manager.set_pin("9988")
+            manager = User.objects.get(pk=manager_with_approval_code.pk)
+            manager.rotate_offline_approval_code()
             manager.save()
 
         device, _token = device_a
         client_cashier_a.post(
             SYNC,
-            batch(device, [self._discounted(item_a, manager_with_pin, cached_version)]),
+            batch(device, [self._discounted(item_a, manager_with_approval_code, cached_version)]),
             format="json",
         )
 
@@ -549,22 +602,23 @@ class TestTheOfflinePinVersionFingerprint:
             entry = AuditLog.objects.filter(action=AuditAction.DISCOUNT_REFUSED).first()
 
         assert entry is not None
-        assert entry.reason == "stale_pin_version"
+        assert entry.reason == "stale_approval_version"
 
-    def test_the_pin_version_carries_nothing_derived_from_the_pin(
-        self, tenant_a, manager_with_pin
+    def test_rotation_changes_only_the_offline_approval_version(
+        self, tenant_a, manager_with_approval_code
     ):
-        """It is a counter. Two managers with the same PIN share no value, and
-        the same manager keeping their PIN does not change it."""
+        """Rotation advances a separate counter without changing the sign-in PIN."""
         with tenant_context(tenant_a.id):
-            manager = User.objects.get(pk=manager_with_pin.pk)
-            before = manager.pin_version
+            manager = User.objects.get(pk=manager_with_approval_code.pk)
+            before = manager.offline_approval_version
+            pin_version = manager.pin_version
             manager.save()
             manager.refresh_from_db()
-            assert manager.pin_version == before
+            assert manager.offline_approval_version == before
 
-            manager.set_pin("4455")  # the same PIN as before
-            assert manager.pin_version == before + 1
+            manager.rotate_offline_approval_code()
+            assert manager.offline_approval_version == before + 1
+            assert manager.pin_version == pin_version
 
 
 @pytest.mark.django_db
@@ -879,7 +933,7 @@ class TestRefusalsThatHappenedOffline:
             assert AuditLog.objects.filter(action=AuditAction.DISCOUNT_REFUSED).count() == 3
 
     def test_a_refusal_is_filed_against_the_name_typed_not_the_manager(
-        self, client_cashier_a, cashier_a, device_a, manager_with_pin
+        self, client_cashier_a, cashier_a, device_a, manager_with_approval_code
     ):
         """Nobody proved they were that person. Attaching the manager would
         file someone else's guessing in their history."""

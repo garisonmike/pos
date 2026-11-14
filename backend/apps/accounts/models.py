@@ -149,6 +149,21 @@ class User(UUIDModel, AbstractBaseUser, PermissionsMixin, TimeStampedModel):
             "PIN itself - it is a counter, not a digest."
         ),
     )
+    offline_approval_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text=(
+            "SHA-256 digest of a high-entropy, offline-only approval code. "
+            "Never used for till sign-in."
+        ),
+    )
+    offline_approval_version = models.PositiveIntegerField(
+        default=0,
+        help_text=(
+            "Incremented whenever the independent offline approval code is "
+            "rotated or revoked, so disconnected approvals can be flagged at sync."
+        ),
+    )
 
     is_active = models.BooleanField(
         default=True,
@@ -245,6 +260,24 @@ class User(UUIDModel, AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         """
         self.pin_hash = ""
         self.pin_version += 1
+
+    def rotate_offline_approval_code(self) -> str:
+        """Generate and store a high-entropy offline-only approval verifier.
+
+        The raw code is returned once to the owner and must not be logged or
+        included in staff serializers. A SHA-256 digest is suitable here
+        because the generated code has 192 bits of entropy; unlike a short PIN,
+        it is not vulnerable to practical offline guessing.
+        """
+        code = secrets.token_urlsafe(24)
+        self.offline_approval_hash = hashlib.sha256(code.encode("ascii")).hexdigest()
+        self.offline_approval_version += 1
+        return code
+
+    def clear_offline_approval_code(self) -> None:
+        """Revoke the offline-only code without changing PIN sign-in."""
+        self.offline_approval_hash = ""
+        self.offline_approval_version += 1
 
     @staticmethod
     def assignable_roles() -> tuple[str, ...]:

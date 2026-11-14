@@ -80,6 +80,7 @@ class AuditAction(models.TextChoices):
     REACTIVATE = "REACTIVATE", "Reactivated"
     LOGIN = "LOGIN", "Signed in"
     LOGIN_FAILED = "LOGIN_FAILED", "Sign-in refused"
+    DATA_EXPORT = "DATA_EXPORT", "Tenant data exported"
     SUSPEND = "SUSPEND", "Suspended"
     STOCK_ADJUST = "STOCK_ADJUST", "Stock adjusted"
     VOID = "VOID", "Voided"

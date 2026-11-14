@@ -17,7 +17,12 @@ from __future__ import annotations
 from django.db import transaction
 from django.db.models import Count, Prefetch, Q
 from django.http import HttpResponse
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    OpenApiTypes,
+    extend_schema,
+)
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -676,6 +681,13 @@ class ItemViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Remove a barcode from an item",
+        parameters=[
+            OpenApiParameter(
+                name="barcode_id",
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+            )
+        ],
         responses={204: OpenApiResponse(description="Removed")},
     )
     @action(detail=True, methods=["delete"], url_path=r"barcodes/(?P<barcode_id>[^/.]+)")

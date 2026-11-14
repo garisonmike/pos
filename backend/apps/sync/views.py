@@ -212,6 +212,28 @@ class CatalogSyncView(APIView):
         )
 
 
+class StaffSyncView(APIView):
+    """Download staff authorization metadata without resending the catalogue."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        summary="Download staff and offline approval metadata",
+        responses={200: None},
+    )
+    def get(self, request):
+        staff = User.objects.filter(tenant=request.user.tenant).order_by("updated_at")
+        return Response(
+            {
+                "server_time": timezone.now(),
+                "staff": [
+                    _staff_row(person)
+                    for person in staff
+                ],
+            }
+        )
+
+
 def _parse_since(raw: str):
     from django.utils.dateparse import parse_datetime
 
@@ -248,18 +270,22 @@ def _item_row(item) -> dict:
 def _staff_row(person: User) -> dict:
     """Flatten a user to what a till needs to sign them in and check approvals.
 
-    The PIN hash is included only for people who can actually authorise
-    something. A cashier's hash would never be consulted by an offline check,
-    so downloading it would widen what a stolen tablet gives up for no gain.
+    The high-entropy offline approval verifier is included only for active
+    managers and owners who have enrolled one. Sign-in PIN hashes never leave
+    the server.
     """
-    may_authorize = person.has_role_at_least(UserRole.MANAGER)
+    may_authorize = (
+        person.is_active
+        and person.has_role_at_least(UserRole.MANAGER)
+        and bool(person.offline_approval_hash)
+    )
     return {
         "id": person.id,
         "username": person.username,
         "full_name": person.full_name,
         "role": person.role,
-        "pin_hash": person.pin_hash if may_authorize else "",
-        "pin_version": person.pin_version,
+        "offline_approval_hash": person.offline_approval_hash if may_authorize else "",
+        "offline_approval_version": person.offline_approval_version,
         "is_active": person.is_active,
         "updated_at": person.updated_at,
     }

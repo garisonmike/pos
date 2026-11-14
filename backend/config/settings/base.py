@@ -65,6 +65,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.core.middleware.RequestLogMiddleware",
     # Must sit after authentication so the Django admin session is available,
     # and it opens its own transaction so that `SET LOCAL app.tenant_id` is
     # scoped to the request. See apps/core/middleware.py for why that matters.
@@ -104,6 +105,7 @@ DATABASES = {
         "ATOMIC_REQUESTS": False,
     }
 }
+RUNTIME_DB_USER = env("DB_USER", default="pos_app")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"

@@ -109,15 +109,25 @@ class TenantAdmin(admin.ModelAdmin):
 class UserAdmin(admin.ModelAdmin):
     """Every account on the platform, across all businesses.
 
-    Read-mostly by design. Support work sometimes needs to confirm an account
-    exists or reactivate one, but changing a password from here would create a
-    route into a customer's data that leaves nothing in their own audit trail.
+    Read-mostly by design. Role and activation changes go through the tenant
+    owner API so offline credentials are revoked and the business audit trail
+    records the change. Changing a password from here would create a route into
+    a customer's data that leaves nothing in their own audit trail.
     """
 
     list_display = ("username", "full_name", "tenant", "role", "is_platform_admin", "is_active")
     list_filter = ("role", "is_platform_admin", "is_active", "tenant")
     search_fields = ("username", "full_name", "email", "phone")
-    readonly_fields = ("id", "password", "pin_hash", "last_login", "created_at", "updated_at")
+    readonly_fields = (
+        "id",
+        "password",
+        "pin_hash",
+        "role",
+        "is_active",
+        "last_login",
+        "created_at",
+        "updated_at",
+    )
     fields = (
         "id",
         "tenant",

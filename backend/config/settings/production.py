@@ -123,12 +123,22 @@ LOGGING = {
             "format": "{levelname} {asctime} {name} {message}",
             "style": "{",
         },
+        "request_json": {"()": "apps.core.formatters.RequestJsonFormatter"},
     },
     "handlers": {
         "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+        "request_console": {
+            "class": "logging.StreamHandler",
+            "formatter": "request_json",
+        },
     },
     "root": {"handlers": ["console"], "level": env.str("DJANGO_LOG_LEVEL", default="INFO")},
     "loggers": {
+        "apps.core.middleware": {
+            "handlers": ["request_console"],
+            "level": "INFO",
+            "propagate": False,
+        },
         # Django logs a warning for every 4xx. A till on a flaky connection
         # produces those constantly, and at INFO they drown everything worth
         # reading.

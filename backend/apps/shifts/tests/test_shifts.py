@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import threading
 import time
+from uuid import uuid4
 
 import pytest
 from django.db import connections, transaction
@@ -892,6 +893,49 @@ class TestServiceGuards:
                     user=cashier_a,
                 )
         assert exc.value.code == "invalid_amount"
+
+    def test_cash_movement_replay_is_idempotent_and_conflicts_are_rejected(
+        self, tenant_a, store_a, cashier_a
+    ):
+        from apps.shifts.services import record_cash_movement
+
+        with tenant_context(tenant_a.id):
+            shift = open_shift(
+                tenant=tenant_a,
+                store=store_a,
+                cashier=cashier_a,
+                opening_float_cents=0,
+            )
+            request_id = uuid4()
+            first = record_cash_movement(
+                shift=shift,
+                client_uuid=request_id,
+                kind=CashMovementKind.PAID_OUT,
+                amount_cents=500,
+                reason="Shop supplies",
+                user=cashier_a,
+            )
+            replay = record_cash_movement(
+                shift=shift,
+                client_uuid=request_id,
+                kind=CashMovementKind.PAID_OUT,
+                amount_cents=500,
+                reason="Shop supplies",
+                user=cashier_a,
+            )
+            assert replay.pk == first.pk
+            assert CashMovement.objects.filter(client_uuid=request_id).count() == 1
+
+            with pytest.raises(ShiftError) as exc:
+                record_cash_movement(
+                    shift=shift,
+                    client_uuid=request_id,
+                    kind=CashMovementKind.PAID_OUT,
+                    amount_cents=600,
+                    reason="Different amount",
+                    user=cashier_a,
+                )
+        assert exc.value.code == "idempotency_conflict"
 
     def test_the_drawer_position_sums_the_rows_it_has(
         self, tenant_a, store_a, cashier_a

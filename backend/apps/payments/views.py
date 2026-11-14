@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 
 from django.db import IntegrityError, transaction
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, OpenApiTypes, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -59,6 +59,7 @@ class MpesaCallbackView(APIView):
 
     @extend_schema(
         summary="M-Pesa STK callback",
+        request=OpenApiTypes.OBJECT,
         description=(
             "Called by Safaricom, not by a client. The token in the path "
             "identifies which payment attempt this is about, which is how an "

@@ -92,17 +92,18 @@ def resolve_device(*, tenant, device_id) -> Device | None:
     return Device.objects.filter(pk=device_id, is_active=True).first()
 
 
-def check_pin_version(*, tenant, username: str, claimed_version: int) -> tuple[User | None, str]:
-    """Compare the PIN version a device authorised against with the current one.
+def check_offline_approval_version(
+    *, tenant, username: str, claimed_version: int
+) -> tuple[User | None, str]:
+    """Compare the offline approval-code version with the server's current one.
 
     Returns the manager, if the name resolves inside this business, and a
     string naming what is wrong - empty when nothing is.
 
-    **Be precise about what this establishes.** It reliably catches a device
-    approving against a cached PIN that has since been changed or revoked: the
-    server bumps ``pin_version`` on every ``set_pin`` and ``clear_pin``, so a
-    till that was offline across either of those events reports a number that no
-    longer matches, and the sale is flagged.
+    **Be precise about what this establishes.** It catches a device approving
+    against a cached offline code that has since been rotated or revoked. The
+    independent version counter changes on those actions and on deactivation
+    or downgrade below manager.
 
     It does **not** prove the device performed the check. Anyone who can edit
     the till's local database can also read the version that database holds, so
@@ -120,10 +121,10 @@ def check_pin_version(*, tenant, username: str, claimed_version: int) -> tuple[U
         return manager, "inactive_user"
     if not manager.has_role_at_least(UserRole.MANAGER):
         return manager, "insufficient_role"
-    if manager.pin_version != claimed_version:
-        return manager, "stale_pin_version"
-    if not manager.pin_hash:
-        return manager, "no_pin_set"
+    if manager.offline_approval_version != claimed_version:
+        return manager, "stale_approval_version"
+    if not manager.offline_approval_hash:
+        return manager, "no_offline_approval_code"
     return manager, ""
 
 
@@ -275,35 +276,58 @@ def _apply_offline_authorization(*, tenant, sale, cashier, authorization, reques
     delete the evidence rather than the problem.
     """
     username = authorization["username"]
-    claimed_version = authorization["pin_version"]
-    manager, problem = check_pin_version(
-        tenant=tenant, username=username, claimed_version=claimed_version
-    )
+    legacy_pin_version = authorization.get("pin_version")
+    if legacy_pin_version is not None:
+        # A sale already in an older till's outbox must still reach the server
+        # after upgrade. Its old PIN version cannot validate against the new
+        # credential contract, so preserve the sale and flag the authorization.
+        manager = User.objects.filter(tenant=tenant, username=username).first()
+        claimed_version = None
+        problem = "legacy_pin_verifier"
+        sale.discount_authorized_pin_version = legacy_pin_version
+        sale.discount_authorized_approval_version = None
+    else:
+        claimed_version = authorization["approval_version"]
+        manager, problem = check_offline_approval_version(
+            tenant=tenant, username=username, claimed_version=claimed_version
+        )
+        sale.discount_authorized_approval_version = claimed_version
 
     sale.discount_authorized_by = manager
     sale.discount_authorized_label = username
     sale.discount_authorization_reason = authorization["reason"]
     sale.discount_authorized_via = AuthorizationMethod.OFFLINE
     sale.discount_authorized_at = authorization["authorized_at"]
-    sale.discount_authorized_pin_version = claimed_version
     sale.discount_authorization_is_stale = bool(problem)
 
     if not problem:
         return []
 
+    if legacy_pin_version is not None:
+        detail = (
+            f"Offline discount on this sale was approved using the retired "
+            f"PIN-based credential ({problem})."
+        )
+    else:
+        detail = (
+            f"Offline discount on this sale was approved against {username}'s "
+            f"cached approval code, which no longer matches the one held now "
+            f"({problem})."
+        )
+
     SaleDiscrepancy.objects.create(
         tenant=tenant,
         sale=sale,
         kind=SaleDiscrepancy.Kind.STALE_AUTHORIZATION,
-        detail=(
-            f"Offline discount on this sale was approved against {username}'s "
-            f"cached PIN, which no longer matches the one held now ({problem})."
-        ),
+        detail=detail,
         context={
             "problem": problem,
             "attempted_authorizer": username,
-            "claimed_pin_version": claimed_version,
-            "current_pin_version": manager.pin_version if manager else None,
+            "claimed_approval_version": claimed_version,
+            "legacy_pin_version": legacy_pin_version,
+            "current_approval_version": (
+                manager.offline_approval_version if manager else None
+            ),
             "acting_cashier": cashier.username,
             "discount_cents": sale.discount_cents,
         },
@@ -314,7 +338,10 @@ def _apply_offline_authorization(*, tenant, sale, cashier, authorization, reques
         actor=cashier,
         request=request,
         reason=problem,
-        after={"attempted_authorizer": username, "claimed_pin_version": claimed_version},
+        after={
+            "attempted_authorizer": username,
+            "claimed_approval_version": claimed_version,
+        },
     )
     return ["stale_authorization"]
 

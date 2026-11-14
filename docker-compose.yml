@@ -17,6 +17,8 @@ services:
       # Consumed by the init script to create the application role.
       APP_DB_USER: ${DB_USER}
       APP_DB_PASSWORD: ${DB_PASSWORD}
+      APP_TEST_DB_USER: ${TEST_DB_USER:-pos_test}
+      APP_TEST_DB_PASSWORD: ${TEST_DB_PASSWORD:-pos_test}
     volumes:
       # Postgres 18 images store data in a major-version subdirectory, so the
       # mount goes at /var/lib/postgresql rather than the /data path that
@@ -50,6 +52,7 @@ services:
   api:
     build:
       context: ./backend
+      target: development
     # Run as the host user so files the container writes into the bind mount -
     # generated migrations especially - are owned by you and not by root.
     user: "${UID:-1000}:${GID:-1000}"
@@ -64,6 +67,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
+      TEST_DB_USER: ${TEST_DB_USER:-pos_test}
+      TEST_DB_PASSWORD: ${TEST_DB_PASSWORD:-pos_test}
       REDIS_URL: ${REDIS_URL:-redis://cache:6379/0}
       PIN_LOCKOUT_MAX_ATTEMPTS: ${PIN_LOCKOUT_MAX_ATTEMPTS}
       PIN_LOCKOUT_SECONDS: ${PIN_LOCKOUT_SECONDS}

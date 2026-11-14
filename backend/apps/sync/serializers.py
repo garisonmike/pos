@@ -18,30 +18,45 @@ from apps.sales.serializers import CheckoutLineSerializer
 class OfflineAuthorizationSerializer(serializers.Serializer):
     """A discount the device approved while it had no connection.
 
-    No PIN and no password. The device has already done the check against its
-    cached copy, and the raw credential must not travel here afterwards - a
-    replayed batch would then be a bundle of manager PINs in flight, which is
-    strictly worse than the problem it would be solving.
+    No approval code, PIN, or password. The device has already done the check
+    against its cached verifier, and the raw credential must not travel here
+    afterwards.
 
-    What travels instead is ``pin_version``: which version of that manager's
-    PIN the cached copy was. See :func:`apps.sync.services.check_pin_version`
-    for exactly what comparing it does and does not establish.
+    New tills report ``approval_version`` for the independent offline code.
+    ``pin_version`` is accepted only for older queued sales during an upgrade;
+    those sales are preserved but flagged as stale legacy authorisations.
     """
 
     username = serializers.CharField(
-        max_length=64, help_text="The manager whose cached PIN the device checked."
+        max_length=64,
+        help_text="The manager whose cached offline approval code the device checked.",
     )
     reason = serializers.CharField(max_length=500)
-    pin_version = serializers.IntegerField(
+    approval_version = serializers.IntegerField(
+        required=False,
         min_value=0,
         help_text=(
-            "The version of that manager's PIN the device's cached copy was. A "
-            "counter, not a digest - it carries no information about the PIN."
+            "The version of that manager's offline approval code in the cached "
+            "copy. A counter, not a digest."
         ),
+    )
+    pin_version = serializers.IntegerField(
+        required=False,
+        min_value=0,
+        help_text="Legacy version from a queued sale created before offline codes existed.",
     )
     authorized_at = serializers.DateTimeField(
         help_text="When the device recorded the approval, by its own clock."
     )
+
+    def validate(self, attrs):
+        has_new = "approval_version" in attrs
+        has_legacy = "pin_version" in attrs
+        if has_new == has_legacy:
+            raise serializers.ValidationError(
+                "Provide exactly one of approval_version or legacy pin_version."
+            )
+        return attrs
 
 
 class OfflineSaleSerializer(serializers.Serializer):
@@ -119,9 +134,8 @@ class OfflineRefusalSerializer(serializers.Serializer):
     """A discount authorisation the device refused while offline.
 
     Sent so that the shop's audit trail contains the failures as well as the
-    successes. Without this, someone could stand at a disconnected till working
-    through a manager's four digits and the only record would be on the tablet
-    in their hand.
+    successes. Without this, repeated guesses at a manager's offline approval
+    code on a disconnected till would leave a record only on the tablet.
     """
 
     username = serializers.CharField(max_length=64, allow_blank=True)
@@ -193,31 +207,17 @@ class CatalogItemSerializer(serializers.Serializer):
 class CatalogStaffSerializer(serializers.Serializer):
     """A member of staff as a till caches them.
 
-    ``pin_version`` travels so that an authorisation made against this cached
-    copy can be matched, at sync, to the copy the server holds now.
-
-    ``pin_hash`` travels because an offline check has to verify against
-    something, and it is sent **only for users who can actually authorise a
-    discount** - a cashier's hash is never downloaded, because no offline check
-    would ever consult it.
-
-    Understand what this costs, because it is not nothing. A PIN is four to six
-    digits, so a hash of one is brute-forceable by anyone holding the tablet:
-    a stolen till is, for practical purposes, a stolen manager PIN. That is
-    inherent to approving anything offline against a short secret - a local
-    check needs a local verifier - and the compensating controls are that the
-    approval is recorded as ``OFFLINE`` rather than equated with a live one,
-    that the PIN version is compared at sync, that refusals sync too, and that
-    a lost till is revoked. See ARCHITECTURE.md, which also records the
-    stronger fix this defers: a separate offline approval code, revocable on
-    its own and useless for signing in.
+    Only managers and owners with an enrolled offline approval code receive
+    its high-entropy verifier. Sign-in PIN hashes are never sent to tills.
+    ``offline_approval_version`` lets sync flag an authorization made against
+    a code that has since been rotated or revoked.
     """
 
     id = serializers.UUIDField()
     username = serializers.CharField()
     full_name = serializers.CharField()
     role = serializers.CharField()
-    pin_hash = serializers.CharField()
-    pin_version = serializers.IntegerField()
+    offline_approval_hash = serializers.CharField()
+    offline_approval_version = serializers.IntegerField()
     is_active = serializers.BooleanField()
     updated_at = serializers.DateTimeField()

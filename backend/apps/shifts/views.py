@@ -200,6 +200,7 @@ class ShiftViewSet(viewsets.ReadOnlyModelViewSet):
             with transaction.atomic():
                 movement = record_cash_movement(
                     shift=shift,
+                    client_uuid=data.get("client_uuid"),
                     kind=data["kind"],
                     amount_cents=data["amount_cents"],
                     reason=data["reason"],

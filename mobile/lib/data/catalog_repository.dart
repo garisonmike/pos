@@ -1,4 +1,5 @@
 import '../core/api_client.dart';
+import 'outbox/database.dart';
 import 'models.dart';
 
 /// Reading the catalogue.
@@ -11,8 +12,23 @@ class CatalogRepository {
 
   final ApiClient _api;
 
+  /// Refresh only staff authorization metadata. This endpoint is intentionally
+  /// separate from the full item catalogue so the till can update revocations
+  /// before an approval without downloading every product image and price.
+  Future<void> refreshApprovalStaff(OutboxDatabase database) async {
+    final result = await _api.get('/api/v1/sync/staff/');
+    final rows = (result.asMap['staff'] as List)
+        .cast<Map>()
+        .map((row) => row.cast<String, dynamic>())
+        .toList();
+    await database.replaceCachedStaff(rows);
+  }
+
   Future<List<Category>> categories() async {
-    final result = await _api.get('/api/v1/categories/', query: {'page_size': 100});
+    final result = await _api.get(
+      '/api/v1/categories/',
+      query: {'page_size': 100},
+    );
     return result.asList
         .map((row) => Category.fromJson((row as Map).cast<String, dynamic>()))
         .toList();
@@ -42,7 +58,10 @@ class CatalogRepository {
   Future<List<Item>> search(String query) async {
     if (query.trim().length < 2) return [];
 
-    final result = await _api.get('/api/v1/items/search/', query: {'q': query.trim()});
+    final result = await _api.get(
+      '/api/v1/items/search/',
+      query: {'q': query.trim()},
+    );
     return (result.data as List)
         .map((row) => Item.fromJson((row as Map).cast<String, dynamic>()))
         .toList();
@@ -55,7 +74,10 @@ class CatalogRepository {
   /// added yet - not an error worth an exception.
   Future<Item?> lookupBarcode(String code) async {
     try {
-      final result = await _api.get('/api/v1/items/lookup/', query: {'barcode': code});
+      final result = await _api.get(
+        '/api/v1/items/lookup/',
+        query: {'barcode': code},
+      );
       return Item.fromJson(result.asMap);
     } on ApiException catch (error) {
       if (error.code == 'barcode_not_found') return null;

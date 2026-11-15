@@ -10,13 +10,17 @@ library;
 
 /// Money taken, by how it arrived.
 class TenderSplit {
-  const TenderSplit({this.cashCents = 0, this.mpesaCents = 0, this.totalCents = 0});
+  const TenderSplit({
+    this.cashCents = 0,
+    this.mpesaCents = 0,
+    this.totalCents = 0,
+  });
 
   factory TenderSplit.fromJson(Map<String, dynamic> json) => TenderSplit(
-        cashCents: json['cash_cents'] as int? ?? 0,
-        mpesaCents: json['mpesa_cents'] as int? ?? 0,
-        totalCents: json['total_cents'] as int? ?? 0,
-      );
+    cashCents: json['cash_cents'] as int? ?? 0,
+    mpesaCents: json['mpesa_cents'] as int? ?? 0,
+    totalCents: json['total_cents'] as int? ?? 0,
+  );
 
   final int cashCents;
   final int mpesaCents;
@@ -43,25 +47,25 @@ class SalesSummary {
   });
 
   factory SalesSummary.fromJson(Map<String, dynamic> json) => SalesSummary(
-        label: json['label'] as String? ?? '',
-        saleCount: json['sale_count'] as int? ?? 0,
-        grossCents: json['gross_cents'] as int? ?? 0,
-        netCents: json['net_cents'] as int? ?? 0,
-        taxCents: json['tax_cents'] as int? ?? 0,
-        discountCents: json['discount_cents'] as int? ?? 0,
-        taken: TenderSplit.fromJson(
-          (json['taken'] as Map?)?.cast<String, dynamic>() ?? const {},
-        ),
-        refunded: TenderSplit.fromJson(
-          (json['refunded'] as Map?)?.cast<String, dynamic>() ?? const {},
-        ),
-        refundCount: json['refund_count'] as int? ?? 0,
-        netTakenCents: json['net_taken_cents'] as int? ?? 0,
-        averageBasketCents: json['average_basket_cents'] as int? ?? 0,
-        refundRateBps: json['refund_rate_bps'] as int? ?? 0,
-        voidCount: json['void_count'] as int? ?? 0,
-        offlineSaleCount: json['offline_sale_count'] as int? ?? 0,
-      );
+    label: json['label'] as String? ?? '',
+    saleCount: json['sale_count'] as int? ?? 0,
+    grossCents: json['gross_cents'] as int? ?? 0,
+    netCents: json['net_cents'] as int? ?? 0,
+    taxCents: json['tax_cents'] as int? ?? 0,
+    discountCents: json['discount_cents'] as int? ?? 0,
+    taken: TenderSplit.fromJson(
+      (json['taken'] as Map?)?.cast<String, dynamic>() ?? const {},
+    ),
+    refunded: TenderSplit.fromJson(
+      (json['refunded'] as Map?)?.cast<String, dynamic>() ?? const {},
+    ),
+    refundCount: json['refund_count'] as int? ?? 0,
+    netTakenCents: json['net_taken_cents'] as int? ?? 0,
+    averageBasketCents: json['average_basket_cents'] as int? ?? 0,
+    refundRateBps: json['refund_rate_bps'] as int? ?? 0,
+    voidCount: json['void_count'] as int? ?? 0,
+    offlineSaleCount: json['offline_sale_count'] as int? ?? 0,
+  );
 
   final String label;
   final int saleCount;
@@ -93,14 +97,14 @@ class BestSeller {
   });
 
   factory BestSeller.fromJson(Map<String, dynamic> json) => BestSeller(
-        name: json['name'] as String? ?? '',
-        sku: json['sku'] as String? ?? '',
-        // Kept as the string the server sent. Parsing to a double to display it
-        // would reintroduce exactly the imprecision the server avoided.
-        quantity: json['quantity'] as String? ?? '0',
-        revenueCents: json['revenue_cents'] as int? ?? 0,
-        lineCount: json['line_count'] as int? ?? 0,
-      );
+    name: json['name'] as String? ?? '',
+    sku: json['sku'] as String? ?? '',
+    // Kept as the string the server sent. Parsing to a double to display it
+    // would reintroduce exactly the imprecision the server avoided.
+    quantity: json['quantity'] as String? ?? '0',
+    revenueCents: json['revenue_cents'] as int? ?? 0,
+    lineCount: json['line_count'] as int? ?? 0,
+  );
 
   final String name;
   final String sku;
@@ -140,18 +144,18 @@ class CashierFigures {
   });
 
   factory CashierFigures.fromJson(Map<String, dynamic> json) => CashierFigures(
-        username: json['username'] as String? ?? '',
-        fullName: json['full_name'] as String? ?? '',
-        saleCount: json['sale_count'] as int? ?? 0,
-        grossCents: json['gross_cents'] as int? ?? 0,
-        discountCents: json['discount_cents'] as int? ?? 0,
-        discountedSaleCount: json['discounted_sale_count'] as int? ?? 0,
-        voidCount: json['void_count'] as int? ?? 0,
-        refundCount: json['refund_count'] as int? ?? 0,
-        averageBasketCents: json['average_basket_cents'] as int? ?? 0,
-        discountRateBps: json['discount_rate_bps'] as int? ?? 0,
-        voidRateBps: json['void_rate_bps'] as int? ?? 0,
-      );
+    username: json['username'] as String? ?? '',
+    fullName: json['full_name'] as String? ?? '',
+    saleCount: json['sale_count'] as int? ?? 0,
+    grossCents: json['gross_cents'] as int? ?? 0,
+    discountCents: json['discount_cents'] as int? ?? 0,
+    discountedSaleCount: json['discounted_sale_count'] as int? ?? 0,
+    voidCount: json['void_count'] as int? ?? 0,
+    refundCount: json['refund_count'] as int? ?? 0,
+    averageBasketCents: json['average_basket_cents'] as int? ?? 0,
+    discountRateBps: json['discount_rate_bps'] as int? ?? 0,
+    voidRateBps: json['void_rate_bps'] as int? ?? 0,
+  );
 
   final String username;
   final String fullName;
@@ -171,18 +175,22 @@ class CashierFigures {
 
 /// The cashier report, with the note the server sends beside it.
 class CashierReport {
-  const CashierReport({required this.label, required this.cashiers, required this.note});
+  const CashierReport({
+    required this.label,
+    required this.cashiers,
+    required this.note,
+  });
 
   factory CashierReport.fromJson(Map<String, dynamic> json) => CashierReport(
-        label: json['label'] as String? ?? '',
-        cashiers: [
-          for (final row in (json['cashiers'] as List? ?? const []))
-            CashierFigures.fromJson((row as Map).cast<String, dynamic>()),
-        ],
-        // Carried through to the screen rather than dropped. The server sends
-        // it because the framing is part of the report, not decoration.
-        note: json['note'] as String? ?? '',
-      );
+    label: json['label'] as String? ?? '',
+    cashiers: [
+      for (final row in (json['cashiers'] as List? ?? const []))
+        CashierFigures.fromJson((row as Map).cast<String, dynamic>()),
+    ],
+    // Carried through to the screen rather than dropped. The server sends
+    // it because the framing is part of the report, not decoration.
+    note: json['note'] as String? ?? '',
+  );
 
   final String label;
   final List<CashierFigures> cashiers;
@@ -198,10 +206,10 @@ class LateArrival {
   });
 
   factory LateArrival.fromJson(Map<String, dynamic> json) => LateArrival(
-        saleId: json['sale_id'] as String? ?? '',
-        amountCents: json['amount_cents'] as int? ?? 0,
-        method: json['method'] as String? ?? '',
-      );
+    saleId: json['sale_id'] as String? ?? '',
+    amountCents: json['amount_cents'] as int? ?? 0,
+    method: json['method'] as String? ?? '',
+  );
 
   final String saleId;
   final int amountCents;
@@ -232,9 +240,11 @@ class DrawerReconciliation {
   });
 
   factory DrawerReconciliation.fromJson(Map<String, dynamic> json) {
-    final counted = (json['counted'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final counted =
+        (json['counted'] as Map?)?.cast<String, dynamic>() ?? const {};
     final after =
-        (json['arrived_after_close'] as Map?)?.cast<String, dynamic>() ?? const {};
+        (json['arrived_after_close'] as Map?)?.cast<String, dynamic>() ??
+        const {};
 
     return DrawerReconciliation(
       shiftId: json['shift_id'] as String? ?? '',
@@ -293,15 +303,15 @@ class DrawerReport {
   });
 
   factory DrawerReport.fromJson(Map<String, dynamic> json) => DrawerReport(
-        label: json['label'] as String? ?? '',
-        shifts: [
-          for (final row in (json['shifts'] as List? ?? const []))
-            DrawerReconciliation.fromJson((row as Map).cast<String, dynamic>()),
-        ],
-        cashTakenCents: json['cash_taken_in_period_cents'] as int? ?? 0,
-        unreconciledCount: json['unreconciled_shift_count'] as int? ?? 0,
-        note: json['note'] as String? ?? '',
-      );
+    label: json['label'] as String? ?? '',
+    shifts: [
+      for (final row in (json['shifts'] as List? ?? const []))
+        DrawerReconciliation.fromJson((row as Map).cast<String, dynamic>()),
+    ],
+    cashTakenCents: json['cash_taken_in_period_cents'] as int? ?? 0,
+    unreconciledCount: json['unreconciled_shift_count'] as int? ?? 0,
+    note: json['note'] as String? ?? '',
+  );
 
   final String label;
   final List<DrawerReconciliation> shifts;
@@ -321,19 +331,52 @@ class OpenShift {
     required this.cashierUsername,
     required this.openingFloatCents,
     required this.openedAt,
+    this.movements = const [],
   });
 
   factory OpenShift.fromJson(Map<String, dynamic> json) => OpenShift(
-        id: json['id'] as String? ?? '',
-        cashierUsername: json['cashier_username'] as String? ?? '',
-        openingFloatCents: json['opening_float_cents'] as int? ?? 0,
-        openedAt: DateTime.tryParse(json['opened_at'] as String? ?? ''),
-      );
+    id: json['id'] as String? ?? '',
+    cashierUsername: json['cashier_username'] as String? ?? '',
+    openingFloatCents: json['opening_float_cents'] as int? ?? 0,
+    openedAt: DateTime.tryParse(json['opened_at'] as String? ?? ''),
+    movements: (json['movements'] as List? ?? [])
+        .map(
+          (row) =>
+              CashMovementRecord.fromJson((row as Map).cast<String, dynamic>()),
+        )
+        .toList(),
+  );
 
   final String id;
   final String cashierUsername;
   final int openingFloatCents;
   final DateTime? openedAt;
+  final List<CashMovementRecord> movements;
+}
+
+class CashMovementRecord {
+  const CashMovementRecord({
+    required this.clientUuid,
+    required this.kind,
+    required this.amountCents,
+    required this.reason,
+    required this.createdAt,
+  });
+
+  factory CashMovementRecord.fromJson(Map<String, dynamic> json) =>
+      CashMovementRecord(
+        clientUuid: json['client_uuid'] as String?,
+        kind: json['kind'] as String? ?? '',
+        amountCents: json['amount_cents'] as int? ?? 0,
+        reason: json['reason'] as String? ?? '',
+        createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+      );
+
+  final String? clientUuid;
+  final String kind;
+  final int amountCents;
+  final String reason;
+  final DateTime? createdAt;
 }
 
 /// A drawer that has just been closed.
@@ -349,10 +392,10 @@ class ClosedShift {
   });
 
   factory ClosedShift.fromJson(Map<String, dynamic> json) => ClosedShift(
-        declaredCents: json['declared_closing_cents'] as int? ?? 0,
-        expectedCents: json['expected_closing_cents'] as int? ?? 0,
-        varianceCents: json['variance_cents'] as int? ?? 0,
-      );
+    declaredCents: json['declared_closing_cents'] as int? ?? 0,
+    expectedCents: json['expected_closing_cents'] as int? ?? 0,
+    varianceCents: json['variance_cents'] as int? ?? 0,
+  );
 
   final int declaredCents;
   final int expectedCents;

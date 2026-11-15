@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
@@ -6,6 +6,9 @@ import '../../core/theme.dart';
 import '../../data/models.dart';
 import '../../data/cart/cart_controller.dart';
 import '../../providers.dart';
+import '../reports/reports_screen.dart';
+import '../recovery/recovery_screen.dart';
+import '../shift/shift_screen.dart';
 import '../sell/cart_screen.dart';
 import 'item_sheet.dart';
 
@@ -56,6 +59,35 @@ class CatalogScreen extends ConsumerWidget {
             onPressed: () => _promptForBarcode(context, ref),
           ),
           const _CartButton(),
+          PopupMenuButton<String>(
+            tooltip: 'More till actions',
+            onSelected: (action) {
+              if (action == 'recovery') {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const RecoveryScreen(),
+                  ),
+                );
+                return;
+              }
+              final repository = ref.read(reportsRepositoryProvider);
+              final screen = action == 'drawer'
+                  ? ShiftScreen(repository: repository)
+                  : ReportsScreen(repository: repository);
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute<void>(builder: (_) => screen));
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'drawer', child: Text('Cash drawer')),
+              const PopupMenuItem(value: 'reports', child: Text('Reports')),
+              if (till?.session?.role == 'OWNER')
+                const PopupMenuItem(
+                  value: 'recovery',
+                  child: Text('Till data recovery'),
+                ),
+            ],
+          ),
           IconButton(
             tooltip: 'Sign out',
             iconSize: 28,

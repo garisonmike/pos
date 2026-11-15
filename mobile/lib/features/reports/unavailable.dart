@@ -10,7 +10,7 @@
 /// this is what stands in its place.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme.dart';
 import '../../data/reports/reports_repository.dart';

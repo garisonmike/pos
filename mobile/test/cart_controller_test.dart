@@ -9,22 +9,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_till/data/cart/cart_controller.dart';
 import 'package:pos_till/data/cart/pricing.dart';
 
-LineInput sugar({int quantityMilli = 1000, int discountBps = 0, int price = 18000}) =>
-    LineInput(
-      itemId: 'sugar',
-      name: 'Sugar 1kg',
-      unitPriceCents: price,
-      quantityMilli: quantityMilli,
-      taxRateBps: 1600,
-      discountBps: discountBps,
-    );
+LineInput sugar({
+  int quantityMilli = 1000,
+  int discountBps = 0,
+  int price = 18000,
+}) => LineInput(
+  itemId: 'sugar',
+  name: 'Sugar 1kg',
+  unitPriceCents: price,
+  quantityMilli: quantityMilli,
+  taxRateBps: 1600,
+  discountBps: discountBps,
+);
 
 LineInput haircut({int price = 50000}) => LineInput(
-      itemId: 'haircut',
-      name: 'Braiding',
-      unitPriceCents: price,
-      quantityMilli: 1000,
-    );
+  itemId: 'haircut',
+  name: 'Braiding',
+  unitPriceCents: price,
+  quantityMilli: 1000,
+);
 
 void main() {
   late CartController cart;
@@ -242,12 +245,12 @@ void main() {
           reason: 'Damaged',
           method: 'OFFLINE',
           at: DateTime(2026, 8, 14),
-          pinVersion: 4,
+          approvalVersion: 4,
         ),
       );
 
       expect(cart.state.approvedBy!.isOffline, isTrue);
-      expect(cart.state.approvedBy!.pinVersion, 4);
+      expect(cart.state.approvedBy!.approvalVersion, 4);
     });
   });
 }

@@ -45,11 +45,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev
+            libgtk-3-dev liblzma-dev libstdc++-12-dev libsecret-1-dev
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.35.7"
+          flutter-version: "3.50.0"
           channel: stable
           cache: true
 
@@ -57,8 +57,12 @@ jobs:
         working-directory: mobile
         run: flutter pub get
 
-      # Unsigned. This asks whether it compiles, not whether it is shippable;
-      # release signing keys are maintained outside this repository.
+      - name: Generate Drift code
+        working-directory: mobile
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      # Unsigned compile smoke test. Signed distribution APKs are produced by
+      # android-release.yml from version tags or a manual workflow dispatch.
       - name: Build
         working-directory: mobile
         run: flutter build ${{ matrix.target }} --release

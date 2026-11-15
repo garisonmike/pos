@@ -18,7 +18,7 @@
 /// signed for nor what the sales say.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme.dart';
 import '../../data/models.dart';

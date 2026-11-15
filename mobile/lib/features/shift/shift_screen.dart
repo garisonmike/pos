@@ -11,8 +11,9 @@
 /// is already committed and cannot be edited.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
@@ -59,7 +60,8 @@ class _ShiftScreenState extends State<ShiftScreen> {
               onRetry: _load,
             );
           }
-          if (!snapshot.hasData && snapshot.connectionState != ConnectionState.done) {
+          if (!snapshot.hasData &&
+              snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -133,7 +135,10 @@ class _OpenDrawerFormState extends State<OpenDrawerForm> {
               onPressed: _working ? null : _open,
               child: Text(
                 _working ? 'Opening…' : 'Open drawer',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -178,8 +183,10 @@ class CloseDrawerForm extends StatefulWidget {
 class _CloseDrawerFormState extends State<CloseDrawerForm> {
   int _countedCents = 0;
   bool _working = false;
+  bool _movingCash = false;
   String? _error;
   ClosedShift? _result;
+  _CashMovementInput? _pendingCashMovement;
 
   @override
   Widget build(BuildContext context) {
@@ -205,8 +212,63 @@ class _CloseDrawerFormState extends State<CloseDrawerForm> {
                 const SizedBox(height: 4),
                 Text(
                   'Opened with ${Money(widget.shift.openingFloatCents).format()}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed:
+                          _working ||
+                              _movingCash ||
+                              _pendingCashMovement != null
+                          ? null
+                          : () => _recordCash('PAID_IN'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Cash in'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed:
+                          _working ||
+                              _movingCash ||
+                              _pendingCashMovement != null
+                          ? null
+                          : () => _recordCash('PAID_OUT'),
+                      icon: const Icon(Icons.remove),
+                      label: const Text('Cash out'),
+                    ),
+                  ],
+                ),
+                if (widget.shift.movements.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Cash movements recorded',
+                    style: TextStyle(color: TillTheme.muted),
+                  ),
+                  for (final movement in widget.shift.movements)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${movement.kind == 'PAID_IN' ? 'Cash in' : 'Cash out'} · ${movement.reason}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(Money(movement.amountCents).format()),
+                        ],
+                      ),
+                    ),
+                ],
               ],
             ),
           ),
@@ -228,14 +290,29 @@ class _CloseDrawerFormState extends State<CloseDrawerForm> {
             const SizedBox(height: 12),
             Text(_error!, style: TextStyle(color: TillTheme.danger)),
           ],
+          if (_pendingCashMovement != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _movingCash ? null : _retryCashMovement,
+              icon: const Icon(Icons.refresh),
+              label: Text(
+                'Retry ${_pendingCashMovement!.kind == 'PAID_IN' ? 'cash in' : 'cash out'}',
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           SizedBox(
             height: TillTheme.primaryActionHeight,
             child: FilledButton(
-              onPressed: _working ? null : _close,
+              onPressed: _working || _movingCash || _pendingCashMovement != null
+                  ? null
+                  : _close,
               child: Text(
                 _working ? 'Closing…' : 'Close drawer',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -260,6 +337,142 @@ class _CloseDrawerFormState extends State<CloseDrawerForm> {
     } finally {
       if (mounted) setState(() => _working = false);
     }
+  }
+
+  Future<void> _recordCash(String kind) async {
+    final input = await showDialog<_CashMovementInput>(
+      context: context,
+      builder: (_) => _CashMovementDialog(kind: kind),
+    );
+    if (input == null || !mounted) return;
+    setState(() => _pendingCashMovement = input);
+    await _retryCashMovement();
+  }
+
+  Future<void> _retryCashMovement() async {
+    final input = _pendingCashMovement;
+    if (input == null) return;
+    setState(() {
+      _movingCash = true;
+      _error = null;
+    });
+    try {
+      await widget.repository.recordCash(
+        shiftId: widget.shift.id,
+        clientUuid: input.clientUuid,
+        kind: input.kind,
+        amountCents: input.amountCents,
+        reason: input.reason,
+      );
+      if (!mounted) return;
+      setState(() => _pendingCashMovement = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${input.kind == 'PAID_IN' ? 'Cash in' : 'Cash out'} recorded: '
+            '${Money(input.amountCents).format()}',
+          ),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (mounted) setState(() => _error = error.message);
+    } finally {
+      if (mounted) setState(() => _movingCash = false);
+    }
+  }
+}
+
+class _CashMovementInput {
+  const _CashMovementInput({
+    required this.clientUuid,
+    required this.kind,
+    required this.amountCents,
+    required this.reason,
+  });
+
+  final String clientUuid;
+  final String kind;
+  final int amountCents;
+  final String reason;
+}
+
+class _CashMovementDialog extends StatefulWidget {
+  const _CashMovementDialog({required this.kind});
+
+  final String kind;
+
+  @override
+  State<_CashMovementDialog> createState() => _CashMovementDialogState();
+}
+
+class _CashMovementDialogState extends State<_CashMovementDialog> {
+  int _amountCents = 0;
+  final _reason = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final paidIn = widget.kind == 'PAID_IN';
+    return AlertDialog(
+      title: Text(paidIn ? 'Cash in' : 'Cash out'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _AmountField(
+              label: paidIn ? 'Amount added' : 'Amount removed',
+              cents: _amountCents,
+              onChanged: (value) => setState(() => _amountCents = value),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _reason,
+              maxLength: 500,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Reason',
+                hintText: 'For example, change float or supplies',
+              ),
+            ),
+            if (_error != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(_error!, style: TextStyle(color: TillTheme.danger)),
+              ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Record')),
+      ],
+    );
+  }
+
+  void _submit() {
+    final reason = _reason.text.trim();
+    if (_amountCents <= 0 || reason.isEmpty) {
+      setState(() => _error = 'Enter an amount and a reason.');
+      return;
+    }
+    Navigator.pop(
+      context,
+      _CashMovementInput(
+        clientUuid: const Uuid().v4(),
+        kind: widget.kind,
+        amountCents: _amountCents,
+        reason: reason,
+      ),
+    );
   }
 }
 
@@ -291,9 +504,15 @@ class _CloseResult extends StatelessWidget {
           Text(
             result.balanced
                 ? 'The drawer balances'
-                : (result.isShort ? 'The drawer is short' : 'The drawer is over'),
+                : (result.isShort
+                      ? 'The drawer is short'
+                      : 'The drawer is over'),
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: colour),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: colour,
+            ),
           ),
           const SizedBox(height: 24),
           _Row(label: 'You counted', cents: result.declaredCents),
@@ -355,7 +574,8 @@ class _AmountField extends StatelessWidget {
           decoration: InputDecoration(
             prefixText: 'KES ',
             border: const OutlineInputBorder(),
-            helperText: 'Entered in cents, so 5000 reads as ${Money(5000).format()}',
+            helperText:
+                'Entered in cents, so 5000 reads as ${Money(5000).format()}',
           ),
           onChanged: (text) => onChanged(int.tryParse(text) ?? 0),
         ),
@@ -424,7 +644,11 @@ class _Problem extends StatelessWidget {
           children: [
             Icon(Icons.cloud_off, size: 48, color: TillTheme.muted),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 17)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 17),
+            ),
             const SizedBox(height: 8),
             Text(
               // A drawer is a server-side record, so it cannot be opened or

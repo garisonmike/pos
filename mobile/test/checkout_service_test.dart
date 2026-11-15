@@ -157,7 +157,8 @@ void main() {
       );
 
       final approval =
-          checkout.sent.single['discount_authorization'] as Map<String, dynamic>;
+          checkout.sent.single['discount_authorization']
+              as Map<String, dynamic>;
       expect(approval.containsKey('username'), isFalse);
       expect(approval['reason'], 'Damaged packaging');
     });
@@ -177,7 +178,8 @@ void main() {
       );
 
       final approval =
-          checkout.sent.single['discount_authorization'] as Map<String, dynamic>;
+          checkout.sent.single['discount_authorization']
+              as Map<String, dynamic>;
       expect(approval['username'], 'grace');
     });
   });
@@ -195,20 +197,23 @@ void main() {
       expect(await outbox.pendingCount(), 1);
     });
 
-    test('the customer gets a reference that is not a receipt number', () async {
-      // A cashier or customer who mistook one for the other would quote a
-      // number belonging to a different sale entirely.
-      checkout.throwThis = offline;
+    test(
+      'the customer gets a reference that is not a receipt number',
+      () async {
+        // A cashier or customer who mistook one for the other would quote a
+        // number belonging to a different sale entirely.
+        checkout.throwThis = offline;
 
-      final result = await service.takeCash(
-        cart: cartWith(),
-        tenderedCents: 20000,
-      );
+        final result = await service.takeCash(
+          cart: cartWith(),
+          tenderedCents: 20000,
+        );
 
-      expect(result.provisionalReference, startsWith('TMP-'));
-      expect(result.reference, isNot(startsWith('#')));
-      expect(result.receiptNumber, isNull);
-    });
+        expect(result.provisionalReference, startsWith('TMP-'));
+        expect(result.reference, isNot(startsWith('#')));
+        expect(result.receiptNumber, isNull);
+      },
+    );
 
     test('a known-offline till does not wait out a timeout', () async {
       final result = await service.takeCash(
@@ -232,76 +237,81 @@ void main() {
             reason: 'Damaged packaging',
             method: 'OFFLINE',
             at: DateTime(2026, 8, 14),
-            pinVersion: 4,
+            approvalVersion: 4,
           ),
         ),
         tenderedCents: 20000,
       );
 
       syncTransport.respond = (body) => {
-            'results': [
-              {
-                'client_uuid':
-                    (body['sales'] as List).single['client_uuid'],
-                'status': SyncStatus.accepted,
-                'sale_id': 's1',
-                'receipt_number': 9,
-                'flags': const [],
-              },
-            ],
-            'refusals_recorded': 0,
-          };
+        'results': [
+          {
+            'client_uuid': (body['sales'] as List).single['client_uuid'],
+            'status': SyncStatus.accepted,
+            'sale_id': 's1',
+            'receipt_number': 9,
+            'flags': const [],
+          },
+        ],
+        'refusals_recorded': 0,
+      };
       await outbox.sync(deviceId: 'till-1');
 
-      final approval = (syncTransport.sent.single['sales'] as List)
-          .single['discount_authorization'] as Map;
-      expect(approval['pin_version'], 4);
+      final approval =
+          (syncTransport.sent.single['sales'] as List)
+                  .single['discount_authorization']
+              as Map;
+      expect(approval['approval_version'], 4);
       expect(approval.containsKey('pin'), isFalse);
     });
   });
 
   group('a request that may have succeeded invisibly', () {
-    test('the queued sale reuses the identifier that was already sent',
-        () async {
-      // The whole reason the uuid is generated before the attempt. A fresh one
-      // here means the sync creates a second sale for money taken once.
-      checkout.throwThis = offline;
+    test(
+      'the queued sale reuses the identifier that was already sent',
+      () async {
+        // The whole reason the uuid is generated before the attempt. A fresh one
+        // here means the sync creates a second sale for money taken once.
+        checkout.throwThis = offline;
 
-      final result = await service.takeCash(
-        cart: cartWith(),
-        tenderedCents: 20000,
-      );
+        final result = await service.takeCash(
+          cart: cartWith(),
+          tenderedCents: 20000,
+        );
 
-      final attempted = checkout.sent.single['client_uuid'];
-      final queued = (await outbox.pending()).single;
-      expect(queued.clientUuid, attempted);
-      expect(queued.clientUuid, result.clientUuid);
-    });
+        final attempted = checkout.sent.single['client_uuid'];
+        final queued = (await outbox.pending()).single;
+        expect(queued.clientUuid, attempted);
+        expect(queued.clientUuid, result.clientUuid);
+      },
+    );
 
-    test('the server recognises it as a replay rather than a new sale',
-        () async {
-      checkout.throwThis = offline;
-      await service.takeCash(cart: cartWith(), tenderedCents: 20000);
+    test(
+      'the server recognises it as a replay rather than a new sale',
+      () async {
+        checkout.throwThis = offline;
+        await service.takeCash(cart: cartWith(), tenderedCents: 20000);
 
-      syncTransport.respond = (body) => {
-            'results': [
-              {
-                'client_uuid': (body['sales'] as List).single['client_uuid'],
-                'status': SyncStatus.duplicate,
-                'sale_id': 'the-original',
-                'receipt_number': 7,
-                'flags': const [],
-              },
-            ],
-            'refusals_recorded': 0,
-          };
+        syncTransport.respond = (body) => {
+          'results': [
+            {
+              'client_uuid': (body['sales'] as List).single['client_uuid'],
+              'status': SyncStatus.duplicate,
+              'sale_id': 'the-original',
+              'receipt_number': 7,
+              'flags': const [],
+            },
+          ],
+          'refusals_recorded': 0,
+        };
 
-      final report = await outbox.sync(deviceId: 'till-1');
+        final report = await outbox.sync(deviceId: 'till-1');
 
-      expect(report.duplicate, 1);
-      expect(report.needsAttention, isFalse);
-      expect(await outbox.pendingCount(), 0);
-    });
+        expect(report.duplicate, 1);
+        expect(report.needsAttention, isFalse);
+        expect(await outbox.pendingCount(), 0);
+      },
+    );
 
     test('a server error is queued, not treated as a refusal', () async {
       // A 500 says nothing about whether the sale was written, and the cash is

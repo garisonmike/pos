@@ -1,9 +1,8 @@
-/// Rate-limiting PIN attempts on a till with no connection.
+/// Rate-limiting offline approval-code attempts on a till with no connection.
 ///
 /// The server counts failed attempts in Redis. Offline, Redis is precisely the
-/// thing that cannot be reached - so without this, a till with no signal would
-/// accept unlimited guesses at a manager's four digits, in the one situation
-/// where nobody is watching. Ten thousand combinations is an evening's work.
+/// thing that cannot be reached - so the till must enforce its own counter
+/// before checking an offline approval code.
 ///
 /// Three properties matter, and each is a way this goes wrong if it is written
 /// casually:
@@ -28,7 +27,7 @@ import 'package:drift/drift.dart';
 
 import 'database.dart';
 
-/// How many wrong PINs before the till stops asking.
+/// How many wrong offline approval codes before the till stops asking.
 ///
 /// Matches the server's threshold. Two different numbers would mean a manager
 /// who mistypes twice is locked out at the counter but not in the back office,
@@ -52,7 +51,7 @@ class OfflineRefusalReason {
   static const lockedOut = 'locked_out';
 }
 
-/// The result of asking whether a PIN may even be tried.
+/// The result of asking whether an offline approval code may be tried.
 class LockoutState {
   const LockoutState({required this.isLocked, required this.remaining});
 

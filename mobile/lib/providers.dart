@@ -8,6 +8,7 @@ import 'data/catalog_repository.dart';
 import 'data/models.dart';
 import 'data/outbox/database.dart';
 import 'data/outbox/outbox_repository.dart';
+import 'data/outbox/offline_approval_service.dart';
 import 'data/outbox/pin_lockout.dart';
 import 'data/printing/escpos.dart';
 import 'data/reports/reports_repository.dart';
@@ -51,12 +52,19 @@ final catalogRepositoryProvider = Provider<CatalogRepository>(
 /// table where a lost row is lost money.
 final outboxDatabaseProvider = Provider<OutboxDatabase>((ref) {
   final db = OutboxDatabase();
-  ref.onDispose(db.close);
+  ref.onDispose(db.closeSafely);
   return db;
 });
 
 final pinLockoutProvider = Provider<PinLockout>(
   (ref) => PinLockout(ref.watch(outboxDatabaseProvider)),
+);
+
+final offlineApprovalServiceProvider = Provider<OfflineApprovalService>(
+  (ref) => OfflineApprovalService(
+    database: ref.watch(outboxDatabaseProvider),
+    lockout: ref.watch(pinLockoutProvider),
+  ),
 );
 
 final outboxProvider = Provider<OutboxRepository>(
@@ -112,7 +120,12 @@ enum TillStage {
 }
 
 class TillState {
-  const TillState({required this.stage, this.session, this.tenantSlug, this.tenantName});
+  const TillState({
+    required this.stage,
+    this.session,
+    this.tenantSlug,
+    this.tenantName,
+  });
 
   final TillStage stage;
   final Session? session;
@@ -142,7 +155,9 @@ class TillStateNotifier extends StateNotifier<AsyncValue<TillState>> {
 
     if (await store.hasAccessToken()) {
       try {
-        final session = await _ref.read(authRepositoryProvider).currentSession();
+        final session = await _ref
+            .read(authRepositoryProvider)
+            .currentSession();
         state = AsyncValue.data(
           TillState(
             stage: TillStage.signedIn,

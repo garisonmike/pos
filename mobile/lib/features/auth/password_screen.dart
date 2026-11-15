@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../providers.dart';
+import '../sell/connectivity.dart';
 import 'widgets.dart';
 
 /// Full sign-in with a password.
@@ -58,8 +59,9 @@ class _PasswordScreenState extends ConsumerState<PasswordScreen> {
       // Registering needs a manager, so only offer it to one. A cashier
       // signing in on an unregistered till simply gets in; someone senior can
       // set the device up later.
-      final alreadyRegistered =
-          await ref.read(sessionStoreProvider).isDeviceRegistered();
+      final alreadyRegistered = await ref
+          .read(sessionStoreProvider)
+          .isDeviceRegistered();
       if (!alreadyRegistered && session.canManage && mounted) {
         await _offerToRegister();
       }
@@ -155,8 +157,9 @@ class _PasswordScreenState extends ConsumerState<PasswordScreen> {
                     labelText: 'Username',
                     prefixIcon: Icon(Icons.person_outline),
                   ),
-                  validator: (value) =>
-                      (value ?? '').trim().isEmpty ? 'Enter your username' : null,
+                  validator: (value) => (value ?? '').trim().isEmpty
+                      ? 'Enter your username'
+                      : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -171,7 +174,9 @@ class _PasswordScreenState extends ConsumerState<PasswordScreen> {
                       // faster than a failed sign-in.
                       iconSize: 28,
                       icon: Icon(
-                        _obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        _obscured
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
                       ),
                       onPressed: () => setState(() => _obscured = !_obscured),
                     ),
@@ -208,8 +213,10 @@ class _PasswordScreenState extends ConsumerState<PasswordScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Change business?'),
         content: const Text(
-          'This till will forget its business and its setup. You will need the '
-          'business ID and a manager password to set it up again.',
+          'This removes the local catalogue and rotates the till recovery key. '
+          'It is blocked while unsynced/refused sales or offline refusal '
+          'reports remain. You will need the new business ID and a manager '
+          'password to set it up again.',
         ),
         actions: [
           TextButton(
@@ -229,7 +236,28 @@ class _PasswordScreenState extends ConsumerState<PasswordScreen> {
     );
 
     if (confirmed != true) return;
-    await ref.read(sessionStoreProvider).clearEverything();
-    await ref.read(tillStateProvider.notifier).refresh();
+    try {
+      // Log out first so an interrupted database reset cannot reopen the old
+      // business under a still-valid in-memory session.
+      await ref.read(sessionStoreProvider).clearEverything();
+      await ref.read(tillStateProvider.notifier).refresh();
+      await ref.read(outboxDatabaseProvider).resetForBusinessChange();
+      ref.invalidate(outboxDatabaseProvider);
+      ref.invalidate(deviceRegisteredProvider);
+      ref.invalidate(lastUsernameProvider);
+      ref.invalidate(categoriesProvider);
+      ref.invalidate(visibleItemsProvider);
+      ref.invalidate(connectivityProvider);
+      ref.read(searchQueryProvider.notifier).state = '';
+      ref.read(selectedCategoryProvider.notifier).state = null;
+      await ref.read(tillStateProvider.notifier).refresh();
+    } catch (error) {
+      ref.invalidate(outboxDatabaseProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
   }
 }

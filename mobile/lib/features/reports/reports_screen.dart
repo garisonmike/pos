@@ -8,7 +8,7 @@
 /// `unavailable.dart` for why that is a state rather than an empty list.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme.dart';
 import '../../data/models.dart';

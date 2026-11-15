@@ -4,7 +4,7 @@
 /// by whole kilos cannot express 0.35 kg, and 0.35 kg is an ordinary purchase.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pos_till/data/cart/cart_controller.dart';

@@ -11,14 +11,17 @@
 /// nobody able to say why.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../data/cart/cart_controller.dart';
 import '../../data/cart/pricing.dart';
 import '../../data/models.dart';
+import '../../data/outbox/database.dart';
+import '../../providers.dart';
 import 'connectivity.dart';
 import 'quantity_sheet.dart';
 
@@ -50,10 +53,8 @@ class CartScreen extends ConsumerWidget {
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: totals.lines.length,
-                    separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: TillTheme.line,
-                    ),
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: TillTheme.line),
                     itemBuilder: (context, index) => _CartRow(
                       line: totals.lines[index],
                       onQuantity: (value) => ref
@@ -107,7 +108,11 @@ class _EmptyCart extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.shopping_basket_outlined, size: 64, color: TillTheme.muted),
+          Icon(
+            Icons.shopping_basket_outlined,
+            size: 64,
+            color: TillTheme.muted,
+          ),
           const SizedBox(height: 16),
           Text(
             'Nothing scanned yet',
@@ -142,7 +147,10 @@ class _CartRow extends StatelessWidget {
               children: [
                 Text(
                   line.line.name,
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -177,7 +185,10 @@ class _CartRow extends StatelessWidget {
                 child: Text(
                   '${_quantity(line.line.quantityMilli)}'
                   '${_unitSuffix(line.line.unit)}',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             )
@@ -191,7 +202,10 @@ class _CartRow extends StatelessWidget {
               child: Text(
                 _quantity(line.line.quantityMilli),
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             _StepButton(
@@ -240,7 +254,9 @@ class _CartRow extends StatelessWidget {
 
   static String _quantity(int milli) {
     if (milli % 1000 == 0) return (milli ~/ 1000).toString();
-    final text = (milli / 1000).toStringAsFixed(3).replaceAll(RegExp(r'0+$'), '');
+    final text = (milli / 1000)
+        .toStringAsFixed(3)
+        .replaceAll(RegExp(r'0+$'), '');
     return text.endsWith('.') ? text.substring(0, text.length - 1) : text;
   }
 }
@@ -269,14 +285,14 @@ class _StepButton extends StatelessWidget {
   }
 }
 
-class _Summary extends StatelessWidget {
+class _Summary extends ConsumerWidget {
   const _Summary({required this.totals, required this.cart});
 
   final CartTotals totals;
   final CartState cart;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final blocked = cart.needsAuthorization;
 
     return Container(
@@ -291,7 +307,11 @@ class _Summary extends StatelessWidget {
           children: [
             _row('Subtotal', totals.subtotalCents),
             if (totals.discountCents > 0)
-              _row('Discount', -totals.discountCents, colour: TillTheme.warning),
+              _row(
+                'Discount',
+                -totals.discountCents,
+                colour: TillTheme.warning,
+              ),
             if (totals.taxCents > 0) _row('VAT', totals.taxCents),
             if (totals.roundingAdjustmentCents != 0)
               _row('Rounding', totals.roundingAdjustmentCents),
@@ -306,10 +326,31 @@ class _Summary extends StatelessWidget {
                 Text(
                   // The rounded figure: what the cashier is about to ask for.
                   Money(totals.cashDueCents).format(),
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ],
             ),
+            if (cart.hasDiscount)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () =>
+                      ref.read(cartControllerProvider.notifier).discountCart(),
+                  child: const Text('Remove discount'),
+                ),
+              )
+            else
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _requestDiscount(context, ref),
+                  icon: const Icon(Icons.sell_outlined),
+                  label: const Text('Add discount'),
+                ),
+              ),
             if (blocked) ...[
               const SizedBox(height: 8),
               Row(
@@ -336,7 +377,10 @@ class _Summary extends StatelessWidget {
                     : () => Navigator.of(context).pushNamed('/sell/pay'),
                 child: Text(
                   'Take payment  ${Money(totals.cashDueCents).format()}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
@@ -347,19 +391,161 @@ class _Summary extends StatelessWidget {
   }
 
   Widget _row(String label, int cents, {Color? colour}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label, style: TextStyle(color: colour ?? TillTheme.muted)),
-            Text(
-              Money(cents).format(currency: ''),
-              style: TextStyle(
-                color: colour ?? TillTheme.muted,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: colour ?? TillTheme.muted)),
+        Text(
+          Money(cents).format(currency: ''),
+          style: TextStyle(
+            color: colour ?? TillTheme.muted,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _requestDiscount(BuildContext context, WidgetRef ref) async {
+    final offline = ref.read(connectivityProvider).isOffline;
+    final percent = TextEditingController();
+    final reason = TextEditingController();
+    final username = TextEditingController();
+    final credential = TextEditingController();
+    try {
+      final values = await showDialog<Map<String, String>>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(
+            offline ? 'Offline manager approval' : 'Manager approval',
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: percent,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Discount percentage',
+                    suffixText: '%',
+                  ),
+                ),
+                TextField(
+                  controller: reason,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(labelText: 'Reason'),
+                ),
+                TextField(
+                  controller: username,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Manager username',
+                  ),
+                ),
+                TextField(
+                  controller: credential,
+                  obscureText: true,
+                  autocorrect: false,
+                  decoration: InputDecoration(
+                    labelText: offline
+                        ? 'Offline approval code'
+                        : 'Manager PIN',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, {
+                'percent': percent.text.trim(),
+                'reason': reason.text.trim(),
+                'username': username.text.trim(),
+                'credential': credential.text,
+              }),
+              child: const Text('Approve'),
             ),
           ],
         ),
       );
+      if (values == null || !context.mounted) return;
+
+      final discountPercent = int.tryParse(values['percent'] ?? '');
+      if (discountPercent == null ||
+          discountPercent < 1 ||
+          discountPercent > 100) {
+        _showApprovalMessage(context, 'Enter a discount from 1% to 100%.');
+        return;
+      }
+      if ((values['reason'] ?? '').isEmpty ||
+          (values['username'] ?? '').isEmpty ||
+          (values['credential'] ?? '').isEmpty) {
+        _showApprovalMessage(
+          context,
+          'Enter a reason and manager credentials.',
+        );
+        return;
+      }
+
+      final usernameValue = values['username']!;
+      final code = values['credential']!;
+      CachedApprovalStaff? staff;
+      if (offline) {
+        final database = ref.read(outboxDatabaseProvider);
+        try {
+          await ref
+              .read(catalogRepositoryProvider)
+              .refreshApprovalStaff(database);
+        } on ApiException {
+          // The user is already working offline. A failed refresh leaves the
+          // last signed staff snapshot in place; sync will flag any stale code.
+        }
+        final result = await ref
+            .read(offlineApprovalServiceProvider)
+            .approve(username: usernameValue, code: code);
+        if (!result.accepted) {
+          if (!context.mounted) return;
+          final detail = result.reason == 'locked_out'
+              ? 'Offline approvals are locked for ${result.lockedFor!.inMinutes} minutes.'
+              : 'That manager code was not accepted. Check the manager name and code.';
+          _showApprovalMessage(context, detail);
+          return;
+        }
+        staff = result.staff;
+      }
+
+      final controller = ref.read(cartControllerProvider.notifier);
+      controller.discountCart(
+        bps: discountPercent * 100,
+        reason: values['reason']!,
+      );
+      controller.approve(
+        CartApproval(
+          username: staff?.username ?? usernameValue,
+          reason: values['reason']!,
+          method: offline ? 'OFFLINE' : 'PIN',
+          at: DateTime.now(),
+          approvalVersion: staff?.version,
+          credential: offline ? null : code,
+        ),
+      );
+    } finally {
+      percent.dispose();
+      reason.dispose();
+      username.dispose();
+      credential.dispose();
+    }
+  }
+
+  void _showApprovalMessage(BuildContext context, String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 }

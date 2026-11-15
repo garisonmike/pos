@@ -68,14 +68,13 @@ class CartState {
     String? discountReason,
     CartApproval? approvedBy,
     bool clearApproval = false,
-  }) =>
-      CartState(
-        lines: lines ?? this.lines,
-        cartDiscountBps: cartDiscountBps ?? this.cartDiscountBps,
-        cartDiscountCents: cartDiscountCents ?? this.cartDiscountCents,
-        discountReason: discountReason ?? this.discountReason,
-        approvedBy: clearApproval ? null : (approvedBy ?? this.approvedBy),
-      );
+  }) => CartState(
+    lines: lines ?? this.lines,
+    cartDiscountBps: cartDiscountBps ?? this.cartDiscountBps,
+    cartDiscountCents: cartDiscountCents ?? this.cartDiscountCents,
+    discountReason: discountReason ?? this.discountReason,
+    approvedBy: clearApproval ? null : (approvedBy ?? this.approvedBy),
+  );
 }
 
 /// Who approved a discount, and how.
@@ -85,7 +84,8 @@ class CartApproval {
     required this.reason,
     required this.method,
     required this.at,
-    this.pinVersion,
+    this.approvalVersion,
+    this.credential,
   });
 
   final String username;
@@ -97,10 +97,13 @@ class CartApproval {
 
   final DateTime at;
 
-  /// Only set for an offline approval: which version of the cached PIN was
-  /// checked. Sent to the server so an approval made against a PIN that has
-  /// since changed is detectable.
-  final int? pinVersion;
+  /// Only set for an offline approval: which version of the separate cached
+  /// approval code was checked. Sent so a rotated code is detectable at sync.
+  final int? approvalVersion;
+
+  /// Ephemeral online PIN, held in cart state only until checkout. It is never
+  /// copied into the offline outbox.
+  final String? credential;
 
   bool get isOffline => method == 'OFFLINE';
 }
@@ -117,10 +120,7 @@ class CartController extends StateNotifier<CartState> {
   /// A variable-priced item is the exception: two haircuts at different prices
   /// are genuinely two lines, and merging them would silently discard one of
   /// the prices the cashier typed.
-  void add(
-    LineInput line, {
-    bool mergeable = true,
-  }) {
+  void add(LineInput line, {bool mergeable = true}) {
     if (!mergeable) {
       state = state.copyWith(lines: [...state.lines, line]);
       return;
@@ -171,7 +171,10 @@ class CartController extends StateNotifier<CartState> {
   void discountLine(int index, {int bps = 0, int cents = 0}) {
     if (index < 0 || index >= state.lines.length) return;
     final updated = [...state.lines];
-    updated[index] = updated[index].copyWith(discountBps: bps, discountCents: cents);
+    updated[index] = updated[index].copyWith(
+      discountBps: bps,
+      discountCents: cents,
+    );
     state = state.copyWith(lines: updated, clearApproval: true);
   }
 
@@ -185,15 +188,19 @@ class CartController extends StateNotifier<CartState> {
   }
 
   void approve(CartApproval approval) {
-    state = state.copyWith(approvedBy: approval, discountReason: approval.reason);
+    state = state.copyWith(
+      approvedBy: approval,
+      discountReason: approval.reason,
+    );
   }
 
   /// Empty the cart, after a sale is finished or abandoned.
   void clear() => state = const CartState();
 }
 
-final cartControllerProvider =
-    StateNotifierProvider<CartController, CartState>((ref) => CartController());
+final cartControllerProvider = StateNotifierProvider<CartController, CartState>(
+  (ref) => CartController(),
+);
 
 /// What the cart currently comes to.
 ///

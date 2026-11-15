@@ -123,8 +123,14 @@ void main() {
     });
 
     test('each sale takes the next number in the device series', () async {
-      final first = await outbox.enqueue(totals: oneItemCart(), tenderedCents: 18000);
-      final second = await outbox.enqueue(totals: oneItemCart(), tenderedCents: 18000);
+      final first = await outbox.enqueue(
+        totals: oneItemCart(),
+        tenderedCents: 18000,
+      );
+      final second = await outbox.enqueue(
+        totals: oneItemCart(),
+        tenderedCents: 18000,
+      );
 
       expect(second.deviceSequence, first.deviceSequence + 1);
     });
@@ -133,12 +139,18 @@ void main() {
       // Derived from a watermark rather than a row count, so that deleting
       // settled sales cannot make a later sale reuse an earlier number - a
       // reused number would hide a gap instead of showing one.
-      final first = await outbox.enqueue(totals: oneItemCart(), tenderedCents: 18000);
+      final first = await outbox.enqueue(
+        totals: oneItemCart(),
+        tenderedCents: 18000,
+      );
       transport.respond = verdicts([SyncStatus.accepted]);
       await outbox.sync(deviceId: 'till-1');
       expect(await outbox.pendingCount(), 0);
 
-      final next = await outbox.enqueue(totals: oneItemCart(), tenderedCents: 18000);
+      final next = await outbox.enqueue(
+        totals: oneItemCart(),
+        tenderedCents: 18000,
+      );
       expect(next.deviceSequence, greaterThan(first.deviceSequence));
     });
 
@@ -149,15 +161,16 @@ void main() {
         approval: OfflineApproval(
           username: 'grace',
           reason: 'Damaged packaging',
-          pinVersion: 3,
+          approvalVersion: 3,
           authorizedAt: DateTime.utc(2026, 8, 14, 9),
         ),
       );
       final payload = jsonDecode(queued.payloadJson) as Map<String, dynamic>;
-      final approval = payload['discount_authorization'] as Map<String, dynamic>;
+      final approval =
+          payload['discount_authorization'] as Map<String, dynamic>;
 
       expect(approval['username'], 'grace');
-      expect(approval['pin_version'], 3);
+      expect(approval['approval_version'], 3);
       // A replayed batch must never be a bundle of manager PINs in flight.
       expect(approval.containsKey('pin'), isFalse);
       expect(approval.containsKey('password'), isFalse);
@@ -271,8 +284,10 @@ void main() {
       transport.respond = verdicts([SyncStatus.duplicate]);
       await outbox.sync(deviceId: 'till-1');
 
-      final firstId = (transport.sent[0]['sales'] as List).single['client_uuid'];
-      final secondId = (transport.sent[1]['sales'] as List).single['client_uuid'];
+      final firstId =
+          (transport.sent[0]['sales'] as List).single['client_uuid'];
+      final secondId =
+          (transport.sent[1]['sales'] as List).single['client_uuid'];
       expect(secondId, firstId);
       expect(firstId, queued.clientUuid);
     });
@@ -300,7 +315,10 @@ void main() {
 
       final report = await outbox.sync(deviceId: 'till-1');
 
-      expect((transport.sent.single['refused_authorizations'] as List), hasLength(1));
+      expect(
+        (transport.sent.single['refused_authorizations'] as List),
+        hasLength(1),
+      );
       expect(report.refusalsSent, 1);
       expect(await lockout.pendingTelemetry(), isEmpty);
     });
@@ -345,7 +363,10 @@ void main() {
 
       await outbox.sync(deviceId: 'till-1');
 
-      expect((transport.sent.single['sales'] as List), hasLength(kMaxSalesPerBatch));
+      expect(
+        (transport.sent.single['sales'] as List),
+        hasLength(kMaxSalesPerBatch),
+      );
       expect(await outbox.pendingCount(), 5);
     });
 
@@ -362,7 +383,10 @@ void main() {
     });
 
     test('the oldest sales go first', () async {
-      final first = await outbox.enqueue(totals: oneItemCart(), tenderedCents: 18000);
+      final first = await outbox.enqueue(
+        totals: oneItemCart(),
+        tenderedCents: 18000,
+      );
       await outbox.enqueue(totals: oneItemCart(), tenderedCents: 18000);
       transport.respond = verdicts([SyncStatus.accepted]);
 

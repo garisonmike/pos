@@ -83,10 +83,10 @@ class OutboxRepository {
     required SyncTransport transport,
     required PinLockout lockout,
     Uuid? uuid,
-  })  : _db = database,
-        _transport = transport,
-        _lockout = lockout,
-        _uuid = uuid ?? const Uuid();
+  }) : _db = database,
+       _transport = transport,
+       _lockout = lockout,
+       _uuid = uuid ?? const Uuid();
 
   final OutboxDatabase _db;
   final SyncTransport _transport;
@@ -124,8 +124,10 @@ class OutboxRepository {
             // field has three decimal places and a double would occasionally
             // arrive as 0.3330000000000001.
             'quantity': (line.line.quantityMilli / 1000).toStringAsFixed(3),
-            if (line.line.discountBps > 0) 'discount_bps': line.line.discountBps,
-            if (line.line.discountCents > 0) 'discount_cents': line.line.discountCents,
+            if (line.line.discountBps > 0)
+              'discount_bps': line.line.discountBps,
+            if (line.line.discountCents > 0)
+              'discount_cents': line.line.discountCents,
           },
       ],
       'tendered_cents': tenderedCents,
@@ -139,7 +141,9 @@ class OutboxRepository {
       if (approval != null) 'discount_authorization': approval.toJson(),
     };
 
-    await _db.into(_db.queuedSales).insert(
+    await _db
+        .into(_db.queuedSales)
+        .insert(
           QueuedSalesCompanion.insert(
             clientUuid: id,
             deviceSequence: sequence,
@@ -252,8 +256,9 @@ class OutboxRepository {
     final status = verdict['status'] as String;
 
     if (status == SyncStatus.accepted || status == SyncStatus.duplicate) {
-      await (_db.update(_db.queuedSales)..where((t) => t.clientUuid.equals(id)))
-          .write(
+      await (_db.update(
+        _db.queuedSales,
+      )..where((t) => t.clientUuid.equals(id))).write(
         QueuedSalesCompanion(
           status: Value(status),
           serverSaleId: Value(verdict['sale_id'] as String?),
@@ -263,14 +268,15 @@ class OutboxRepository {
       // Settled rows are removed rather than kept as history. The server is
       // the record of a sale that reached it; keeping a second copy here would
       // grow without bound on a device with no housekeeping.
-      await (_db.delete(_db.queuedSales)
-            ..where((t) => t.clientUuid.equals(id)))
-          .go();
+      await (_db.delete(
+        _db.queuedSales,
+      )..where((t) => t.clientUuid.equals(id))).go();
       return;
     }
 
-    await (_db.update(_db.queuedSales)..where((t) => t.clientUuid.equals(id)))
-        .write(
+    await (_db.update(
+      _db.queuedSales,
+    )..where((t) => t.clientUuid.equals(id))).write(
       QueuedSalesCompanion(
         status: const Value(SyncStatus.rejected),
         failureCode: Value(verdict['code'] as String?),
@@ -282,9 +288,9 @@ class OutboxRepository {
   Future<void> _markAttempted(List<QueuedSale> batch) async {
     final now = DateTime.now();
     for (final sale in batch) {
-      await (_db.update(_db.queuedSales)
-            ..where((t) => t.clientUuid.equals(sale.clientUuid)))
-          .write(
+      await (_db.update(
+        _db.queuedSales,
+      )..where((t) => t.clientUuid.equals(sale.clientUuid))).write(
         QueuedSalesCompanion(
           attempts: Value(sale.attempts + 1),
           lastAttemptAt: Value(now),
@@ -300,18 +306,20 @@ class OutboxRepository {
   /// highest ever issued rather than from a row count, because deleting settled
   /// rows would otherwise make the series repeat itself.
   Future<int> _nextDeviceSequence() async {
-    final row = await (_db.selectOnly(_db.queuedSales)
-          ..addColumns([_db.queuedSales.deviceSequence.max()]))
-        .getSingleOrNull();
+    final row = await (_db.selectOnly(
+      _db.queuedSales,
+    )..addColumns([_db.queuedSales.deviceSequence.max()])).getSingleOrNull();
     final highest = row?.read(_db.queuedSales.deviceSequence.max()) ?? 0;
 
-    final cursor = await (_db.select(_db.syncCursor)
-          ..where((t) => t.name.equals(_sequenceCursor)))
-        .getSingleOrNull();
+    final cursor = await (_db.select(
+      _db.syncCursor,
+    )..where((t) => t.name.equals(_sequenceCursor))).getSingleOrNull();
     final watermark = int.tryParse(cursor?.serverTime ?? '') ?? 0;
 
     final next = (highest > watermark ? highest : watermark) + 1;
-    await _db.into(_db.syncCursor).insertOnConflictUpdate(
+    await _db
+        .into(_db.syncCursor)
+        .insertOnConflictUpdate(
           SyncCursorCompanion.insert(
             name: _sequenceCursor,
             serverTime: Value(next.toString()),
@@ -322,39 +330,37 @@ class OutboxRepository {
 
   static const _sequenceCursor = 'device_sequence';
 
-  Future<QueuedSale?> _byUuid(String id) =>
-      (_db.select(_db.queuedSales)..where((t) => t.clientUuid.equals(id)))
-          .getSingleOrNull();
+  Future<QueuedSale?> _byUuid(String id) => (_db.select(
+    _db.queuedSales,
+  )..where((t) => t.clientUuid.equals(id))).getSingleOrNull();
 }
 
 /// A discount the till approved with no connection.
 ///
 /// Carries no PIN and no password. The device has already done the check
-/// against its cached copy, and sending the raw credential afterwards would
-/// turn a replayed batch into a bundle of manager PINs in flight.
+/// against its cached verifier, and sending the raw credential afterwards
+/// would expose it in replayable sync requests.
 class OfflineApproval {
   const OfflineApproval({
     required this.username,
     required this.reason,
-    required this.pinVersion,
+    required this.approvalVersion,
     required this.authorizedAt,
   });
 
   final String username;
   final String reason;
 
-  /// Which version of that manager's cached PIN was checked. A counter, not a
-  /// digest - it carries nothing derived from the PIN. The server compares it
-  /// to the version it holds now, which is what catches a till approving
-  /// against a PIN that has since been changed or revoked.
-  final int pinVersion;
+  /// Which version of the manager's separate cached offline approval code was
+  /// checked. The raw code is never included in the sale payload.
+  final int approvalVersion;
 
   final DateTime authorizedAt;
 
   Map<String, dynamic> toJson() => {
-        'username': username,
-        'reason': reason,
-        'pin_version': pinVersion,
-        'authorized_at': authorizedAt.toUtc().toIso8601String(),
-      };
+    'username': username,
+    'reason': reason,
+    'approval_version': approvalVersion,
+    'authorized_at': authorizedAt.toUtc().toIso8601String(),
+  };
 }

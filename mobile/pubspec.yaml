@@ -4,7 +4,7 @@ publish_to: "none"
 version: 0.2.0
 
 environment:
-  sdk: ^3.9.0
+  sdk: ^3.10.0
 
 dependencies:
   flutter:
@@ -26,6 +26,7 @@ dependencies:
   # Tokens and the device token go in the platform keystore, never in shared
   # preferences. A device token is a credential: it is half of PIN sign-in.
   flutter_secure_storage: ^9.2.2
+  crypto: ^3.0.7
 
   # Non-secret preferences: which business this till belongs to.
   shared_preferences: ^2.3.3
@@ -35,21 +36,28 @@ dependencies:
   # day. Drift over raw sqflite because the outbox is queried from a background
   # sync loop and from the UI at the same time, and typed queries are what stop
   # those two disagreeing about a column's meaning.
-  drift: ^2.20.0
-  drift_flutter: ^0.2.0
+  drift: ^2.32.1
+  drift_flutter: ^0.3.0
+  sqlite3: ^3.3.3
   path_provider: ^2.1.5
 
   # Generating a client_uuid on the till, at the moment of sale. This is the
   # key the server dedupes on, so it must be generated once and survive a
   # restart - never regenerated on retry.
   uuid: ^4.5.1
+  material_ui: ^1.11.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  drift_dev: ^2.20.0
+  drift_dev: ^2.32.1
   build_runner: ^2.4.13
+
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc
 
 flutter:
   uses-material-design: true

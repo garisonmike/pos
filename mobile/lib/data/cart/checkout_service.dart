@@ -94,9 +94,9 @@ class CheckoutService {
     required CheckoutTransport transport,
     required OutboxRepository outbox,
     Uuid? uuid,
-  })  : _transport = transport,
-        _outbox = outbox,
-        _uuid = uuid ?? const Uuid();
+  }) : _transport = transport,
+       _outbox = outbox,
+       _uuid = uuid ?? const Uuid();
 
   final CheckoutTransport _transport;
   final OutboxRepository _outbox;
@@ -123,7 +123,9 @@ class CheckoutService {
     // and any later queued replay carry the *same* key.
     final clientUuid = _uuid.v4();
 
-    if (!forceOffline) {
+    // An offline-only approval code is deliberately never sent to the API.
+    // Queue this sale and let sync compare the verifier version later.
+    if (!forceOffline && cart.approvedBy?.isOffline != true) {
       try {
         final sale = await _transport.postCashSale(
           _onlineBody(
@@ -207,18 +209,23 @@ class CheckoutService {
           {
             'item_id': line.line.itemId,
             'quantity': (line.line.quantityMilli / 1000).toStringAsFixed(3),
-            if (line.line.discountBps > 0) 'discount_bps': line.line.discountBps,
-            if (line.line.discountCents > 0) 'discount_cents': line.line.discountCents,
+            if (line.line.discountBps > 0)
+              'discount_bps': line.line.discountBps,
+            if (line.line.discountCents > 0)
+              'discount_cents': line.line.discountCents,
           },
       ],
       if (cart.cartDiscountBps > 0) 'cart_discount_bps': cart.cartDiscountBps,
-      if (cart.cartDiscountCents > 0) 'cart_discount_cents': cart.cartDiscountCents,
+      if (cart.cartDiscountCents > 0)
+        'cart_discount_cents': cart.cartDiscountCents,
       if (approval != null)
         'discount_authorization': {
           // A manager ringing up sends only a reason; their session is the
           // authority. A cashier's request carries the manager's username, and
           // the credential was already verified when they entered it.
           if (approval.method != 'SESSION') 'username': approval.username,
+          if (approval.method == 'PIN' && approval.credential != null)
+            'pin': approval.credential,
           'reason': approval.reason,
         },
       'tendered_cents': tenderedCents,
@@ -237,7 +244,7 @@ class CheckoutService {
       reason: approval.reason,
       // A session approval made offline still carries a version: the manager's
       // own cached record is what the device checked they were.
-      pinVersion: approval.pinVersion ?? 0,
+      approvalVersion: approval.approvalVersion ?? 0,
       authorizedAt: approval.at,
     );
   }

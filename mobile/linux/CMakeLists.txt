@@ -74,6 +74,16 @@ set_target_properties(${BINARY_NAME}
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# The pinned flutter_secure_storage_linux plugin vendors a JSON header whose
+# literal-operator declarations trigger a deprecation warning with current
+# Clang. Flutter's standard plugin flags promote every warning to an error;
+# keep other warnings strict and relax only this upstream-header warning.
+if(TARGET flutter_secure_storage_linux_plugin)
+  target_compile_options(flutter_secure_storage_linux_plugin PRIVATE
+    -Wno-error=deprecated-literal-operator
+  )
+endif()
+
 
 # === Installation ===
 # By default, "installing" just makes a relocatable bundle in the build

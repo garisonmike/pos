@@ -32,13 +32,19 @@ class ApiReportsTransport implements ReportsTransport {
   final ApiClient _api;
 
   @override
-  Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? query}) async {
+  Future<Map<String, dynamic>> get(
+    String path, {
+    Map<String, dynamic>? query,
+  }) async {
     final result = await _api.get(path, query: query);
     return result.asMap;
   }
 
   @override
-  Future<Map<String, dynamic>> post(String path, {Map<String, dynamic>? body}) async {
+  Future<Map<String, dynamic>> post(
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
     final result = await _api.post(path, body: body);
     return result.asMap;
   }
@@ -141,7 +147,10 @@ class ReportsRepository {
     return OpenShift.fromJson((shift as Map).cast<String, dynamic>());
   }
 
-  Future<OpenShift> openShift({required int openingFloatCents, String note = ''}) async {
+  Future<OpenShift> openShift({
+    required int openingFloatCents,
+    String note = '',
+  }) async {
     final body = await _transport.post(
       '/api/v1/shifts/open/',
       body: {
@@ -180,13 +189,19 @@ class ReportsRepository {
 
   Future<void> recordCash({
     required String shiftId,
+    required String clientUuid,
     required String kind,
     required int amountCents,
     required String reason,
   }) async {
     await _transport.post(
       '/api/v1/shifts/$shiftId/cash/',
-      body: {'kind': kind, 'amount_cents': amountCents, 'reason': reason},
+      body: {
+        'client_uuid': clientUuid,
+        'kind': kind,
+        'amount_cents': amountCents,
+        'reason': reason,
+      },
     );
   }
 }

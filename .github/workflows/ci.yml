@@ -122,13 +122,8 @@ jobs:
       # is a deploy that migrates to the wrong shape.
       - name: Migration drift
         run: |
-          set -a
-          . .env
-          set +a
           docker compose run --rm -T \
             -e DJANGO_SETTINGS_MODULE=config.settings.test \
-            -e TEST_DB_USER \
-            -e TEST_DB_PASSWORD \
             --entrypoint python api manage.py makemigrations --check --dry-run
 
       - uses: subosito/flutter-action@v2

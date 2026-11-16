@@ -766,30 +766,38 @@ online refusal and a failed sign-in are, because nobody proved they were that
 person. Without this, somebody spending an evening on a manager's four digits at
 a disconnected till would leave a record only on the tablet in their hand.
 
-**A PIN version fingerprint.** Every `set_pin` and `clear_pin` bumps
-`accounts.User.pin_version`. The till caches that number beside the hash it
-verifies against, and sends it back with any offline approval:
+**A separate offline approval code.** Sign-in PINs are no longer sent by
+catalog sync. An owner can rotate or revoke a manager's offline approval code
+through the user-management API. Rotation returns a URL-safe random code once;
+the server stores its SHA-256 digest and a separate version counter. The till
+caches the digest only for active managers and owners who enrolled a code:
 
 | Field | Where | What it holds |
 |---|---|---|
-| `accounts.User.pin_version` | server | Bumped on every `set_pin` / `clear_pin`. The source of truth. |
-| `staff_cache.pin_version` | device | The version of the cached copy the device checks against. |
-| `discount_authorization.pin_version` | wire | What the device reports it checked against. |
-| `sales.Sale.discount_authorized_pin_version` | server | Recorded on the sale, for OFFLINE approvals only. |
+| `accounts.User.offline_approval_hash` | server | SHA-256 digest of the independent high-entropy code. |
+| `accounts.User.offline_approval_version` | server | Bumped on rotation, revocation, deactivation, and manager-to-cashier downgrade. |
+| `staff_cache.offline_approval_hash` | device | Verifier for local code entry; the sign-in PIN hash is not downloaded. |
+| `discount_authorization.approval_version` | wire | Version of the offline verifier the till reports it checked. |
+| `sales.Sale.discount_authorized_approval_version` | server | Recorded on the sale, for OFFLINE approvals only. |
 | `sales.Sale.discount_authorization_is_stale` | server | Set at sync when the two do not match. |
 
 **Be precise about what this establishes.** It reliably catches a device
-approving against a PIN that has since been *changed or revoked* — a till that
-was offline across either event reports a number that no longer matches, and the
-sale is flagged with a `STALE_AUTH` discrepancy. It does **not** prove the
-device performed the check: anyone who can edit the till's local database can
-also read the version that database holds, so a fabricated payload built on a
-current cache carries a matching version. Detecting that would need the device
-to hold a secret the fabricator cannot read, which a rooted Android tablet does
-not offer. The claim is the narrow one — staleness and revocation, not forgery.
+approving against a code that has since been *rotated or revoked* — a till that
+was offline across either event reports a version that no longer matches, and
+the sale is flagged with a `STALE_AUTH` discrepancy. The 192-bit code prevents
+practical brute-force recovery from the cached SHA-256 verifier. It does **not**
+prove the device performed the check: a rooted device can fabricate a sync
+payload carrying a current version. Device revocation and review of offline
+sales remain necessary controls.
 
 The server also re-checks the named authoriser's **role** at sync, so a till
 claiming a cashier approved a discount is caught regardless of versions.
+
+During app upgrades, sync still accepts the retired `pin_version` field only
+for sales already queued by an older till. It stores the old counter in the
+legacy sale field and flags the sale as stale; the payload is never treated as a
+valid approval under the new code scheme. This keeps money already taken from
+being stranded at the local outbox while ensuring a person reviews the sale.
 
 A stale or invalid authorisation never rejects the sale. By the time sync runs
 the customer has walked out with the goods; refusing the record would delete the
@@ -840,18 +848,31 @@ stock movement. With VAT-inclusive pricing that is most sales.
 `initiate_stk` had been adding the adjustment back by hand at its own call site,
 which is what a missing concept looks like from the inside.
 
-### Open: offline approval credential protection
+### Remaining: offline approval and device recovery
 
-Offline discount approval currently depends on credential material cached on
-the till. The till database is not encrypted, and lost-device recovery that
-preserves unsynced sales is not implemented. Treat this as an unresolved
-security limitation; do not deploy with sensitive shop data until it is
-addressed.
+The mobile discount screen now refreshes and caches staff approval metadata,
+checks the independent offline code with a local lockout, and queues the code
+version for server-side revocation checks. The till database is encrypted and
+the key is held in platform secure storage. The earlier offline-approval and
+database-encryption changes passed automated tests and Linux/Android builds on
+the compatible Flutter toolchain. The recovery workflow was added afterward
+and still needs those checks. The current machine has an older preinstalled
+Flutter SDK than this checkout requires, and no target Android device is
+attached, so on-device migration/revocation/restore checks remain outstanding.
+The owner can now reveal the random 256-bit database key,
+save an encrypted SQLite snapshot through Android's document provider, and
+restore that snapshot on a replacement till by entering the key. Import checks
+the key, database integrity, queue tables and migrations before replacing the
+local file. The key is kept separately from the selected backup destination.
+Snapshots are manual, so sales made after the latest snapshot are still at risk
+if a till is destroyed; each client must choose a cadence and acceptable
+recovery point objective. This does not replace normal online sync.
 
-The planned direction is a separate offline approval credential that can be
-revoked independently of sign-in, together with protected local storage and a
-recovery process for unsynced sales. See the implementation checklist for the
-remaining work.
+Changing the business on a till is a separate security boundary: it refuses to
+proceed while queued/refused sales or offline refusal reports remain, removes
+the prior local database and recovery key, and creates a new key before setup.
+This prevents a prior client's recovery key from decrypting the next client's
+future till database.
 
 ### What the till claimed it came to
 
@@ -934,7 +955,10 @@ the one part of a sale that can be retried at leisure.
 
 ## The till application
 
-Flutter, Android first. Currently signs in and browses; selling is milestone 3.
+Flutter, Android first. The till supports sign-in, catalogue browsing, cash
+checkout, receipts, offline sale sync, shift and cash-drawer management, and
+sales reports. Discount approvals use a separate revocable offline code. The
+restaurant ordering screen is still planned; the restaurant API is available.
 
 **Three states, one rule.** The app is in exactly one of: *unclaimed* (no
 business chosen), *claimed* (business known, device not registered, so a

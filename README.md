@@ -37,10 +37,13 @@ connection, reconcile its drawer, issue an invoice document, and read its own
 takings. Restaurant orders can be managed through the API; the till order-taking
 screen remains unfinished:
 
-> **Production status:** This project is not yet ready for live shops. Offline
-> till-data protection and lost-device recovery, encrypted off-site backups,
-> and failure/uptime monitoring remain open. The invoice export is manual and
-> is not a certified eTIMS integration.
+> **Production status:** This project is not yet ready for live shops. The
+> offline approval flow and encrypted local database are implemented in the
+> current worktree, but mobile dependency resolution, device-build verification,
+> and lost-device recovery remain open. Production backup destination setup,
+> remote restore proof, external monitoring, and a defined data-retention/exit
+> policy are also outstanding.
+> The invoice export is manual and is not a certified eTIMS integration.
 
 - **Selling.** Cart arithmetic in integer cents, a sale state machine where a
   paid sale cannot be voided, and cash checkout with a manager-authorised

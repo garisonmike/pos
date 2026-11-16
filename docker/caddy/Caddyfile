@@ -23,6 +23,18 @@
 {
 	email {$ACME_EMAIL}
 
+	# Runtime error logs can include the full failed request, independently of
+	# the per-site access log below. Drop request details from Caddy's default
+	# logger too, so an upstream failure cannot put callback credentials or
+	# customer headers into container logs.
+	log default {
+		output stdout
+		format filter {
+			request delete
+			wrap console
+		}
+	}
+
 	servers {
 		trusted_proxies static private_ranges
 		# Caddy appends exactly one entry to X-Forwarded-For for the peer it
@@ -69,6 +81,12 @@
 
 	log {
 		output stdout
-		format console
+		# Callback credentials are part of the URL path. Django's request
+		# logger keeps a redacted route; remove the URI entirely here so Caddy
+		# cannot write the original callback token or query values to stdout.
+		format filter {
+			request>uri delete
+			wrap console
+		}
 	}
 }

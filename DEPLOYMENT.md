@@ -105,6 +105,27 @@ dig +short YOUR_DOMAIN     # must return the server's IP
 
 ### 4. Start it
 
+Start Postgres first:
+
+```bash
+docker compose --env-file .env.production \
+  -f docker-compose.yml -f docker-compose.prod.yml up -d db
+```
+
+Reconcile the runtime account before starting the API. This also handles an
+existing Postgres volume, where initialization scripts are not rerun:
+
+```bash
+scripts/reconcile-db-role.sh --env-file .env.production \
+  -f docker-compose.yml -f docker-compose.prod.yml
+```
+
+This removes the test runner's former `CREATEDB` privilege from the runtime
+role. New databases initialize the runtime role without that privilege; the
+development/CI-only test role is omitted from production Compose.
+
+Then start the application:
+
 ```bash
 docker compose --env-file .env.production \
   -f docker-compose.yml -f docker-compose.prod.yml up -d --build
@@ -132,6 +153,53 @@ curl -sS https://YOUR_DOMAIN/api/v1/health/
 If Django is misconfigured it will not have started at all — the boot checks
 (`pos.E001` through `pos.E004`) refuse to run with the default admin path, the
 development signing key, or an unset proxy hop count.
+
+### Client-specific staff setup: offline approval codes
+
+Each manager who must approve discounts while a till is disconnected needs a
+separate offline approval code. Sign-in PINs are not used for this and are no
+longer included in catalog sync.
+
+An owner can provision or rotate a manager's code through the authenticated
+user-management API:
+
+```http
+POST /api/v1/auth/users/{manager_id}/rotate-offline-approval/
+Authorization: Bearer <owner access token>
+```
+
+The response contains the code and its version. The code is shown once; store
+it through the business's agreed secure credential process and give it only to
+that manager. Repeating the request rotates the code again. The till receives
+only a SHA-256 verifier for an enrolled manager during catalog sync. The raw
+code is never sent with a sale. Use
+`POST /api/v1/auth/users/{manager_id}/revoke-offline-approval/` to revoke it
+without changing that person's sign-in PIN. Deactivation and downgrading below
+manager also revoke it.
+
+The till now has a separate offline discount prompt and refreshes the staff
+verifier cache before approval when connected. The Android release build
+compiles; exercise the file-picker recovery flow on the target device before
+handing it to a client. A rooted or modified device can still fabricate an
+offline authorization payload. Review offline sales and revoke a lost till.
+
+
+### Client-specific till recovery setup
+
+After signing in as the owner, open **More till actions → Till data recovery**.
+Record the 64-character recovery key in the client's password manager or other
+approved secure store, separately from the backup destination. Select the
+client-controlled storage provider in Android's file picker when saving an
+encrypted snapshot. Set an operational cadence that covers offline trading;
+the app displays the last snapshot time on that till but does not upload
+automatically.
+
+To recover, install the signed app on a replacement till, choose **Restore an
+encrypted backup** before business setup, select the file for the correct
+business, and enter the separately stored key. The import verifies the key,
+SQLite integrity, queued-sales table, and current schema before replacing the
+local database. A recovery snapshot cannot contain sales made after it was
+created; the client must accept and manage that recovery point objective.
 
 ---
 
@@ -175,7 +243,8 @@ Until it passes, treat the M-Pesa IP allowlist as not working.
 ## Backups
 
 The `backup` service runs nightly at `BACKUP_HOUR` (default 02:00 container
-time) and writes to the `backups` volume: a `pg_dump -Fc` of the database and a
+time; startup rejects hours outside 0–23 and non-positive retention values)
+and writes to the `backups` volume: a `pg_dump -Fc` of the database and a
 tarball of the media directory, keeping 7 daily and 4 weekly copies. Media
 backup is required by default: if the configured media mount is absent, the
 backup fails instead of publishing a database-only copy. Set
@@ -184,6 +253,59 @@ stores no uploaded media; such backups print an explicit warning.
 
 The dump is verified as it is taken — an empty file, or one `pg_restore
 --list` cannot parse, is deleted and reported as a failure rather than kept.
+
+### Configure encrypted off-site copies
+
+Production requires an off-site destination. The backup container uses rclone,
+and refuses to start unless its destination is an encrypted `crypt` remote and
+an HTTPS alert endpoint is configured. Rclone encrypts file contents and, with
+the required settings, both file and directory names before sending data to the
+provider. See the [rclone crypt documentation](https://rclone.org/crypt/) for
+the encryption model and provider setup.
+
+On an administrator's trusted machine:
+
+1. Create an rclone remote for the selected object-storage provider.
+2. Create a `crypt` remote over a dedicated path in that provider. Use
+   standard filename encryption and directory-name encryption.
+3. Encrypt the rclone config file with [`rclone config encryption set`](https://rclone.org/commands/rclone_config_encryption_set/)
+   and retain its password separately. Keep the config file outside the
+   repository with mode `0600`.
+4. Copy the encrypted config to the deployment host at the path set by
+   `BACKUP_RCLONE_CONFIG_FILE` (default `./.secrets/rclone.conf`). Set
+   `BACKUP_RCLONE_CONFIG_PASSWORD`, `BACKUP_REMOTE` (for example
+   `encrypted:pos-production`), and an HTTPS `BACKUP_ALERT_URL` that accepts a
+   plain-text POST, such as an ntfy topic.
+5. Configure provider lifecycle retention and access controls. The job also
+   prunes encrypted daily copies older than 30 days and weekly copies older
+   than 365 days by default; both periods are configurable.
+
+The job uploads database and media archives, downloads each object through the
+decrypting remote, and compares SHA-256 digests before reporting success. It
+sends success and failure notifications. The backup container health check
+goes unhealthy when no completed backup exists within 25 hours; connect that
+health state to an external uptime monitor so a stopped container or missed
+schedule also pages someone. The application cannot create an object-storage
+account, alert receiver, lifecycle rule, or external monitor on the owner's
+behalf; those deployment choices remain setup work.
+
+To drill a remote copy, first copy a matching database and media pair back into
+the backup volume. The crypt remote decrypts them on download:
+
+```bash
+docker compose --env-file .env.production \
+  -f docker-compose.yml -f docker-compose.prod.yml \
+  exec backup sh -c 'mkdir -p /backups/remote-drill && \
+    rclone copyto "$BACKUP_REMOTE/daily/pos-STAMP.dump" \
+      /backups/remote-drill/pos-STAMP.dump && \
+    rclone copyto "$BACKUP_REMOTE/daily/media-STAMP.tar.gz" \
+      /backups/remote-drill/media-STAMP.tar.gz && \
+    /scripts/restore.sh --drill /backups/remote-drill/pos-STAMP.dump'
+```
+
+Replace both `STAMP` values with the same timestamp from the backup filenames.
+Keep the drill output and check that it reports `DRILL PASSED` before calling
+the remote recovery path proven.
 
 Run one by hand:
 
@@ -199,9 +321,10 @@ docker compose --env-file .env.production \
   copy somewhere safe and off this server.
 - **The `caddy_data` volume** — TLS certificates and ACME state. Losing it
   means re-issuing, which Let's Encrypt rate-limits.
-- **Off-site copies.** The nightly dump lives on the same disk as the database
-  it came from. A server whose backups live only on itself has no backups.
-  Off-site backup configuration remains an open production task in `tasks.md`.
+- **Off-site restore drill.** The production job sends encrypted copies to the
+  configured remote. A deployment still has to restore a remote copy into a
+  scratch database and verify media before it can claim its off-site recovery
+  path works.
 
 ---
 
@@ -210,7 +333,7 @@ docker compose --env-file .env.production \
 **A backup nobody has restored is a hope with a filename.**
 
 Run this after the first deployment, and once a quarter afterwards. It restores
-the most recent dump into a scratch database, checks that core tables are
+the most recent local dump into a scratch database, checks that core tables are
 queryable, reports their restored row counts as a limited sanity check, and
 extracts the matching media archive into a temporary directory to verify that
 every archived entry can be restored. It never touches the live database or
@@ -314,9 +437,84 @@ docker compose --env-file .env.production \
   -f docker-compose.yml -f docker-compose.prod.yml logs -f backup
 ```
 
-A failed backup prints `!!! BACKUP FAILED !!!` to stderr. Nothing watches for
-that yet — alerting is an open item in `tasks.md`, and until it exists the
-backup log is something a person has to read.
+A failed backup prints `!!! BACKUP FAILED !!!` to stderr, and that event is
+also sent to the configured alert endpoint. The backup container health check
+reports a stale or absent successful run; connect it to an external uptime
+monitor to alert on missed runs and API outages.
+
+---
+
+## Outage response
+
+1. Check `docker compose ps` and the API/backup health states. Read the API and
+   backup logs before restarting anything; preserve the request ID when
+   reporting an API failure.
+2. If the API or network is unavailable but the till is still operating,
+   continue only within the till's offline workflow. Do not clear app data,
+   reinstall the till, or reset its database while its outbox contains pending
+   or rejected sales.
+3. When service returns, let the till sync and review every rejected sale or
+   discrepancy before treating the books as reconciled. Replaying a sale is
+   idempotent; manually entering it again can create a separate sale.
+4. For suspected database loss, stop writes and follow the live restore
+   procedure. Prefer an off-site copy if the host or its backup volume is
+   unavailable. Run a scratch restore drill before declaring service recovered.
+5. Record the start/end time, affected stores/tills, lost service, recovery
+   source, and unresolved sales. The deployment owner must configure the
+   customer-facing support contact and outage-notification channel before
+   onboarding shops.
+
+---
+
+## Tenant export and customer exit
+
+For an export request, verify the request with the business owner and obtain a
+customer-controlled `age` public recipient through a separate trusted channel.
+Never ask the customer to send the matching private identity key. The export
+contains tenant settings, staff and operational records, sales and payment
+history, audit records, and uploaded media. It omits operator-only tenant
+notes, account password/PIN/offline-approval hashes, device token hashes,
+M-Pesa credentials, and callback tokens. The archive manifest lists its records, media, and
+redacted fields.
+
+Run the export on the API container, then copy only the encrypted artifact to
+the approved transfer location:
+
+```bash
+docker compose --env-file .env.production \
+  -f docker-compose.yml -f docker-compose.prod.yml \
+  exec api python manage.py export_tenant \
+    --tenant-id TENANT_UUID \
+    --actor-username PLATFORM_ADMIN_USERNAME \
+    --recipient age1CUSTOMER_PUBLIC_RECIPIENT \
+    --output /tmp/tenant-export.age
+
+docker compose --env-file .env.production \
+  -f docker-compose.yml -f docker-compose.prod.yml \
+  cp api:/tmp/tenant-export.age ./tenant-export.age
+
+docker compose --env-file .env.production \
+  -f docker-compose.yml -f docker-compose.prod.yml \
+  exec api rm -f /tmp/tenant-export.age
+```
+
+The command requires an existing platform administrator, writes no plaintext
+export to disk, uses a consistent read-only tenant snapshot, records the export
+and encrypted artifact digest in that tenant's audit history, and refuses to
+overwrite an existing artifact. The customer
+can decrypt it with their private identity and inspect the ZIP manifest:
+
+```bash
+age --decrypt --identity customer-identity.txt \
+  --output tenant-export.zip tenant-export.age
+unzip -l tenant-export.zip
+```
+
+Send the encrypted file only through the agreed customer channel, confirm
+receipt, and record the handoff and deletion. An export does not delete or
+anonymize records. Apply the organization's approved statutory retention
+schedule before any later data deletion; the retention period and deletion
+authorization must be decided for the service before onboarding.
 
 ---
 

@@ -5,10 +5,22 @@ milestone.
 
 ---
 
-## [Unreleased] — 2026-11-12
+## [Unreleased] — 2026-11-13
 
 ### Fixed
 
+- Caddy access logs no longer include request URIs, and runtime error logs drop
+  the complete failed request, preventing callback credentials, query values,
+  and sensitive headers from reaching reverse proxy logs.
+- Mobile dependencies now use Flutter 3.50's standalone Material package and
+  the Drift/SQLite versions required by encrypted outbox storage. Android's
+  Gradle, AGP and built-in Kotlin configuration are aligned with Flutter 3.50's
+  template; Linux and unsigned Android release artifacts build successfully.
+- Android release builds no longer fall back to the debug signing key; a
+  customer release pipeline can supply all four keystore values securely.
+- Linux release builds exempt only the deprecated literal-operator warning in
+  the secure-storage plugin's vendored JSON header; all other plugin warnings
+  remain errors.
 - Shift drawer reconciliation now counts cash refunds once per sale, even when
   a split tender created multiple cash payment rows for that sale. Cash refunds
   now belong to the open shift that paid them, including when it differs from
@@ -17,7 +29,45 @@ milestone.
   checks `pg_restore`'s real exit status, database dumps are published only
   after verification, required media mounts must exist, and the drill extracts
   the matching media archive. Core restored row counts are reported as limited
-  sanity checks and are not compared with mutable live data.
+  sanity checks and are not compared with mutable live data. Invalid backup
+  schedule and retention values now fail at startup rather than disabling or
+  unexpectedly pruning backups.
+- Production API and development Compose now select separate image targets, so
+  pytest and Ruff are not installed in the production API image.
+- Production request logs now emit structured tenant and request correlation
+  fields without request bodies or query strings; the M-Pesa callback token in
+  the URL path is redacted as well.
+- User PIN changes and staff deactivation now persist the incremented PIN
+  version, allowing offline approvals based on a cached version to be flagged
+  as stale after revocation.
+- Offline discount approval now has a separate high-entropy code, owner-only
+  rotation and revocation, role/deactivation revocation, and a versioned sync
+  contract. Catalog sync no longer sends sign-in PIN verifiers, and queued
+  legacy PIN-authorized sales are preserved but flagged for review.
+- Production backup support now uploads database and media archives through a
+  required encrypted rclone remote, verifies each downloaded copy, applies
+  longer remote retention, sends success/failure notices, and exposes a stale
+  backup through the container health check. Fresh remotes now initialize both
+  retention directories before pruning, so the first non-Monday backup does not
+  fail after uploading its archives.
+- The Flutter outbox now uses an OS-secured random key with SQLite encryption.
+  Existing plaintext outboxes are copied, encrypted, reopened, and verified
+  before replacement; startup fails closed if the key or migration is invalid.
+- The till now refreshes staff authorization metadata and offers a separate
+  offline approval-code prompt for discounted sales; approval versions are
+  queued for revocation checks, and the raw offline code is not sent to the API.
+  Release artifacts now build; Android device migration verification and
+  customer release signing remain deployment gates.
+- The till now exposes its drawer and reports screens from the catalogue, and
+  the open drawer supports reasoned cash-in and cash-out movements. Each cash
+  movement carries a retry-safe idempotency key and appears in the current
+  drawer response for recovery after a lost reply.
+- Platform operators can create a consistent per-tenant export containing
+  business records and media, encrypted directly to a customer-provided age
+  public recipient. Authentication/payment secrets and platform-only notes are
+  redacted, many-to-many memberships are preserved, and the tenant audit trail
+  records the administrator and artifact digest; customer handoff and
+  retention steps are documented.
 
 ### Documentation
 
@@ -27,9 +77,9 @@ milestone.
   manual invoice export is not eTIMS certification.
 - Replaced the generated Flutter starter README with project-specific setup,
   API address, and current feature notes.
-- Updated the roadmap to distinguish completed deployment safeguards from the
-  remaining off-site backup, alerting, local-data protection, and tenant export
-  work.
+- Updated the roadmap to distinguish implementation from deployment proof,
+  and to track remaining offline approval, device recovery, monitoring, and
+  tenant export work.
 
 ## [0.3.0] — 2026-08-14 — Milestone 3: selling, payments, receipts, offline and the drawer
 

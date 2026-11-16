@@ -70,6 +70,9 @@ rather than planned up front.
 ### Tests
 - [x] RLS coverage: every tenant table has a policy and forces it
 - [x] The connected database role is neither superuser nor `BYPASSRLS`
+- [x] Production runtime role is `NOCREATEDB`; CI/development use a separate
+      `NOSUPERUSER NOBYPASSRLS` test role with `CREATEDB` only for pytest;
+      PostgreSQL 18 fresh initialization and existing-volume reconciliation verified
 - [x] No `FloatField` anywhere in the schema
 - [x] Cross-tenant ORM access returns nothing
 - [x] Cross-tenant API access returns 404, not 403
@@ -280,13 +283,25 @@ rather than planned up front.
 - [x] A refusal is distinguished from a failure to reach the server: one is kept for a person, the other is retried
 
 ### Account management
-- [ ] **Protect offline approval credentials and local till data** *(offline approval currently leaves credential material on an unencrypted device; lost-device recovery must preserve unsynced sales)*
-  - [ ] Add a separate, revocable offline approval credential, replacing the cached sign-in verifier
-  - [ ] Set and rotate it independently of the sign-in PIN, so revoking it does not lock anyone out of the till
-  - [ ] Rotate on staff departure without touching their password or PIN
-  - [ ] Till screen for entering it, distinct from PIN entry so the two are never confused
-  - [ ] Test that a cashier's approval material is still never downloaded
-  - [ ] Test that revoking it stops offline approvals while sign-in keeps working
+- [ ] **Protect offline approval credentials and local till data** *(encrypted outbox and recovery workflow are implemented; compatible-toolchain and device verification plus client backup setup remain)*
+  - [x] Add a separate, revocable, high-entropy offline approval code and remove cached sign-in PIN verifiers from the sync contract
+  - [x] Rotate and revoke it independently of the sign-in PIN through owner-only endpoints
+  - [x] Revoke it on staff deactivation or downgrade below manager without touching the password or PIN
+  - [x] Till discount prompt accepts the separate offline code; sign-in PIN remains a different flow
+  - [x] Encrypt the local SQLite database using a random key held in platform secure storage
+  - [x] Migrate the existing plaintext database through a verified temporary copy and retain/restore the source on failure
+  - [x] Verify encrypted migration preserves queued sales and wrong keys fail closed in Flutter's native SQLite tests
+  - [x] Build Linux and Android release artifacts with the encrypted SQLite and secure-storage plugins
+  - [ ] Install on a target Android device and verify encrypted migration preserves queued sales at runtime
+  - [x] Build the unsigned Android APK and verify release configuration does not use the debug signing key
+  - [ ] Sign through the customer's protected release pipeline and verify the signed artifact
+  - [x] Show the database recovery key to the owner and export the closed, encrypted SQLite snapshot through Android's client-selected document provider
+  - [x] Restore on a replacement till after verifying the recovery key, database integrity, queued-sales tables, and current schema; reject invalid backups without replacing local data
+  - [ ] Client stores the recovery key separately and sets a backup cadence/data-loss window for its selected off-device provider
+  - [ ] Verify a lost-till restore with a queued sale on a target Android device
+  - [x] Catalog sync sends verifier material only to active managers/owners who enrolled a code; sign-in PIN hashes are never included
+  - [x] Preserve old queued PIN-authorized sales during upgrade and flag their legacy authorization for review
+  - [x] Run endpoint and sync regression tests proving revocation stops offline approvals while sign-in keeps working *(the full PostgreSQL-backed backend suite passes; mobile cache behavior still needs Flutter verification)*
 
 ### Shifts and the cash drawer
 - [x] `Shift`, `CashMovement`, `DrawerCount` and `ShiftDiscrepancy`, with RLS
@@ -303,7 +318,7 @@ rather than planned up front.
 - [x] Shifts are optional — a shop that never opens one goes on selling
 - [x] 53 tests
 - [x] **Flutter: open/close drawer screens** *(built with the reports screens in milestone 5, since a manager's "today" view is where both live)*
-- [ ] Flutter: cash in/out from the till
+- [x] Flutter: cash in/out from the open-drawer screen, with positive amount, required reason, and retry-safe idempotency
 
 ### Selling by weight
 - [x] Confirmed already supported end to end on the server *(UnitOfMeasure, Decimal quantities throughout, pricing tested against 2.5kg / 0.333kg from milestone 3, receiving in the selling unit, decimal quantity in the sync payload)*
@@ -344,7 +359,7 @@ rather than planned up front.
 - [x] **29:36 → 1:42** for the same 1328 tests, all passing *(the real password hasher had been running instead of the test one)*
 - [x] Tenant isolation confirmed unaffected — only `base.py` defines `DATABASES`, so both modules connect as the same NOSUPERUSER NOBYPASSRLS role and RLS was genuinely exercised throughout
 - [x] `.env.example` shipped an invalid Fernet key, 43 characters with the padding dropped *(a fresh clone following the documented setup could not run the M-Pesa tests)*
-- [x] Whole suite on every push — backend and all 224 Dart tests, nothing deferred, nothing sharded
+- [x] Whole suite on every push — backend and all 237 Dart tests, nothing deferred, nothing sharded
 - [x] Backend jobs run through `docker compose` *(Django must connect as the NOSUPERUSER NOBYPASSRLS role; a superuser bypasses RLS and every isolation test would pass while proving nothing)*
 - [x] `check --deploy` against `config/settings/production.py` on every push *(no test imports that module, so a typo in it would otherwise surface during a deploy)*
 - [x] Nightly: Linux and Android release builds, coverage as a trend
@@ -449,8 +464,77 @@ rather than planned up front.
 
 ---
 
+## Production readiness — shared gates
+
+These items block a production release. Tenant branding, business data, tax
+settings, provider credentials and deployment addresses are onboarding
+configuration; they do not replace the shared work below. The README and API
+describe retail as available, restaurant ordering as API-only, and salon and
+pharmacy workflows as planned. The retail discount-approval flow now builds and
+passes automated tests; target-device runtime verification remains open.
+Unchecked product tasks remain release gaps; the
+supported retail scope must be complete before calling only onboarding setup
+outstanding.
+
+- [ ] Protect offline approvals and the local till database
+  - [x] Replace downloaded manager PIN verifiers with independent,
+        high-entropy, revocable offline approval codes and a versioned sync contract
+  - [x] Add owner-only rotation/revocation; revoke on staff deactivation or role downgrade
+  - [x] Persist the PIN version when the owner sets a PIN or deactivates staff;
+        the user-management endpoints previously incremented it only in memory
+  - [x] Encrypt the local database with a key held in platform secure storage
+  - [x] Upgrade existing plaintext databases without deleting the queued-sale source before verification
+  - [x] Build Linux and Android release artifacts with encrypted SQLite and secure storage
+  - [x] Owner-only recovery-key display and encrypted database export to a client-selected Android document provider
+  - [x] Restore a selected encrypted snapshot on first launch or the recovery screen; reject wrong keys/corrupt files and verify current Drift schema before replacing data
+  - [x] Changing business clears local data and rotates the recovery key only after pending/refused sales and offline refusal audit entries settle; reset failure restores the old database/key, and interrupted resets fail closed
+  - [ ] Client chooses the off-device storage provider, protects the recovery key separately, and sets the snapshot cadence/data-loss window
+  - [ ] Install on a target Android device and verify the encrypted migration preserves queued sales at runtime
+  - [ ] Verify lost-till restore on a target Android device with a queued sale and record recovery behavior
+  - [x] Automated endpoint and mobile-service tests verify revocation stops offline approval without blocking sign-in
+  - [ ] Verify the complete flow on a target Android device
+- [ ] Encrypted off-site backups and failure alerts
+  - [x] Support a configurable rclone crypt remote with encrypted filenames
+        and directories
+  - [x] Upload database and media archives and verify downloaded SHA-256
+        digests before declaring success
+  - [x] Send success/failure notifications and expose stale backup state as an
+        unhealthy container
+  - [ ] Configure the production destination and alert receiver
+  - [ ] Connect health state to an external monitor and alert on missed runs
+  - [x] Test encrypted remote upload, digest verification, remote download, and scratch restore through the backup image using an isolated SFTP-backed crypt remote
+  - [ ] Demonstrate restore from the customer's configured object-storage remote
+- [ ] Service uptime alerts and an operational outage procedure
+  - [x] Documented response steps protect pending till sales during an outage
+  - [ ] Configure an external monitor, support contact and client notification
+        channel for the deployment
+- [ ] Full tenant data export and customer exit procedure
+  - [x] Platform-admin command creates a tenant-scoped consistent snapshot including records and media, and records an audit event
+  - [x] Encrypt the export to the customer-controlled age public recipient; never stage a plaintext archive
+  - [x] Redact authentication and offline-approval hashes, device tokens, M-Pesa credentials, callback tokens, and operator-only notes
+  - [x] Run PostgreSQL export/decrypt integration tests, including tenant records, media, and age encryption round trip
+  - [x] Build the production API image, apply migrations against isolated PostgreSQL 18 as `NOSUPERUSER NOBYPASSRLS`, and run an encrypted tenant export/decrypt round trip from that image
+  - [ ] Set the retention schedule, deletion authorization, receipt handoff, and post-exit data purge procedure
+- [x] Structured request logs carry tenant and request correlation IDs, omit
+      query strings and request bodies, redact the M-Pesa callback path token,
+      remove request details from Caddy runtime error logs, omit URI values from
+      Caddy access logs, and return the ID in `X-Request-ID`
+- [x] Production eTIMS position documented and accurate: manual eTIMS Lite
+      export is supported; direct integration/certification is not claimed
+
+### Customer release setup after shared gates
+
+- [ ] Choose the customer application ID, signing key and release owner; provide
+      signing values through the protected Android release pipeline variables
+- [ ] Provision the encrypted backup destination, alert receiver and external
+      uptime/backup monitor for the deployment
+- [ ] Run and record the restore drill against the configured customer remote
+- [ ] Set support and outage communication contacts, data retention/exit
+      schedule, and the customer export handoff procedure
+
 ## Cross-cutting, not yet scheduled
 
+- [x] Production API image installs runtime dependencies only; development and CI use a separate image target *(review follow-up: pytest, Ruff and other development tools no longer ship with gunicorn)*
 - [x] Flutter till: sign-in, catalogue, cash checkout, offline outbox, receipts, shift screens, and reports
 - [x] Rate limiting on sign-in endpoints, especially PIN sign-in *(discovered while building PIN auth: a 4-digit PIN with a valid device token is brute-forceable without throttling)*
   - [x] **The limit did not work.** DRF resolves the client address through its own `NUM_PROXIES`, not this project's `TRUSTED_PROXY_HOPS`; unset, it used the whole `X-Forwarded-For` header as the throttle key, so changing one header per request bought a fresh allowance every time
@@ -470,8 +554,4 @@ rather than planned up front.
   - [x] 21 tests, all six named mutations killed
 - [x] CI pipeline running the test suite on every push *(see the CI section above)*
 - [x] Production deployment: Redis, static/media serving, TLS, and a restore drill
-- [ ] Encrypted off-site backups and failure alerts
-- [ ] Full per-tenant data export and documented customer exit process
-- [ ] Protect the offline till database and define lost-device recovery without deleting unsynced sales
-- [ ] Operational uptime alerts, support contact, and outage communications process
-- [ ] Structured request logging with the tenant attached
+- [ ] Operational support contact and outage communications procedure

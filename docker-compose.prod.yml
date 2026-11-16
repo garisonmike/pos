@@ -32,6 +32,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       APP_DB_USER: ${DB_USER}
       APP_DB_PASSWORD: ${DB_PASSWORD}
+      APP_TEST_DB_USER: !reset null
+      APP_TEST_DB_PASSWORD: !reset null
     # Postgres tunes itself for a small machine badly. These suit a 2GB VPS
     # serving a handful of shops; raise shared_buffers if the host grows.
     command: >
@@ -70,6 +72,7 @@ services:
   api:
     build:
       context: ./backend
+      target: runtime
     restart: unless-stopped
     # Root inside the container, unlike development: there is no bind mount
     # here whose file ownership has to match a host user, and gunicorn drops to
@@ -88,6 +91,8 @@ services:
       --error-logfile -
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
+      TEST_DB_USER: !reset null
+      TEST_DB_PASSWORD: !reset null
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS}
       DJANGO_STATIC_ROOT: /srv/static
@@ -127,8 +132,8 @@ services:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - static_files:/srv/static:ro
       - media_files:/srv/media:ro
-      # Certificates and ACME state. Losing this volume means re-issuing, which
-      # Let's Encrypt rate-limits - so it is in the backup set.
+      # Certificates and ACME state. These can be re-issued; the configured
+      # database/media backup archives do not include this volume.
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -148,10 +153,30 @@ services:
       BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
       BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
       MEDIA_BACKUP_REQUIRED: ${MEDIA_BACKUP_REQUIRED:-true}
+      BACKUP_REMOTE_REQUIRED: ${BACKUP_REMOTE_REQUIRED:-true}
+      BACKUP_REMOTE: ${BACKUP_REMOTE:-}
+      BACKUP_REMOTE_KEEP_DAILY_DAYS: ${BACKUP_REMOTE_KEEP_DAILY_DAYS:-30}
+      BACKUP_REMOTE_KEEP_WEEKLY_DAYS: ${BACKUP_REMOTE_KEEP_WEEKLY_DAYS:-365}
+      BACKUP_ALERT_REQUIRED: ${BACKUP_ALERT_REQUIRED:-true}
+      RCLONE_CONFIG: /run/backup/rclone.conf
+      RCLONE_CONFIG_PASS: ${BACKUP_RCLONE_CONFIG_PASSWORD:-}
+      BACKUP_ALERT_URL: ${BACKUP_ALERT_URL:-}
     volumes:
       - backups:/backups
       - media_files:/srv/media:ro
       - ./scripts:/scripts:ro
+      - type: bind
+        source: ${BACKUP_RCLONE_CONFIG_FILE:-./.secrets/rclone.conf}
+        target: /run/backup/rclone.conf
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /backups/.last_success && find /backups/.last_success -mmin -1500 -print -quit | grep -q ."]
+      interval: 10m
+      timeout: 10s
+      retries: 2
+      start_period: 30m
     depends_on:
       db:
         condition: service_healthy

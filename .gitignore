@@ -40,9 +40,12 @@ htmlcov/
 
 # Docker volumes
 /docker/postgres/data/
+/.secrets/
+/.rclone.conf
 
 # Flutter build artefacts not covered above
 /mobile/android/.gradle/
+/mobile/android/build/
 /mobile/android/local.properties
 /mobile/.flutter-plugins*
 
@@ -51,3 +54,4 @@ htmlcov/
 /input.md
 /POS_RESEARCH.md
 /REVIEW.md
+/memory.md

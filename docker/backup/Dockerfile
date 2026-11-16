@@ -5,7 +5,7 @@
 # that out during a restore is the worst possible time.
 FROM postgres:18-alpine
 
-RUN apk add --no-cache tzdata
+RUN apk add --no-cache tzdata rclone curl ca-certificates
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

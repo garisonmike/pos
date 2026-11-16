@@ -10,10 +10,6 @@
 name: Nightly
 
 on:
-  schedule:
-    # 02:15 UTC, which is 05:15 in Nairobi - after the overnight and before
-    # anybody opens a till.
-    - cron: "15 2 * * *"
   # Runnable by hand, because a nightly nobody can trigger is a nightly nobody
   # debugs.
   workflow_dispatch:
